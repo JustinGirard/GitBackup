@@ -1,0 +1,14 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" xsi="http://www.w3.org/2001/XMLSchema-instance" engine="UnityEngine.UIElements" editor="UnityEditor.UIElements" noNamespaceSchemaLocation="../../UIElementsSchema/UIElements.xsd" editor-extension-mode="False">
+    <ui:Template name="NavigationButton" src="project://database/Assets/MenuExample/Controls/NavigationButton.uxml?fileID=9197481963319205126&amp;guid=de123281afe654e67a52333eab5fc9e5&amp;type=3#NavigationButton" />
+    <Style src="project://database/Assets/MenuExample/SystemStyle.uss?fileID=7433441132597879392&amp;guid=fc40ef5de768b4108b0bf86c5b9e0dd5&amp;type=3#SystemStyle" />
+    <ui:VisualElement name="Container" style="flex-grow: 1;">
+        <ui:Label tabindex="-1" text="MainMenu" parse-escape-sequences="true" display-tooltip-when-elided="true" class="header" />
+        <ui:Button text="Load Repos" parse-escape-sequences="true" display-tooltip-when-elided="true" name="LoadReposButton" class="button" />
+        <ui:TextField picking-mode="Ignore" label="Text Field" value="filler text" name="TextField" class="button" />
+        <ui:Slider picking-mode="Ignore" label="Slider" value="42" high-value="100" name="Slider" />
+        <ui:DropdownField label="Dropdown" index="-1" choices="System.Collections.Generic.List`1[System.String]" name="DropdownField" />
+        <ui:ListView focusable="true" name="ListView" />
+        <ui:Button text="To BackupScreen" parse-escape-sequences="true" display-tooltip-when-elided="true" name="BackupScreenButton" class="button" />
+        <ui:Instance template="NavigationButton" name="NavigationButton" />
+    </ui:VisualElement>
+</ui:UXML>

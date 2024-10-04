@@ -1,0 +1,29 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" xsi="http://www.w3.org/2001/XMLSchema-instance" engine="UnityEngine.UIElements" editor="UnityEditor.UIElements" noNamespaceSchemaLocation="../../../UIElementsSchema/UIElements.xsd" editor-extension-mode="False">
+    <Style src="project://database/Assets/Resources/SystemStyle.uss?fileID=7433441132597879392&amp;guid=fc40ef5de768b4108b0bf86c5b9e0dd5&amp;type=3#SystemStyle" />
+    <ui:VisualElement style="flex-grow: 1;">
+        <ui:VisualElement name="UsernameField" style="flex-direction: column; margin-bottom: 10px;">
+            <ui:Label text="Name" name="lbl_name" />
+            <ui:TextField name="Name" value="some_repo_name" />
+        </ui:VisualElement>
+        <ui:VisualElement name="GitUrlField" style="flex-direction: column; margin-bottom: 10px;">
+            <ui:Label text="Git URL" name="lbl_git_url" />
+            <ui:TextField name="GitURL" value="https://some.url.dot.com" />
+        </ui:VisualElement>
+        <ui:VisualElement name="UsernameField" style="flex-direction: column; margin-bottom: 10px;">
+            <ui:Label text="Username (optional)" name="lbl_username" />
+            <ui:TextField name="Username" value="some_user" />
+        </ui:VisualElement>
+        <ui:VisualElement name="AccessKeyField" style="flex-direction: column; margin-bottom: 10px;">
+            <ui:Label text="Access Key" name="lbl_access_key" />
+            <ui:TextField name="AccessKey" value="48fh27ert12947" />
+        </ui:VisualElement>
+        <ui:VisualElement name="TargetBranchField" style="flex-direction: column; margin-bottom: 10px;">
+            <ui:Label text="Target Branch" name="lbl_target_branch" />
+            <ui:TextField name="Branch" value="master" />
+        </ui:VisualElement>
+        <ui:VisualElement style="position: absolute; bottom: 0; width: 100%; flex-direction: row; justify-content: flex-end; padding: 10px;">
+            <ui:Button text="Cancel" name="Cancel" />
+            <ui:Button text="Save" name="Save" style="margin-left: 10px;" />
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

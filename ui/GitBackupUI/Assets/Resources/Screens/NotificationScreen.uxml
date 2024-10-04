@@ -1,0 +1,12 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" xsi="http://www.w3.org/2001/XMLSchema-instance" engine="UnityEngine.UIElements" editor="UnityEditor.UIElements" noNamespaceSchemaLocation="../../../UIElementsSchema/UIElements.xsd" editor-extension-mode="False">
+    <Style src="project://database/Assets/Resources/SystemStyle.uss?fileID=7433441132597879392&amp;guid=fc40ef5de768b4108b0bf86c5b9e0dd5&amp;type=3#SystemStyle" />
+    <ui:VisualElement name="loadingPopup" style="position: absolute; top: 50%; left: 50%; width: 300px; height: 200px; margin-left: -150px; margin-top: -100px; background-color: white; border-radius: 10px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2); flex-direction: column; justify-content: center; align-items: center; padding: 10px;">
+        <ui:Image name="logoImage" style="width: 50px; height: 50px; margin-bottom: 10px;" />
+        <ui:Label name="Message" text="Message" style="font-size: 16px; text-align: center; margin-bottom: 10px; white-space: normal; width: 270px; height: 66px; max-width: 270px; max-height: 66px; min-width: 270px; min-height: 66px;" />
+        <ui:ProgressBar name="Progress" value="0" style="width: 100%; height: 20px; margin-bottom: 10px;" />
+        <ui:VisualElement style="flex-direction: row; justify-content: space-between; width: 100%; margin-top: 10px;">
+            <ui:Button text="Cancel" name="Cancel" style="width: 45%;" />
+            <ui:Button text="OK" name="OK" style="width: 45%;" />
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

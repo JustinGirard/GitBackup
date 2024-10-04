@@ -1,0 +1,32 @@
+.header {
+    font-size: 40px;
+    color: rgb(255, 255, 255);
+}
+
+.button {
+}
+
+.tab-label-container Label {
+    color: rgb(255, 255, 255);
+    flex-direction: column;
+    flex-wrap: nowrap;
+}
+
+.tab-label-container {
+    color: rgb(32, 32, 32);
+    flex-direction: row;
+    flex-wrap: nowrap;
+}
+
+.list-repos-button {
+    width: 50px;
+    color: rgb(0, 0, 0);
+    height: 50px;
+}
+
+Label {
+    font-size: 100%;
+}
+
+.tab-label {
+}

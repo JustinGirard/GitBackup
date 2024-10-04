@@ -1,0 +1,52 @@
+.main-container {
+    flex-grow: 1;
+    padding: 10px;
+}
+
+.header-label {
+    font-size: 20px;
+    margin-bottom: 20px;
+}
+
+.section-container {
+    flex-direction: column;
+    margin-bottom: 20px;
+}
+
+.section-header {
+    font-size: 16px;
+    margin-bottom: 10px;
+}
+
+.field-container {
+    flex-direction: row;
+    margin-bottom: 10px;
+}
+
+.field-label {
+    font-weight: bold;
+}
+
+.field-value {
+    font-size: 14px;
+    margin-left: 10px;
+}
+
+.button-container {
+    flex-direction: row;
+    justify-content: flex-end;
+}
+
+.action-button {
+    margin-left: 10px;
+}
+
+.download-button {
+    margin-top: 5px;
+}
+
+.list-view {
+    height: 100px;
+    margin-top: 5px;
+    border: 1px solid rgb(204, 204, 204);
+}

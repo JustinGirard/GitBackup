@@ -1,0 +1,66 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" xsi="http://www.w3.org/2001/XMLSchema-instance" engine="UnityEngine.UIElements" editor="UnityEditor.UIElements" editor-extension-mode="False">
+    <Style src="project://database/Assets/MenuExample/RepoInfoStyle.uss?fileID=7433441132597879392&amp;guid=1a0d3c94728b84f5a92189fd634e1ca3&amp;type=3#RepoInfoStyle" />
+    <ui:VisualElement class="main-container">
+        <ui:Label text="Repository Info" class="header-label" style="height: 10px;" />
+        <ui:VisualElement name="userGeneratedSection" class="section-container">
+            <ui:VisualElement class="field-container" style="padding-top: 0;">
+                <ui:Label text="Git URL" enable-rich-text="true" class="field-label" />
+                <ui:Label name="git-url" text="[Git URL]" class="field-value" />
+            </ui:VisualElement>
+            <ui:VisualElement class="field-container">
+                <ui:Label text="Username (optional)" class="field-label" />
+                <ui:Label name="username" text="[Username]" class="field-value" />
+            </ui:VisualElement>
+            <ui:VisualElement class="field-container">
+                <ui:Label text="Target Branch" class="field-label" />
+                <ui:Label name="target-branch" text="main, master" class="field-value" />
+            </ui:VisualElement>
+            <ui:VisualElement class="button-container">
+                <ui:Button text="Edit" name="Edit" class="action-button" />
+                <ui:Button text="Delete" name="Delete" class="action-button" />
+            </ui:VisualElement>
+        </ui:VisualElement>
+        <ui:VisualElement name="systemGeneratedSection" class="section-container">
+            <ui:Label text="System Generated Info" class="section-header" style="height: 16px;" />
+            <ui:VisualElement class="field-container">
+                <ui:Label text="Status" class="field-label" />
+                <ui:Label name="status" text="[Status]" class="field-value" />
+            </ui:VisualElement>
+            <ui:VisualElement class="field-container">
+                <ui:Label text="Last Hash" class="field-label" />
+                <ui:Label name="last-hash" text="[Last Hash]" class="field-value" />
+            </ui:VisualElement>
+            <ui:VisualElement class="field-container">
+                <ui:Label text="Last Commit Time" class="field-label" />
+                <ui:Label name="last-commit-time" text="[Last Commit Time]" class="field-value" />
+            </ui:VisualElement>
+            <ui:VisualElement class="field-container">
+                <ui:Label text="Last Update Time" class="field-label" />
+                <ui:Label name="last-update-time" text="[Last Update Time]" class="field-value" />
+            </ui:VisualElement>
+            <ui:VisualElement class="field-container">
+                <ui:Label text="Conflict Status" class="field-label" />
+                <ui:Label name="conflict-status" text="[Conflict Status]" class="field-value" />
+            </ui:VisualElement>
+            <ui:VisualElement class="field-container">
+                <ui:Label text="Log File" class="field-label" />
+                <ui:Button text="Download Log File" name="Download" class="download-button" />
+            </ui:VisualElement>
+            <ui:VisualElement class="field-container">
+                <ui:Label text="Size on Disk" class="field-label" />
+                <ui:Label name="size-on-disk" text="[Size on Disk]" class="field-value" />
+            </ui:VisualElement>
+            <ui:VisualElement class="field-container">
+                <ui:Label text="Active Replicators" class="field-label" />
+                <ui:ListView name="active-replicators" class="list-view" />
+            </ui:VisualElement>
+            <ui:VisualElement class="field-container">
+                <ui:Label text="Recent Replicators" class="field-label" />
+                <ui:ListView name="recent-replicators" class="list-view" />
+            </ui:VisualElement>
+        </ui:VisualElement>
+    </ui:VisualElement>
+    <ui:VisualElement style="position: absolute; bottom: 0; width: 100%; flex-direction: row; justify-content: flex-end; padding: 10px;">
+        <ui:Button text="Back" name="Back" />
+    </ui:VisualElement>
+</ui:UXML>

@@ -1,0 +1,8 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" xsi="http://www.w3.org/2001/XMLSchema-instance" engine="UnityEngine.UIElements" editor="UnityEditor.UIElements" noNamespaceSchemaLocation="../../../../UIElementsSchema/UIElements.xsd" editor-extension-mode="False">
+    <ui:VisualElement class="repo-list-item" style="flex-grow: 1; flex-direction: row; max-height: 32px; height: 100px; border-left-color: rgba(217, 73, 73, 0); border-right-color: rgba(217, 73, 73, 0); border-top-color: rgba(217, 73, 73, 0); border-bottom-color: rgba(217, 73, 73, 0); border-top-width: 4px; border-right-width: 4px; border-bottom-width: 4px; border-left-width: 4px;">
+        <ui:VisualElement name="VisualElement" style="flex-grow: 1; width: 10px; height: 32px; background-image: url(&apos;project://database/Assets/Resources/Controls/RepoListItem/status_error.png?fileID=2800000&amp;guid=76e81d6aa846e4351a0c3a8e0ba3768f&amp;type=3#status_error&apos;); max-width: 32px; border-top-width: 1px; border-right-width: 1px; border-bottom-width: 1px; border-left-width: 1px;" />
+        <ui:Label tabindex="-1" text="Status" parse-escape-sequences="true" display-tooltip-when-elided="true" name="repo_status" class="repo-list-item-label" style="width: 73px; height: 29px;" />
+        <ui:Label tabindex="-1" text="Name " parse-escape-sequences="true" display-tooltip-when-elided="true" name="repo_name" class="repo-list-item-label" style="width: 73px; height: 29px;" />
+        <ui:Label tabindex="-1" text="Branch" parse-escape-sequences="true" display-tooltip-when-elided="true" name="repo_branch" class="repo-list-item-label" style="width: 73px; height: 29px;" />
+    </ui:VisualElement>
+</ui:UXML>

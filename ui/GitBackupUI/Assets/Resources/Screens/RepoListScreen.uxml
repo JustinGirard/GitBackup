@@ -1,0 +1,24 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" xsi="http://www.w3.org/2001/XMLSchema-instance" engine="UnityEngine.UIElements" editor="UnityEditor.UIElements" noNamespaceSchemaLocation="../../../UIElementsSchema/UIElements.xsd" editor-extension-mode="False">
+    <ui:Template name="RepoListItem" src="project://database/Assets/Resources/Controls/RepoListItem/RepoListItem.uxml?fileID=9197481963319205126&amp;guid=d4b88790be6614bb9a66f3ba6e144207&amp;type=3#RepoListItem" />
+    <Style src="project://database/Assets/Resources/SystemStyle.uss?fileID=7433441132597879392&amp;guid=fc40ef5de768b4108b0bf86c5b9e0dd5&amp;type=3#SystemStyle" />
+    <ui:VisualElement name="VisualElement" style="flex-grow: 1;">
+        <ui:Label tabindex="-1" text="Repository List" parse-escape-sequences="true" display-tooltip-when-elided="true" />
+        <ui:VisualElement name="repolist-tab-list" class="tab-label-container" style="flex-grow: 1; flex-direction: row; height: 10px; width: 348px; max-height: 32px;">
+            <ui:Label tabindex="-1" text="Repos" parse-escape-sequences="true" display-tooltip-when-elided="true" class="tab-label" style="width: 69px; height: 22px; color: rgb(0, 0, 0);" />
+            <ui:Label tabindex="-1" text="Users" parse-escape-sequences="true" display-tooltip-when-elided="true" class="tab-label" style="width: 89px; height: 22px; color: rgb(0, 0, 0);" />
+        </ui:VisualElement>
+        <ui:VisualElement name="repo_list_items" style="flex-grow: 1; height: 205px;">
+            <ui:Instance template="RepoListItem" name="RepoListItem" style="height: 41px;" />
+            <ui:Instance template="RepoListItem" name="RepoListItem" style="height: 41px;" />
+            <ui:Instance template="RepoListItem" name="RepoListItem" style="height: 41px;" />
+            <ui:Label tabindex="-1" text="No Repos Present. Please add one to get started" parse-escape-sequences="true" display-tooltip-when-elided="true" />
+        </ui:VisualElement>
+        <ui:VisualElement style="flex-grow: 1; flex-direction: row; height: 101px; position: absolute; bottom: 0;">
+            <ui:Button text="Edit" parse-escape-sequences="true" display-tooltip-when-elided="true" name="Edit" class="list-repos-button" />
+            <ui:Button text="Delete" parse-escape-sequences="true" display-tooltip-when-elided="true" name="Delete" class="list-repos-button" />
+            <ui:Button text="View" parse-escape-sequences="true" display-tooltip-when-elided="true" name="View" class="list-repos-button" />
+            <ui:Button text="Visit" parse-escape-sequences="true" display-tooltip-when-elided="true" name="Visit" class="list-repos-button" />
+            <ui:Button text="Add" parse-escape-sequences="true" display-tooltip-when-elided="true" name="Add" class="list-repos-button" />
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>
