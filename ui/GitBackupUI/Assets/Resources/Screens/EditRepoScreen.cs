@@ -99,9 +99,39 @@ public class EditRepoScreen : MonoBehaviour, NavigationManager.ICanInitalize
         cancelButton.RegisterCallback<ClickEvent>(evt => navigationManager.NavigateTo("RepoListScreen"));
     }
 
+    private void SetTextboxText(VisualElement root, string labelName, string value)
+    {
+        var label = root.Q<TextField>(labelName);
+        label.value = value;
+    }
+
     public void InitData(Dictionary<string, string> dataframe)
     {
-        //throw new System.NotImplementedException();
+
+        var root = GetComponent<UIDocument>().rootVisualElement;
+        var navigatorObject = GameObject.Find("Navigator");
+        RepoData repoData = navigatorObject.GetComponent<RepoData>();
+
+        if (dataframe.ContainsKey("name"))
+        {
+            Debug.Log($"RepoInfo.InitData for {dataframe["name"]} ");
+            RecordRepoFull record = new RecordRepoFull(repoData.GetRepoInfo(dataframe["name"]));
+
+            SetTextboxText(root, "Name", record.name);
+            SetTextboxText(root, "GitURL", record.url);
+            SetTextboxText(root, "Branch", record.branch);
+            SetTextboxText(root, "Username", "UNKNOWN");
+            SetTextboxText(root, "AccessKey", "UNKNOWN");
+        }
+        else
+        {
+            SetTextboxText(root, "Name", "UNKNOWN_NAME");
+            SetTextboxText(root, "GitURL", "https://UNKNOWN_URL.COM");
+            SetTextboxText(root, "Branch", "UNKNOWN_BRANCH");
+            SetTextboxText(root, "Username", "UNKNOWN_USERNAME");
+            SetTextboxText(root, "AccessKey", "UNKNOWN_ACCESS_KEY");
+
+        }
     }
 
     public void Refresh()

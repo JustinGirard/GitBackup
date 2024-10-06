@@ -125,7 +125,7 @@ public class RepoListScreen : MonoBehaviour, NavigationManager.ICanInitalize
         var root = GetComponent<UIDocument>().rootVisualElement;
         // Register navigation callbacks for buttons
         var navigateElement = root.Q<Button>("Add");
-        navigateElement.RegisterCallback<ClickEvent>(evt => navigationManager.NavigateTo("EditRepoScreen"));
+        navigateElement.RegisterCallback<ClickEvent>(evt => NavigateToWithBlankRecord(evt, "EditRepoScreen"));
         navigateElement = root.Q<Button>("Edit");
         navigateElement.RegisterCallback<ClickEvent>(evt => NavigateToWithRecord(evt, "EditRepoScreen"));
         navigateElement = root.Q<Button>("View");
@@ -165,11 +165,21 @@ public class RepoListScreen : MonoBehaviour, NavigationManager.ICanInitalize
 
 
     void NavigateToWithRecord(ClickEvent evt, string targetScreen) {
+        // TODO Generalize NavigateToWithRecord and NavigateToWithBlankRecord
         var navigatorObject = GameObject.Find("Navigator");
         var navigationManager = navigatorObject.GetComponent<NavigationManager>();
 
         DictStrStr argument = new DictStrStr { { "name", highlightedRepoName } };
         Debug.Log($"RepoList sending record {highlightedRepoName} to {targetScreen}" );
+        navigationManager.NavigateToWithRecord(targetScreen, argument);
+    }
+    void NavigateToWithBlankRecord(ClickEvent evt, string targetScreen)
+    {
+        var navigatorObject = GameObject.Find("Navigator");
+        var navigationManager = navigatorObject.GetComponent<NavigationManager>();
+
+        DictStrStr argument = new DictStrStr { };
+        Debug.Log($"RepoList sending record {highlightedRepoName} to {targetScreen}");
         navigationManager.NavigateToWithRecord(targetScreen, argument);
     }
 

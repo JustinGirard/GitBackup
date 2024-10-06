@@ -197,6 +197,7 @@ class RecordRepoFull
     public string branch;
     public string status;
     public string last_updated;
+    public string username;
 
     public RecordRepoFull(DictStrStr record)
     {
@@ -205,6 +206,7 @@ class RecordRepoFull
         branch = record["branch"];
         status = record["status"];
         last_updated = record["last_updated"];
+        //username = record["username"];
     }
 
     public DictStrStr ToDictRecord()
@@ -214,7 +216,7 @@ class RecordRepoFull
             { "url", url },
             { "branch", branch },
             { "status", status },
-            { "last_updated", last_updated }
+            { "last_updated", last_updated },
         };
         return d;
     }
