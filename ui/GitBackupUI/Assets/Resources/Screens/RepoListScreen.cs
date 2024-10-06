@@ -1,117 +1,14 @@
-
-/*
-
-Great! Now can you update the RepoListManager so it uses the repo data class. Please add three repos with random names to the repo data class, then list them.
-The current RepoData interface, and RepoListManager is attached:
-
-
- using System.Collections.Generic;
-
-public interface IRepoData
-{
-    bool AddRepo(string repoUrl, string branch);
-    List<string> ListUser(string username);
-    bool RemoveRepo(string repoUrl);
-    bool AddUser(string username);
-    bool RemoveUser(string username);
-    bool AttachUserToRepo(string username, string repoUrl);
-    bool RemoveUserFromRepo(string username, string repoUrl);
-    List<string> ListUsersOnRepo(string repoUrl);
-    Dictionary<string, string> GetRepoInfo(string repoUrl);
-    bool StartDownloads(string repoUrl);
-    string DownloadStatus(string repoUrl);
-    bool StopDownloads(string repoUrl);
-    Dictionary<string, Dictionary<string, string>> GetRepoReport(string repoUrl);
-    bool GetRepoStatus(string repoUrl);
-    string GetRepoLogs(string repoUrl);
-}
- 
-
-
-using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UIElements;
-
-public class RepoListManager : MonoBehaviour
-{
-    private VisualElement repoListContainer;
-
-    // Start is called before the first frame update
-    void Start()
-    {
-        LoadRepos(); // Simulate loading repos at startup
-    }
-
-    // Method to load repositories (currently using a simulated list)
-    private void LoadRepos()
-    {
-        // Clear the list of repository items
-        repoListContainer = GetComponent<UIDocument>().rootVisualElement.Q<VisualElement>("repo_list_items");
-        repoListContainer.Clear();
-
-        // Example list of repositories (replace this with your JSON loading in the future)
-        List<Dictionary<string, string>> repoData = new List<Dictionary<string, string>>()
-        {
-            new Dictionary<string, string> { { "repo_name", "Repo 3" }, { "repo_status", "Active" }, { "repo_branch", "feature-branch" } }
-        };
-
-        // Add each repo to the list
-        foreach (var repo in repoData)
-        {
-            AddRepoToList(repo["repo_name"], repo["repo_status"], repo["repo_branch"]);
-        }
-    }
-
-    // Method to add a repository entry to the list using the RepoListItem template
-    private void AddRepoToList(string repoName, string repoStatus, string repoBranch)
-    {
-        // Create a new instance of the RepoListItem template
-        var repoListItem = new VisualElement();
-        var repoListItemTemplate = Resources.Load<VisualTreeAsset>("Controls/RepoListItem/RepoListItem");
-        Debug.Log(repoListItemTemplate);
-        repoListItemTemplate.CloneTree(repoListItem);
-
-        // Set the repository attributes (repo_name, repo_status, repo_branch)
-        repoListItem.Q<Label>("repo_name").text = repoName;
-        repoListItem.Q<Label>("repo_status").text = repoStatus;
-        repoListItem.Q<Label>("repo_branch").text = repoBranch;
-
-        // Add the new item to the repo list container
-        repoListContainer.Add(repoListItem);
-    }
-
-    void OnEnable()
-    {
-        // Find the Navigator object and the NavigationManager component
-        var navigatorObject = GameObject.Find("Navigator");
-        var navigationManager = navigatorObject.GetComponent<NavigationManager>();
-
-        // Get the root of the current UIDocument
-        var root = GetComponent<UIDocument>().rootVisualElement;
-
-        // Register navigation callbacks for buttons
-        var navigateElement = root.Q<Button>("Add");
-        navigateElement.RegisterCallback<ClickEvent>(evt => navigationManager.NavigateTo("EditRepoScreen"));
-        navigateElement = root.Q<Button>("Edit");
-        navigateElement.RegisterCallback<ClickEvent>(evt => navigationManager.NavigateTo("EditRepoScreen"));
-        navigateElement = root.Q<Button>("View");
-        navigateElement.RegisterCallback<ClickEvent>(evt => navigationManager.NavigateTo("RepoInfoScreen"));
-        navigateElement = root.Q<Button>("Visit");
-        navigateElement.RegisterCallback<ClickEvent>(evt => navigationManager.NavigateTo("RepoInfoScreen"));
-    }
-}
-
- */
-
-using System.Collections.Generic;
-using UnityEngine;
-using UnityEngine.UIElements;
+using DictStrStr = System.Collections.Generic.Dictionary<string, string>;
+using DictTable = System.Collections.Generic.Dictionary<string, System.Collections.Generic.Dictionary<string, string>>;
 
 public class RepoListScreen : MonoBehaviour, NavigationManager.ICanInitalize
 {
     private VisualElement repoListContainer;
     private RepoData repoData;  // Use the IRepoData interface for the RepoData class
+    private string highlightedRepoName = "";
 
     // Start is called before the first frame update
     void Start()
@@ -141,8 +38,19 @@ public class RepoListScreen : MonoBehaviour, NavigationManager.ICanInitalize
 
         // Retrieve the list of repositories from RepoData
         List<string> repoList = repoData.ListRepos(); // Simulated call for listing repos
+        bool highlighted_found = false;
+        foreach (var repo_name in repoList)
+        {
+            if (repo_name == highlightedRepoName && highlightedRepoName != "")
+            {
+                highlighted_found = true;
+            }
+        }
+        if (highlighted_found == false)
+            highlightedRepoName = "";
 
-        // Simulate adding each repo from RepoData to the list UI
+            // Simulate adding each repo from RepoData to the list UI
+        bool first = true;
         foreach (var repo_name in repoList)
         {
             Debug.Log("Parsing " + repo_name);
@@ -152,12 +60,21 @@ public class RepoListScreen : MonoBehaviour, NavigationManager.ICanInitalize
             string repoBranch = repoInfo["branch"];
 
             // Add each repo to the UI list
-            AddRepoToList(repoName, repoStatus, repoBranch);
+            VisualElement repoListItem = AddRepoToList(repoName, repoStatus, repoBranch);
+            if (first == true && highlighted_found == false)
+            {
+                OnRepoItemClick(repoListItem, repoName);
+                first = false;
+            }
+            if (highlightedRepoName == repoName && highlighted_found == true)
+            {
+                OnRepoItemClick(repoListItem, repoName);
+            }
         }
     }
 
     // Method to add a repository entry to the list using the RepoListItem template
-    private void AddRepoToList(string repoName, string repoStatus, string repoBranch)
+    private VisualElement AddRepoToList(string repoName, string repoStatus, string repoBranch)
     {
         // Create a new instance of the RepoListItem template
         var repoListItem = new VisualElement();
@@ -171,8 +88,33 @@ public class RepoListScreen : MonoBehaviour, NavigationManager.ICanInitalize
 
         // Add the new item to the repo list container
         repoListContainer.Add(repoListItem);
+
+        var navigatorObject = GameObject.Find("Navigator"); //TODO ew so wasteful. HACK
+        var navigationManager = navigatorObject.GetComponent<NavigationManager>();
+
+        //repoListContainer.Add(repoListItem);
+        // Register click event for highlighting
+        repoListItem.RegisterCallback<ClickEvent>(evt => OnRepoItemClick(repoListItem, repoName));
+        return repoListItem;
     }
 
+    // Method to handle the click event and highlight the selected repo
+    private void OnRepoItemClick(VisualElement clickedRepoListItem, string repoName)
+    {
+        // Remove the 'highlighted_ve' class from all repo list items
+        foreach (var repoListItem in repoListContainer.Children())
+        {
+            repoListItem.RemoveFromClassList("highlighted_ve");
+        }
+
+        // Add the 'highlighted_ve' class to the clicked item
+        clickedRepoListItem.AddToClassList("highlighted_ve");
+
+        // Store the name of the highlighted repo
+        highlightedRepoName = repoName;
+
+        Debug.Log($"Repo {repoName} is now highlighted.");
+    }
     void OnEnable()
     {
         // Find the Navigator object and the NavigationManager component
@@ -181,17 +123,56 @@ public class RepoListScreen : MonoBehaviour, NavigationManager.ICanInitalize
 
         // Get the root of the current UIDocument
         var root = GetComponent<UIDocument>().rootVisualElement;
-
         // Register navigation callbacks for buttons
         var navigateElement = root.Q<Button>("Add");
         navigateElement.RegisterCallback<ClickEvent>(evt => navigationManager.NavigateTo("EditRepoScreen"));
         navigateElement = root.Q<Button>("Edit");
-        navigateElement.RegisterCallback<ClickEvent>(evt => navigationManager.NavigateTo("EditRepoScreen"));
+        navigateElement.RegisterCallback<ClickEvent>(evt => NavigateToWithRecord(evt, "EditRepoScreen"));
         navigateElement = root.Q<Button>("View");
-        navigateElement.RegisterCallback<ClickEvent>(evt => navigationManager.NavigateTo("RepoInfoScreen"));
+        navigateElement.RegisterCallback<ClickEvent>(evt => NavigateToWithRecord(evt, "RepoInfoScreen"));
         navigateElement = root.Q<Button>("Visit");
-        navigateElement.RegisterCallback<ClickEvent>(evt => navigationManager.NavigateTo("RepoInfoScreen"));
+        navigateElement.RegisterCallback<ClickEvent>(evt => NavigateToWithRecord(evt, "RepoInfoScreen"));
+        navigateElement = root.Q<Button>("Delete");
+        navigateElement.RegisterCallback<ClickEvent>(DeleteConfirm);
+
     }
+    void DoDelete()
+    {
+        Debug.Log($"Doing Delete {highlightedRepoName}");
+        repoData.DeleteRepo(highlightedRepoName);
+        LoadRepos();
+
+    }
+
+    void DoCancel()
+    {
+        Debug.Log("Doing Cancel");
+
+    }
+
+    public bool SetAction(string actionLabel, System.Action action)
+    {
+        // Does not support programmable buttons
+        return false;
+    }
+
+    void DeleteConfirm(ClickEvent evt)
+    {
+        var navigatorObject = GameObject.Find("Navigator");
+        var navigationManager = navigatorObject.GetComponent<NavigationManager>();
+        navigationManager.NotifyConfirm("Are you sure you want to delete?", DoDelete, DoCancel);
+    }
+
+
+    void NavigateToWithRecord(ClickEvent evt, string targetScreen) {
+        var navigatorObject = GameObject.Find("Navigator");
+        var navigationManager = navigatorObject.GetComponent<NavigationManager>();
+
+        DictStrStr argument = new DictStrStr { { "name", highlightedRepoName } };
+        Debug.Log($"RepoList sending record {highlightedRepoName} to {targetScreen}" );
+        navigationManager.NavigateToWithRecord(targetScreen, argument);
+    }
+
 
     public void InitData(Dictionary<string, string> dataframe)
     {

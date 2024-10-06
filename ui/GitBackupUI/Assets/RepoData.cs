@@ -173,6 +173,55 @@ using UnityEngine;
 using DictStrStr = System.Collections.Generic.Dictionary<string, string>;
 using DictTable = System.Collections.Generic.Dictionary<string, System.Collections.Generic.Dictionary<string, string>>;
 
+
+
+class RecordRepoReference
+{
+    public string name;
+    public RecordRepoReference(DictStrStr record)
+    {
+        name = record["name"];
+    }
+
+    public DictStrStr ToDictRecord()
+    {
+        DictStrStr d = new DictStrStr { { "name", name } };
+        return d;
+    }
+
+}
+class RecordRepoFull
+{
+    public string name;
+    public string url;
+    public string branch;
+    public string status;
+    public string last_updated;
+
+    public RecordRepoFull(DictStrStr record)
+    {
+        name = record["name"];
+        url = record["url"];
+        branch = record["branch"];
+        status = record["status"];
+        last_updated = record["last_updated"];
+    }
+
+    public DictStrStr ToDictRecord()
+    {
+        DictStrStr d = new DictStrStr {
+            { "name", name },
+            { "url", url },
+            { "branch", branch },
+            { "status", status },
+            { "last_updated", last_updated }
+        };
+        return d;
+    }
+
+}
+
+
 public class RepoData : MonoBehaviour
 {
 
@@ -185,6 +234,8 @@ public class RepoData : MonoBehaviour
     {
         if (!repos.ContainsKey(repoUrl))
         {
+
+
             repos[name] = new DictStrStr
             {
                 { "name", name },
@@ -197,6 +248,16 @@ public class RepoData : MonoBehaviour
             return true;
         }
         return false; // Repo already exists
+    }
+    public bool DeleteRepo(string name)
+    {
+        if (repos.ContainsKey(name))
+        {
+            Debug.Log($"REPO REMOVED {name}");
+            repos.Remove(name);
+
+        }
+        return true; // Repo already exists
     }
 
     // Simulate listing all repositories (in this case, URLs) for a user
@@ -299,11 +360,11 @@ public class RepoData : MonoBehaviour
     }
 
     // Simulate getting repository info
-    public DictStrStr GetRepoInfo(string repoUrl)
+    public DictStrStr GetRepoInfo(string name)
     {
-        if (repos.ContainsKey(repoUrl))
+        if (repos.ContainsKey(name))
         {
-            return repos[repoUrl];
+            return repos[name];
         }
         return new DictStrStr(); // Repo not found
     }

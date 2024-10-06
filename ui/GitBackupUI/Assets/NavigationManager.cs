@@ -6,12 +6,14 @@ using DictStrStr = System.Collections.Generic.Dictionary<string, string>;
 using DictTable = System.Collections.Generic.Dictionary<string, System.Collections.Generic.Dictionary<string, string>>;
 
 
+
 public class NavigationManager : MonoBehaviour
 {
     public interface ICanInitalize
     {
         public void InitData(DictStrStr dataframe);
         public void Refresh();
+        public bool SetAction(string actionLabel, System.Action action );
     }
     // Start is called before the first frame update
     void Start()
@@ -23,7 +25,9 @@ public class NavigationManager : MonoBehaviour
         bool hideAll = false;
         DictStrStr dataframe = new DictStrStr
         {
-            { "message", param }
+            { "message", param },
+            { "mode", "error" },
+
         };
         Debug.Log("Calling Notification Error");
 
@@ -31,6 +35,25 @@ public class NavigationManager : MonoBehaviour
         NavigateTo("NotificationScreen", hideAll);
 
     }
+    public void NotifyConfirm(string param, System.Action onConfirm, System.Action onCancel)
+    {
+        DictStrStr dataframe = new DictStrStr
+        {
+            { "message", param },
+            { "mode", "confirm" },
+
+        };
+        InitDataOnto("NotificationScreen", dataframe);
+
+        NavigatorSetAction("NotificationScreen", "OK", onConfirm);
+        NavigatorSetAction("NotificationScreen", "Cancel", onCancel);
+        bool hideAll = false;
+        NavigateTo("NotificationScreen", hideAll);
+
+    }
+
+
+
     // Method to navigate to a specific screen by object name
     public void InitDataOnto(string objectName, DictStrStr dataframe)
     {
@@ -71,6 +94,24 @@ public class NavigationManager : MonoBehaviour
         // Call Refresh
         initalizer.Refresh();
     }
+    public void NavigatorSetAction(string objectName,string action_name, System.Action action)
+    {
+        // Find GameObject
+        GameObject matchedElement = FindGameObjectByName(objectName);
+        if (matchedElement == null)
+            throw new System.Exception($"No UI document found with the name: {objectName}");
+        // Extract MonoBehaviour
+        var initalizer_test = matchedElement.GetComponent(objectName);
+        if (initalizer_test == null)
+            throw new System.Exception($"No Component name : '{objectName}' on {objectName}");
+        // Extract MonoBehaviour as ICanInitalize
+        ICanInitalize initalizer = matchedElement.GetComponent(objectName) as ICanInitalize;
+        if (matchedElement == null)
+            throw new System.Exception($"No ICanInitalize on : {objectName}. {objectName}");
+
+        // Call Refresh
+        initalizer.SetAction(action_name, action);
+    }
 
 
     // Method to navigate to a specific screen by object name
@@ -93,6 +134,12 @@ public class NavigationManager : MonoBehaviour
         {
             Debug.LogWarning($"No screen found with an element named: {objectName}");
         }
+    }
+
+    public void NavigateToWithRecord(string objectName,DictStrStr dataframe, bool hideAll = true)
+    {
+        InitDataOnto(objectName, dataframe);
+        NavigateTo(objectName, hideAll);
     }
 
     // Method to hide all UIDocument descendants

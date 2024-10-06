@@ -82,6 +82,11 @@ public class EditRepoScreen : MonoBehaviour, NavigationManager.ICanInitalize
         // If successful, navigate back to the RepoListScreen
         navigationManager.NavigateTo("RepoListScreen");
     }
+    public bool SetAction(string actionLabel, System.Action action)
+    {
+        // Does not support programmable buttons
+        return false;
+    }
 
 
     void OnEnable()
