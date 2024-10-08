@@ -16,9 +16,11 @@ public class NavigationManager : MonoBehaviour
         public bool SetAction(string actionLabel, System.Action action );
     }
     // Start is called before the first frame update
+    public string targetFirstScreen;
     void Start()
     {
-        NavigateTo("RepoListScreen"); // Example start, replace "HomeScreen" with your first screen's name
+        //ProfileListScreen
+        NavigateTo(targetFirstScreen); // Example start, replace "HomeScreen" with your first screen's name
     }
     public void NotifyError(string param)
     {
@@ -52,8 +54,6 @@ public class NavigationManager : MonoBehaviour
 
     }
 
-
-
     // Method to navigate to a specific screen by object name
     public void InitDataOnto(string objectName, DictStrStr dataframe)
     {
@@ -69,7 +69,7 @@ public class NavigationManager : MonoBehaviour
 
         /// Cast to the initalizer
         ICanInitalize initalizer = matchedElement.GetComponent(objectName) as ICanInitalize;
-        if (matchedElement == null)
+        if (initalizer == null)
             throw new System.Exception($"No ICanInitalize on : {objectName}. {objectName}");
 
         // initalize the data
@@ -94,6 +94,7 @@ public class NavigationManager : MonoBehaviour
         // Call Refresh
         initalizer.Refresh();
     }
+
     public void NavigatorSetAction(string objectName,string action_name, System.Action action)
     {
         // Find GameObject
@@ -117,12 +118,15 @@ public class NavigationManager : MonoBehaviour
     // Method to navigate to a specific screen by object name
     public void NavigateTo(string objectName, bool hideAll = true)
     {
+        Debug.Log($"NavigationManager.NavigateTo OBJ Name - {objectName}");
+
         if (hideAll == true)
         {
             HideAllScreens(); 
         }
         var matchedObject= FindGameObjectByName(objectName);
 
+        Debug.Log($"NavigationManager.matchedObject - {objectName}");
         var matchedElement = FindUIDocumentByName(objectName);
         if (matchedElement != null)
         {
@@ -138,6 +142,7 @@ public class NavigationManager : MonoBehaviour
 
     public void NavigateToWithRecord(string objectName,DictStrStr dataframe, bool hideAll = true)
     {
+        Debug.Log($"NavigateToWithRecord - {objectName}");
         InitDataOnto(objectName, dataframe);
         NavigateTo(objectName, hideAll);
     }

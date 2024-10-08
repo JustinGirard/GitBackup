@@ -13,14 +13,6 @@
             <ui:Label text="Target Branch" name="lbl_target_branch" />
             <ui:TextField name="Branch" value="editor_master" />
         </ui:VisualElement>
-        <ui:VisualElement name="UsernameField" style="flex-direction: column; margin-bottom: 10px;">
-            <ui:Label text="Username (optional)" name="lbl_username" />
-            <ui:TextField name="Username" value="editor_user" />
-        </ui:VisualElement>
-        <ui:VisualElement name="AccessKeyField" style="flex-direction: column; margin-bottom: 10px;">
-            <ui:Label text="Access Key" name="lbl_access_key" />
-            <ui:TextField name="AccessKey" value="48fh27ert12947" />
-        </ui:VisualElement>
         <ui:VisualElement style="position: absolute; bottom: 0; width: 100%; flex-direction: row; justify-content: flex-end; padding: 10px;">
             <ui:Button text="Cancel" name="Cancel" />
             <ui:Button text="Save" name="Save" style="margin-left: 10px;" />

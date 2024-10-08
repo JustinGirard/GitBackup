@@ -1,0 +1,25 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" xsi="http://www.w3.org/2001/XMLSchema-instance" engine="UnityEngine.UIElements" editor="UnityEditor.UIElements" noNamespaceSchemaLocation="../../../UIElementsSchema/UIElements.xsd" editor-extension-mode="False">
+    <Style src="project://database/Assets/Resources/SystemStyle.uss?fileID=7433441132597879392&amp;guid=fc40ef5de768b4108b0bf86c5b9e0dd5&amp;type=3#SystemStyle" />
+    <ui:VisualElement style="flex-grow: 1;">
+        <ui:VisualElement name="ProfileNameField" style="flex-direction: column; margin-bottom: 10px;">
+            <ui:Label text="Profile Name" name="lbl_profile_name" />
+            <ui:TextField name="ProfileName" value="default_profile" />
+        </ui:VisualElement>
+        <ui:VisualElement name="DefaultGitUserField" style="flex-direction: column; margin-bottom: 10px;">
+            <ui:Label text="Default Git User" name="lbl_default_git_user" />
+            <ui:TextField name="GitUser" value="default_git_user" />
+        </ui:VisualElement>
+        <ui:VisualElement name="DefaultGitKeyField" style="flex-direction: column; margin-bottom: 10px;">
+            <ui:Label text="Default Git Key" name="lbl_default_git_key" />
+            <ui:TextField name="GitKey" value="your_ssh_key_here" />
+        </ui:VisualElement>
+        <ui:VisualElement name="StorageLocationField" style="flex-direction: column; margin-bottom: 10px;">
+            <ui:Label text="Storage Location" name="lbl_storage_location" />
+            <ui:TextField name="StorageLocation" value="/path/to/storage" />
+        </ui:VisualElement>
+        <ui:VisualElement style="position: absolute; bottom: 0; width: 100%; flex-direction: row; justify-content: flex-end; padding: 10px;">
+            <ui:Button text="Cancel" name="Cancel" />
+            <ui:Button text="Save" name="Save" style="margin-left: 10px;" />
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

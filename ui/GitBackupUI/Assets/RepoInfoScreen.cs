@@ -52,7 +52,7 @@ public class RepoInfoScreen : MonoBehaviour, NavigationManager.ICanInitalize
 
 
         Debug.Log($"RepoInfo.InitData for {dataframe["name"]} ");
-        RecordRepoFull record = new RecordRepoFull(repoData.GetRepoInfo(dataframe["name"]));
+        RecordRepoFull record = new RecordRepoFull(repoData.GetRecord(dataframe["name"]));
         
 
         // Populate user-generated section
