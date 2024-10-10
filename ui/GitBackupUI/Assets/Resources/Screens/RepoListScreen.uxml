@@ -19,6 +19,7 @@
             <ui:Button text="View" parse-escape-sequences="true" display-tooltip-when-elided="true" name="View" class="list-repos-button" />
             <ui:Button text="Visit" parse-escape-sequences="true" display-tooltip-when-elided="true" name="Visit" class="list-repos-button" />
             <ui:Button text="Add" parse-escape-sequences="true" display-tooltip-when-elided="true" name="Add" class="list-repos-button" />
+            <ui:Button text="GHList" parse-escape-sequences="true" display-tooltip-when-elided="true" name="GHList" class="list-repos-button" />
         </ui:VisualElement>
     </ui:VisualElement>
 </ui:UXML>

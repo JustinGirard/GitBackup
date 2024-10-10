@@ -72,7 +72,7 @@ public class RepoData : MonoBehaviour
         };
         return true; // Repo already exists
     }
-    public bool DeleteRecord(string name)
+    public virtual bool DeleteRecord(string name)
     {
         if (__records.ContainsKey(name))
         {
@@ -82,13 +82,13 @@ public class RepoData : MonoBehaviour
         return true; // Repo already exists
     }
 
-    public List<string> ListRecords()
+    public virtual List<string> ListRecords()
     {
         return new List<string>(__records.Keys);
     }
 
     // Simulate getting repository info
-    public DictStrStr GetRecord(string name)
+    public virtual DictStrStr GetRecord(string name)
     {
         if (__records.ContainsKey(name))
         {

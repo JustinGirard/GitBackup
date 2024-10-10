@@ -105,7 +105,6 @@ public class TemplateListScreen : MonoBehaviour
         var navigationManager = navigatorObject.GetComponent<NavigationManager>();
 
         DictStrStr argument = new DictStrStr { };
-        Debug.Log($"RepoList sending record '{highlightedListItem}' to {targetScreen}");
         navigationManager.NavigateToWithRecord(targetScreen, argument);
     }
 
@@ -132,7 +131,6 @@ public class TemplateListScreen : MonoBehaviour
         List<DictStrStr> repoList = new List<DictStrStr>();
         foreach (var repo_name in repoNameList)
         {
-            Debug.Log("Parsing " + repo_name);
             DictStrStr reporec = datasource.GetRecord(repo_name);
             if (reporec!= null) 
                 repoList.Add(reporec);
@@ -152,10 +150,8 @@ public class TemplateListScreen : MonoBehaviour
         // Simulate adding each repo from RepoData to the list UI
         bool first = true;
 
-        Debug.Log($"Printing {this.gameObject.name}");
         foreach (var repoData in repoList)
         {
-            Debug.Log("Parsing " + repoData["name"]);
             string repoName = repoData["name"];
             //string repoStatus = repoInfo["status"];
             //string repoBranch = repoInfo["branch"];
@@ -173,8 +169,6 @@ public class TemplateListScreen : MonoBehaviour
             }
         }
     }
-
-
 
     // Method to add a repository entry to the list using the RepoListItem template
     protected virtual VisualElement AddToList(DictStrStr rec)
@@ -197,8 +191,6 @@ public class TemplateListScreen : MonoBehaviour
 
         // Store the name of the highlighted repo
         highlightedListItem = repoName;
-
-        Debug.Log($"Repo {repoName} is now highlighted.");
     }
 
 }
@@ -245,11 +237,25 @@ public class RepoListScreen : TemplateListScreen, NavigationManager.ICanInitaliz
 
     protected override void InitializeRepoData()
     {
-        Debug.Log(datasource);
         datasource.AddRepo("repo1","https://github.com/user/repo1.git", "main");
-        datasource.AddRepo("repo2","https://github.com/user/repo2.git", "develop");
-        datasource.AddRepo("repo3", "https://github.com/user/repo3.git", "feature-branch");
+        //datasource.AddRepo("repo2","https://github.com/user/repo2.git", "develop");
+        //datasource.AddRepo("repo3", "https://github.com/user/repo3.git", "feature-branch");
+        // /Users/computercomputer/justinops/propagator/datasource
 
+
+        string[] command = new string[] { "/Users/computercomputer/justinops/propagator/propenv/bin/python3","UtilGit.py","example" };
+        DictStrStr arguments =new DictStrStr {
+                                } ;
+        bool isNamedArguments = true; 
+        string workingDirectory = "/Users/computercomputer/justinops/propagator/datasource";
+        Debug.Log("--------------------Running Command:");
+        Debug.Log( ShellRun.BuildCommandArguments(command, arguments, isNamedArguments)[0]);      
+        Debug.Log( ShellRun.BuildCommandArguments(command, arguments, isNamedArguments)[1]);      
+        ShellRun.Response r = ShellRun.RunCommand( command, arguments,  isNamedArguments,  workingDirectory );
+        Debug.Log("Some output:");
+        Debug.Log(r.Output);
+        Debug.Log("Some error:");
+        Debug.Log(r.Error);
     }
 
     protected override IEnumerable<Dictionary<string, object>> GenerateNavigationActions()

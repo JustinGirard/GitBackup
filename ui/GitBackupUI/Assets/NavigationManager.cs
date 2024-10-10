@@ -118,7 +118,6 @@ public class NavigationManager : MonoBehaviour
     // Method to navigate to a specific screen by object name
     public void NavigateTo(string objectName, bool hideAll = true)
     {
-        Debug.Log($"NavigationManager.NavigateTo OBJ Name - {objectName}");
 
         if (hideAll == true)
         {
@@ -126,7 +125,6 @@ public class NavigationManager : MonoBehaviour
         }
         var matchedObject= FindGameObjectByName(objectName);
 
-        Debug.Log($"NavigationManager.matchedObject - {objectName}");
         var matchedElement = FindUIDocumentByName(objectName);
         if (matchedElement != null)
         {
@@ -142,7 +140,6 @@ public class NavigationManager : MonoBehaviour
 
     public void NavigateToWithRecord(string objectName,DictStrStr dataframe, bool hideAll = true)
     {
-        Debug.Log($"NavigateToWithRecord - {objectName}");
         InitDataOnto(objectName, dataframe);
         NavigateTo(objectName, hideAll);
     }

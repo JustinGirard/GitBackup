@@ -17,9 +17,8 @@ public class ProfileListScreen : TemplateListScreen, NavigationManager.ICanInita
 
     protected override void InitializeRepoData()
     {
-        Debug.Log(datasource);
         ProfileData profileData = (ProfileData)datasource;
-        profileData.AddProfile("Main", "justin.girard", "/some/path", "12345");
+        //profileData.AddProfile("Main", "justin.girard", "/some/path", "12345");
         // TODO Generalize to add record DirStrStr
     }
 
@@ -92,7 +91,6 @@ public class ProfileListScreen : TemplateListScreen, NavigationManager.ICanInita
 
     public void Refresh()
     {
-        Debug.Log("Calling Refresh()->Profile()");
         LoadDatasource();
         //throw new System.NotImplementedException();
     }
