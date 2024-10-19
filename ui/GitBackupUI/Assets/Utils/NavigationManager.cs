@@ -5,14 +5,11 @@ using System.Collections.Generic;
 using DictStrStr = System.Collections.Generic.Dictionary<string, string>;
 using DictTable = System.Collections.Generic.Dictionary<string, System.Collections.Generic.Dictionary<string, string>>;
 
-
-
 public class NavigationManager : MonoBehaviour
 {
     public interface ICanInitalize
     {
         public void InitData(DictStrStr dataframe);
-        public void Refresh();
         public bool SetAction(string actionLabel, System.Action action );
     }
     // Start is called before the first frame update
@@ -75,7 +72,7 @@ public class NavigationManager : MonoBehaviour
         // initalize the data
         initalizer.InitData(dataframe);
     }
-
+    /*
     public void RefreshUI(string objectName)
     {
         // Find GameObject
@@ -91,9 +88,7 @@ public class NavigationManager : MonoBehaviour
         if (matchedElement == null)
             throw new System.Exception($"No ICanInitalize on : {objectName}. {objectName}");
 
-        // Call Refresh
-        initalizer.Refresh();
-    }
+    }*/
 
     public void NavigatorSetAction(string objectName,string action_name, System.Action action)
     {
@@ -130,7 +125,7 @@ public class NavigationManager : MonoBehaviour
         {
             matchedElement.style.display = DisplayStyle.Flex;
             matchedElement.BringToFront();
-            RefreshUI(objectName);
+            //RefreshUI(objectName);
         }
         else
         {

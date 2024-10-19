@@ -2,9 +2,141 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using System.Collections.Generic;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 using DictStrStr = System.Collections.Generic.Dictionary<string, string>;
 using DictTable = System.Collections.Generic.Dictionary<string, System.Collections.Generic.Dictionary<string, string>>;
+
+
+public class JsonParser
+{
+    public static object ParseJsonObjects(string input)
+    {
+        List<object> parsedResults = new List<object>();
+        int length = input.Length;
+        bool inString = false;
+        bool escape = false;
+
+        for (int i = 0; i < length; i++)
+        {
+            char c = input[i];
+
+            if (escape)
+            {
+                escape = false;
+            }
+            else if (c == '\\')
+            {
+                escape = true;
+            }
+            else if (c == '"')
+            {
+                inString = !inString;
+            }
+            else if (!inString && (c == '{' || c == '['))
+            {
+                int endIndex = FindMatchingBrace(input, i);
+                if (endIndex != -1)
+                {
+                    int substringLength = endIndex - i + 1;
+                    string jsonSubstring = input.Substring(i, substringLength);
+                    try
+                    {
+                        JToken token = JToken.Parse(jsonSubstring);
+                        object result = ConvertJToken(token);
+                        if (result != null)
+                        {
+                            parsedResults.Add(result);
+                        }
+                    }
+                    catch (JsonReaderException)
+                    {
+                        // Ignore parsing errors
+                    }
+                    i = endIndex; // Move to the end of the current JSON substring
+                }
+            }
+        }
+
+        // If only one top-level JSON was found, return it directly; otherwise, return a list of results.
+        return parsedResults.Count == 1 ? parsedResults[0] : parsedResults;
+    }
+
+    private static int FindMatchingBrace(string input, int startIndex)
+    {
+        char openingBrace = input[startIndex];
+        char closingBrace = (openingBrace == '{') ? '}' : ']';
+        int length = input.Length;
+        bool inString = false;
+        bool escape = false;
+        int nestingLevel = 1;
+
+        for (int i = startIndex + 1; i < length; i++)
+        {
+            char c = input[i];
+
+            if (escape)
+            {
+                escape = false;
+            }
+            else if (c == '\\')
+            {
+                escape = true;
+            }
+            else if (c == '"')
+            {
+                inString = !inString;
+            }
+            else if (!inString)
+            {
+                if (c == openingBrace)
+                {
+                    nestingLevel++;
+                }
+                else if (c == closingBrace)
+                {
+                    nestingLevel--;
+                    if (nestingLevel == 0)
+                    {
+                        return i;
+                    }
+                }
+            }
+        }
+
+        return -1; // No matching closing brace/bracket found
+    }
+
+    private static object ConvertJToken(JToken token)
+    {
+        if (token.Type == JTokenType.Object)
+        {
+            var dict = new Dictionary<string, object>();
+            foreach (JProperty property in token.Children<JProperty>())
+            {
+                dict.Add(property.Name, ConvertJToken(property.Value));
+            }
+            return dict;
+        }
+        else if (token.Type == JTokenType.Array)
+        {
+            var list = new List<object>();
+            foreach (JToken item in token.Children())
+            {
+                list.Add(ConvertJToken(item));
+            }
+            return list;
+        }
+        else
+        {
+            // Return the primitive type (string, number, etc.)
+            return token.ToObject<object>();
+        }
+    }
+}
+
+
 
 public class ShellRun
 {

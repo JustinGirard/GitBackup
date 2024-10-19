@@ -21,5 +21,9 @@
             <ui:Button text="Cancel" name="Cancel" />
             <ui:Button text="Save" name="Save" style="margin-left: 10px;" />
         </ui:VisualElement>
+        <ui:VisualElement name="EncryptionPasswordField" style="flex-direction: column; margin-bottom: 10px;">
+            <ui:Label text="Encryption Password" name="lbl_encryption_password" />
+            <ui:TextField name="EncryptionPassword" value="x" />
+        </ui:VisualElement>
     </ui:VisualElement>
 </ui:UXML>

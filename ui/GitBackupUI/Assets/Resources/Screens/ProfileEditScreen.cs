@@ -8,12 +8,12 @@ using DictTable = System.Collections.Generic.Dictionary<string, System.Collectio
 
 public class ProfileEditScreen : StandardEditScreen, NavigationManager.ICanInitalize
 {
-    private RepoData repoData;
+    private StandardData repoData;
 
     protected override void Start()
     {
         base.Start();
-        repoData = navigatorObject.GetComponent<ProfileData>();
+        repoData = (StandardData)navigatorObject.GetComponent<ProfileData>();
     }
 
     protected override void OnCancel()
@@ -27,7 +27,7 @@ public class ProfileEditScreen : StandardEditScreen, NavigationManager.ICanInita
         var root = GetComponent<UIDocument>().rootVisualElement;
 
         // Retrieve form data using base method
-        var fieldNames = new List<string> { "ProfileName", "GitUser", "GitKey", "StorageLocation" };
+        var fieldNames = new List<string> { "ProfileName", "GitUser", "GitKey", "StorageLocation","EncryptionPassword" };
         var formData = GetFormData(GetComponent<UIDocument>(), fieldNames);
         foreach (var field in fieldNames)
         {
@@ -42,7 +42,7 @@ public class ProfileEditScreen : StandardEditScreen, NavigationManager.ICanInita
 
 
         // Add the repo if validation passes
-        bool addedSuccessfully = ((ProfileData)repoData).AddProfile(formData["ProfileName"], formData["GitUser"], formData["StorageLocation"], formData["GitKey"]);
+        bool addedSuccessfully = ((ProfileData)repoData).AddProfile(formData["ProfileName"], formData["GitUser"], formData["StorageLocation"], formData["GitKey"], formData["EncryptionPassword"]);
         if (!addedSuccessfully)
         {
             navigationManager.NotifyError("Failed to add repository. Please try again.");
@@ -54,27 +54,6 @@ public class ProfileEditScreen : StandardEditScreen, NavigationManager.ICanInita
     }
 
 
-    /*
-    public void InitData(Dictionary<string, string> dataframe)
-    {
-        var root = GetComponent<UIDocument>().rootVisualElement;
-        if (dataframe.ContainsKey("name"))
-        {
-            Debug.Log($"RepoInfo.InitData for {dataframe["name"]} ");
-            RecordRepoFull record = new RecordRepoFull(repoData.GetRecord(dataframe["name"]));
-            SetTextboxText(root, "Name", record.name);
-            SetTextboxText(root, "GitURL", record.url);
-            SetTextboxText(root, "Branch", record.branch);
-        }
-        else
-        {
-            SetTextboxText(root, "Name", "UNKNOWN_NAME");
-            SetTextboxText(root, "GitURL", "https://UNKNOWN_URL.COM");
-            SetTextboxText(root, "Branch", "UNKNOWN_BRANCH");
-        }
-    }     
-     
-     */
     void OnEnable()
     {
         RegisterButtonCallbacks(GetComponent<UIDocument>(), "Save", "Cancel");
@@ -103,6 +82,7 @@ public class ProfileEditScreen : StandardEditScreen, NavigationManager.ICanInita
             SetTextboxText(root, "GitUser", record["username"]);
             SetTextboxText(root, "GitKey", record["access_key"]);
             SetTextboxText(root, "StorageLocation", record["path"]);
+            SetTextboxText(root, "EncryptionPassword", record["encryption_password"]);
         }
         else
         {
@@ -110,6 +90,7 @@ public class ProfileEditScreen : StandardEditScreen, NavigationManager.ICanInita
             SetTextboxText(root, "GitUser", "New Username");
             SetTextboxText(root, "GitKey", "Access Key");
             SetTextboxText(root, "StorageLocation", "OS path");
+            SetTextboxText(root, "EncryptionPassword", "A password to save");
         }
 
 

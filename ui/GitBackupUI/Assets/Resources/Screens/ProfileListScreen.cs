@@ -4,9 +4,8 @@ using UnityEngine.UIElements;
 using DictStrStr = System.Collections.Generic.Dictionary<string, string>;
 using DictTable = System.Collections.Generic.Dictionary<string, System.Collections.Generic.Dictionary<string, string>>;
 //public class RepoListScreen : TemplateListScreen, NavigationManager.ICanInitalize
-public class ProfileListScreen : TemplateListScreen, NavigationManager.ICanInitalize
+public class ProfileListScreen : StandardListScreen//, NavigationManager.ICanInitalize
 {
-
     void Start()
     {
         var navigatorObject = GameObject.Find("Navigator");
@@ -14,12 +13,9 @@ public class ProfileListScreen : TemplateListScreen, NavigationManager.ICanInita
         listContainerId = "profile_list_items";
         BaseStart();
     }
-
-    protected override void InitializeRepoData()
+    void Update()
     {
-        ProfileData profileData = (ProfileData)datasource;
-        //profileData.AddProfile("Main", "justin.girard", "/some/path", "12345");
-        // TODO Generalize to add record DirStrStr
+        BaseUpdate();
     }
 
     protected override IEnumerable<Dictionary<string, object>> GenerateNavigationActions()
@@ -43,11 +39,10 @@ public class ProfileListScreen : TemplateListScreen, NavigationManager.ICanInita
 
     void OnEnable()
     {
+        RegisterEvents();
         RegisterStandardEvents();
-        RegisterDelete();
-
     }
-    void RegisterDelete()
+    void RegisterEvents()
     {
         /// Special Delete Event
         var navigatorObject = GameObject.Find("Navigator");
@@ -55,16 +50,26 @@ public class ProfileListScreen : TemplateListScreen, NavigationManager.ICanInita
         var root = GetComponent<UIDocument>().rootVisualElement;
         var navigateElement = root.Q<Button>("Delete");
         navigateElement.RegisterCallback<ClickEvent>(DeleteConfirm);
+        navigateElement = root.Q<Button>("Open");
+        navigateElement.RegisterCallback<ClickEvent>(EvtSelectRecord);
+    }
 
+    void EvtSelectRecord(ClickEvent evt)
+    {
+        string selectedProfileName = GetHighlightedItem();
+        var navigatorObject = GameObject.Find("Navigator");
+        var appState = navigatorObject.GetComponent<ApplicationState>();
+        appState.Set("selected_profile",selectedProfileName);
+        string selectedProfile = (string)appState.Get("selected_profile");
     }
 
     void DeleteConfirm(ClickEvent evt)
     {
         void DoDelete()
         {
-            Debug.Log($"Doing Delete {highlightedListItem}");
-            datasource.DeleteRecord(highlightedListItem);
-            LoadDatasource();
+            Debug.Log($"Doing Delete {GetHighlightedItem()}");
+            datasource.DeleteRecord(GetHighlightedItem());
+            //LoadDatasource();
         }
 
         void DoCancel()
@@ -76,24 +81,6 @@ public class ProfileListScreen : TemplateListScreen, NavigationManager.ICanInita
         navigationManager.NotifyConfirm("Are you sure you want to delete?", DoDelete, DoCancel);
     }
 
-
-    //  NavigationManager.ICanInitalize
-    public bool SetAction(string actionLabel, System.Action action)
-    {
-        return false;
-    }
-
-
-    public void InitData(Dictionary<string, string> dataframe)
-    {
-        //throw new System.NotImplementedException();
-    }
-
-    public void Refresh()
-    {
-        LoadDatasource();
-        //throw new System.NotImplementedException();
-    }
 
     protected override VisualElement AddToList(DictStrStr rec)
     {

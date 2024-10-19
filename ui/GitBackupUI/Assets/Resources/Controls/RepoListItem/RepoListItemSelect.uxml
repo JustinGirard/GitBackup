@@ -1,0 +1,6 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" editor-extension-mode="False">
+    <ui:VisualElement name="VisualElement" style="flex-direction: row; justify-content: space-between; align-items: center; padding: 5px 0; width: 302px; max-width: 302px; min-width: 302px;">
+        <ui:Label name="repo_name" text="Repository Name" style="flex-grow: 1; width: 127px; max-width: 127px; min-width: 127px;" />
+        <ui:Label name="repo_branch" text="master" style="width: 80px; text-align: right; margin-right: 10px;" />
+    </ui:VisualElement>
+</ui:UXML>

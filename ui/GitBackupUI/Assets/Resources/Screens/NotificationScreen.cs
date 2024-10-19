@@ -35,13 +35,13 @@ public class NotificationScreen : MonoBehaviour, NavigationManager.ICanInitalize
 
         if (record.ContainsKey("message"))
         {
-            Debug.Log("Got Message");
-            Debug.Log(record["message"]);
+            //Debug.Log("Got Message");
+            //Debug.Log(record["message"]);
             ele.text = record["message"];
         }
         else
            Debug.Log("No Message");
-        Debug.Log("FINISHING");
+        //Debug.Log("FINISHING");
         /*
         btnOk.RegisterCallback<ClickEvent>(null);
         btnCancel.RegisterCallback<ClickEvent>(null);
@@ -61,9 +61,7 @@ public class NotificationScreen : MonoBehaviour, NavigationManager.ICanInitalize
         newBtnCancel.text = btnCancel.text;
         cancelParent.Insert(cancelParent.IndexOf(btnCancel), newBtnCancel); // Insert new button in the same place
         cancelParent.Remove(btnCancel); // Remove the old button
-
-
-        Debug.Log("FINISHED");
+        //Debug.Log("FINISHED");
 
     }
     public void DoOK(ClickEvent evt, System.Action action) {

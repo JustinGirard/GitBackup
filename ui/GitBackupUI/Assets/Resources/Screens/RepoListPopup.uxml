@@ -1,0 +1,24 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" xsi="http://www.w3.org/2001/XMLSchema-instance" noNamespaceSchemaLocation="UIElementsSchema/UIElements.xsd" engine="UnityEngine.UIElements" editor="UnityEditor.UIElements" editor-extension-mode="False">
+    <ui:Template name="RepoListItemSelect" src="project://database/Assets/Resources/Controls/RepoListItem/RepoListItemSelect.uxml?fileID=9197481963319205126&amp;guid=ecb71e1405cd14a8aaf5e4769af219bc&amp;type=3#RepoListItemSelect" />
+    <Style src="project://database/Assets/Resources/SystemStyle.uss?fileID=7433441132597879392&amp;guid=fc40ef5de768b4108b0bf86c5b9e0dd5&amp;type=3#SystemStyle" />
+    <ui:VisualElement name="repoSelectionPopup" style="position: relative; top: 1%; left: 1%; width: 325px; height: 400px; margin-left: 0; margin-top: 0; background-color: white; border-radius: 10px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2); flex-direction: column; justify-content: flex-start; align-items: flex-start; padding: 10px; max-width: 325px; max-height: 400px; align-self: flex-start; margin-right: 0; margin-bottom: 0;">
+        <ui:Label name="Title" text="Repo Selection" style="font-size: 18px; font-weight: bold; text-align: center; margin-bottom: 10px; -unity-text-align: middle-left;" />
+        <ui:ScrollView name="RepoList" horizontal-scroller-visibility="Hidden" style="flex-grow: 1; width: 100%; margin-bottom: 10px;">
+            <ui:Instance template="RepoListItemSelect" name="repo_name" />
+            <ui:Instance template="RepoListItemSelect" name="repo_name" />
+            <ui:Instance template="RepoListItemSelect" name="repo_name" />
+            <ui:Instance template="RepoListItemSelect" name="repo_name" />
+            <ui:Instance template="RepoListItemSelect" name="repo_name" />
+            <ui:Instance template="RepoListItemSelect" name="repo_name" />
+            <ui:Instance template="RepoListItemSelect" name="repo_name" />
+        </ui:ScrollView>
+        <ui:VisualElement style="flex-direction: row; justify-content: space-between; align-items: center; width: 100%; margin-bottom: 10px;">
+            <ui:Button text="Select All" name="SelectAllButton" style="width: 30%;" />
+            <ui:Label name="SelectedCount" text="0 Selected" style="width: 65%; text-align: right;" />
+        </ui:VisualElement>
+        <ui:VisualElement style="flex-direction: row; justify-content: space-between; width: 100%; margin-top: 10px;">
+            <ui:Button text="Cancel" name="Cancel" style="width: 45%;" />
+            <ui:Button text="Download" name="Download" style="width: 45%;" />
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>
