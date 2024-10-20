@@ -1,0 +1,5 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements">
+    <ui:VisualElement name="StatusBar" style="flex-grow: 1; height: 25px; max-height: 25px;">
+        <ui:Button text="Jobs" parse-escape-sequences="true" display-tooltip-when-elided="true" name="Jobs" class="list-repos-button" style="height: 10px;" />
+    </ui:VisualElement>
+</ui:UXML>

@@ -1,0 +1,14 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" xsi="http://www.w3.org/2001/XMLSchema-instance" engine="UnityEngine.UIElements" editor="UnityEditor.UIElements" noNamespaceSchemaLocation="../../../UIElementsSchema/UIElements.xsd" editor-extension-mode="False">
+    <ui:Template name="JobListItem" src="project://database/Assets/Resources/Controls/RepoListItem/JobListItem.uxml?fileID=9197481963319205126&amp;guid=3ef5190b8ead24860a1716aff0b257ff&amp;type=3#JobListItem" />
+    <Style src="project://database/Assets/Resources/SystemStyle.uss?fileID=7433441132597879392&amp;guid=fc40ef5de768b4108b0bf86c5b9e0dd5&amp;type=3#SystemStyle" />
+    <ui:VisualElement name="VisualElement" style="flex-grow: 1; background-color: rgb(200, 200, 200);">
+        <ui:Label tabindex="-1" text="Active Jobs" parse-escape-sequences="true" display-tooltip-when-elided="true" style="background-color: rgba(171, 171, 171, 0);" />
+        <ui:VisualElement name="job_list_items" style="flex-grow: 1; height: 205px;">
+            <ui:Instance template="JobListItem" name="JobListItem" style="height: 29px;" />
+        </ui:VisualElement>
+        <ui:VisualElement style="flex-grow: 1; flex-direction: row; height: 101px; position: absolute; bottom: 0;">
+            <ui:Button text="Delete" parse-escape-sequences="true" display-tooltip-when-elided="true" name="Delete" class="list-repos-button" />
+            <ui:Button text="Close" parse-escape-sequences="true" display-tooltip-when-elided="true" name="Close" class="list-repos-button" />
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

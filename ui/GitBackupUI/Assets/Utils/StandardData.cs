@@ -115,9 +115,9 @@ public class StandardData : MonoBehaviour
         AfterSaveData();     
         return true;
     }
-    protected bool SetRecord(DictStrStr rec)
+    protected bool SetRecord(DictStrStr rec,string keyfield="name" )
     {
-        string name = rec["name"];
+        string name = rec[keyfield];
         __records[name] = rec;
         UpdateDataRevision(2);   
         AfterSaveData();     

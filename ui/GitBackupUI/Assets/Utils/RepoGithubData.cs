@@ -90,7 +90,7 @@ public class RepoGithubData : StandardData
 
         //ShellRun.Response r = ShellRun.RunCommand( command, arguments,  isNamedArguments,  workingDirectory );
 
-        Func<Task> tsk = CreateShellTask(
+        Func<Task> tsk = JobUtils.CreateShellTask(
             jobName: $"list_github_repos",
             command: command,
             arguments: arguments,
@@ -338,105 +338,7 @@ public class RepoGithubData : StandardData
     }
     */
 
-private Func<Task> CreateShellTask(
-    string jobName,
-    string[] command,
-    DictStrStr arguments,
-    bool isNamedArguments,
-    string workingDirectory,
-    Action<ShellRun.Response> onSuccess,
-    Action<ShellRun.Response> onFailure,
-    bool debugMode = false)
-{
-    Func<Task> asyncTaskFunction = async () =>
-    {
-        try
-        {
-            if (debugMode)
-            {
-                // Log on the main thread using a dispatcher
-                ApplicationState.Instance().Enqueue(() => Debug.Log("INNER TEMP Running a command " + command[0]));
-            }
 
-            ShellRun.Response response = ShellRun.RunCommand(command, arguments, isNamedArguments: isNamedArguments, workingDirectory);
-            if (debugMode)
-            {
-                // Log on the main thread using a dispatcher
-                ApplicationState.Instance().Enqueue(() => Debug.Log("INNER TEMP RAN a command " + command[0]));
-            }
-
-            if (!string.IsNullOrEmpty(response.Error))
-            {
-                if (debugMode)
-                {
-                    ApplicationState.Instance().Enqueue(() => Debug.Log("INNER TEMP Running a command FAIL 1"));
-                }
-                ApplicationState.Instance().Enqueue(() => onFailure.Invoke(response));
-                return;
-            }
-
-            if (debugMode)
-            {
-                ApplicationState.Instance().Enqueue(() => Debug.Log("INNER TEMP Running a command SUCCESS"));
-            }
-            ApplicationState.Instance().Enqueue(() => onSuccess?.Invoke(response));
-        }
-        catch (Exception ex)
-        {
-            if (debugMode)
-            {
-                ApplicationState.Instance().Enqueue(() => Debug.Log("*********Fatal Exception running command:" + ex.Message + " " + ex.StackTrace));
-            }
-
-            ShellRun.Response resp = new ShellRun.Response
-            {
-                Output = "",
-                Error = $"An error occurred during shell execution: {ex.Message}: {ex.StackTrace}"
-            };
-            ApplicationState.Instance().Enqueue(() => onFailure.Invoke(resp));
-        }
-    };
-    return asyncTaskFunction;
-}
-
-
-   private Func<Task> CreateShellTaskOLD(
-        string jobName,
-        string[] command,
-        DictStrStr arguments,
-        bool isNamedArguments,
-        string workingDirectory,
-        Action<ShellRun.Response> onSuccess,
-        Action<ShellRun.Response> onFailure,
-        bool debugMode = false)
-    {
-        Func<Task> asyncTaskFunction = async () =>
-        {
-            try
-            {
-                if (debugMode == true) Debug.Log("INNER TEMP Running a command "+command[0]);
-                ShellRun.Response response = ShellRun.RunCommand(command, arguments, isNamedArguments: isNamedArguments, workingDirectory);
-                if (!string.IsNullOrEmpty(response.Error))
-                {
-                    if (debugMode == true) Debug.Log("INNER TEMP Running a command FAIL 1");
-                    onFailure.Invoke(response);
-                }
-                if (debugMode == true) Debug.Log("INNER TEMP Running a command SUCCESS");
-                onSuccess?.Invoke(response);
-            }
-            catch (Exception ex)
-            {
-                if (debugMode == true) Debug.Log("*********Fatal Exception running command:"+ex.Message+" "+ex.StackTrace);
-                if (debugMode == true) Debug.Log("TEMP Running a command FAIL 2");
-                ShellRun.Response resp = new ShellRun.Response();
-                resp.Output = "";
-                resp.Error = $"An error occurred during shell execution: {ex.Message}: {ex.StackTrace}";
-                onFailure.Invoke(resp);
-            }
-        };
-        return  asyncTaskFunction;
-        //Example basic usage Task.Run(() => asyncTaskFunction());
-    }
 
     // Example usage for downloading a repository
     private void NonBlockingDownloadRepo(DictStrStr repoData)
@@ -479,7 +381,7 @@ private Func<Task> CreateShellTask(
 
         // Call the generalized shell execution method
         Debug.Log($"{this.ToString()}: TEMP OUTER Starting Shell Download {repoData["name"]}");
-        Func<Task> tsk = CreateShellTask(
+        Func<Task> tsk = JobUtils.CreateShellTask(
             jobName: $"DownloadRepo_{repoData["name"]}",
             command: command,
             arguments: arguments,

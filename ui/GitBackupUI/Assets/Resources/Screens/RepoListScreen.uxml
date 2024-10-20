@@ -1,7 +1,9 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" xsi="http://www.w3.org/2001/XMLSchema-instance" engine="UnityEngine.UIElements" editor="UnityEditor.UIElements" noNamespaceSchemaLocation="../../../UIElementsSchema/UIElements.xsd" editor-extension-mode="False">
     <ui:Template name="RepoListItem" src="project://database/Assets/Resources/Controls/RepoListItem/RepoListItem.uxml?fileID=9197481963319205126&amp;guid=d4b88790be6614bb9a66f3ba6e144207&amp;type=3#RepoListItem" />
+    <ui:Template name="StatusBar" src="project://database/Assets/StatusBar.uxml?fileID=9197481963319205126&amp;guid=063fb282f59444c18b4fefad4cf6c8e6&amp;type=3#StatusBar" />
     <Style src="project://database/Assets/Resources/SystemStyle.uss?fileID=7433441132597879392&amp;guid=fc40ef5de768b4108b0bf86c5b9e0dd5&amp;type=3#SystemStyle" />
     <ui:VisualElement name="VisualElement" style="flex-grow: 1;">
+        <ui:Instance template="StatusBar" name="StatusBar" />
         <ui:Label tabindex="-1" text="Repository List" parse-escape-sequences="true" display-tooltip-when-elided="true" />
         <ui:VisualElement name="repolist-tab-list" class="tab-label-container" style="flex-grow: 1; flex-direction: row; height: 10px; width: 348px; max-height: 32px;">
             <ui:Label tabindex="-1" text="Repos" parse-escape-sequences="true" display-tooltip-when-elided="true" class="tab-label" style="width: 69px; height: 22px; color: rgb(0, 0, 0);" />

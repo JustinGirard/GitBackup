@@ -2,6 +2,7 @@
 using UnityEngine;
 using System;
 using System.Collections.Generic;
+using System.Collections.Concurrent;
 
 public class ApplicationState : MonoBehaviour
 {
@@ -112,6 +113,7 @@ public class ApplicationState : MonoBehaviour
         }
     }
 
+    /*
     private static readonly Queue<Action> executionQueue = new Queue<Action>();
 
     public void Update()
@@ -120,7 +122,6 @@ public class ApplicationState : MonoBehaviour
         {
             while (executionQueue.Count > 0)
             {
-                Debug.Log("Dispatching method on main branch");
                 executionQueue.Dequeue()?.Invoke();
             }
         }
@@ -136,6 +137,21 @@ public class ApplicationState : MonoBehaviour
         {
             executionQueue.Enqueue(action);
         }
+    }*/
+
+    private readonly ConcurrentQueue<Action> _actionQueue = new ConcurrentQueue<Action>();
+
+    public void Enqueue(Action action)
+    {
+        _actionQueue.Enqueue(action);
     }
+
+    void Update()
+    {
+        while (_actionQueue.TryDequeue(out var action))
+        {
+            action?.Invoke();
+        }
+    }    
 
 }

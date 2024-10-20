@@ -8,6 +8,10 @@ using Newtonsoft.Json.Linq;
 using DictStrStr = System.Collections.Generic.Dictionary<string, string>;
 using DictTable = System.Collections.Generic.Dictionary<string, System.Collections.Generic.Dictionary<string, string>>;
 
+using System.Threading.Tasks;
+
+using UnityEngine;
+
 
 public class JsonParser
 {
@@ -140,6 +144,9 @@ public class JsonParser
 
 public class ShellRun
 {
+
+
+
     public class Response
     {
         public string Output { get; set; }
@@ -273,6 +280,38 @@ public class ShellRun
 
         return response;
     }
+
+
+public static Process StartProcess(string[] command, DictStrStr arguments, bool isNamedArguments = false, string workingDirectory = null)
+{
+    Process process = new Process();
+
+    try
+    {
+        string[] commandAndArgs = BuildCommandArguments(command, arguments, isNamedArguments);
+        process.StartInfo.FileName = commandAndArgs[0];
+        process.StartInfo.Arguments = commandAndArgs[1];
+        process.StartInfo.RedirectStandardOutput = true;
+        process.StartInfo.RedirectStandardError = true;
+        process.StartInfo.UseShellExecute = false;
+        process.StartInfo.CreateNoWindow = true;
+
+        if (workingDirectory != null)
+        {
+            process.StartInfo.WorkingDirectory = workingDirectory;
+        }
+
+        process.Start();
+    }
+    catch (Exception ex)
+    {
+        process.Dispose();
+        throw new Exception($"Exception occurred while starting process: {ex.Message}");
+    }
+
+    return process;
+}
+
 
    
     public static string[] BuildCommandArguments(string[] commands, Dictionary<string, string> arguments, bool isNamedArguments)

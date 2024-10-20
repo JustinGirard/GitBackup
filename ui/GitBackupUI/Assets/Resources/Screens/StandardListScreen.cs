@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using UnityEditor.MemoryProfiler;
 using UnityEditor.UI;
 using UnityEngine;
 using UnityEngine.UIElements;
@@ -64,25 +65,52 @@ public class StandardListScreen : MonoBehaviour
 
         foreach (var action in GenerateNavigationActions())
         {
-            var buttonName = (string)action["buttonName"];
-            if (buttonName.Length == 0)
-                throw new System.Exception("buttonName was empty");
-            var navigateElement = root.Q<Button>(buttonName);
+            if (action != null)
+            {
+                var buttonName = (string)action["buttonName"];
+                if (buttonName.Length == 0)
+                    throw new System.Exception("buttonName was empty");
+                var navigateElement = root.Q<Button>(buttonName);
+                if (navigateElement == null)
+                    throw new System.Exception("navigateElement was empty");
+
+                var destinationScreen = (string)action["destinationScreen"];
+                if (destinationScreen.Length == 0)
+                    throw new System.Exception("destinationScreen was empty");
+                bool passRecord = (bool)action["passRecord"];
+
+
+                if (passRecord)
+                    navigateElement.RegisterCallback<ClickEvent>(evt => NavigateToWithRecord(evt, destinationScreen));
+                else
+                    navigateElement.RegisterCallback<ClickEvent>(evt => NavigateToWithBlankRecord(evt, destinationScreen));
+            }
+        }
+        RegisterStatusBarEvents();
+    }
+
+    protected void RegisterStatusBarEvents()
+    {
+        var navigatorObject = GameObject.Find("Navigator");
+        var navigationManager = navigatorObject.GetComponent<NavigationManager>();
+        var root = GetComponent<UIDocument>().rootVisualElement;
+
+        // Add Status Bar Control
+        var statusBarName = "StatusBar";
+        if (statusBarName.Length == 0)
+            throw new System.Exception("StatusBarName was empty");
+        var barElement = root.Q<VisualElement>(statusBarName);
+        if (barElement != null)
+        {
+            var navigateElement = barElement.Q<Button>("Jobs");
             if (navigateElement == null)
-                throw new System.Exception("navigateElement was empty");
+                throw new System.Exception("Could not find Jobs button");
+            
+            navigateElement.RegisterCallback<ClickEvent>(evt => NavigateTo("JobListScreen",hideAll:false));
 
-            var destinationScreen = (string)action["destinationScreen"];
-            if (destinationScreen.Length == 0)
-                throw new System.Exception("destinationScreen was empty");
-            bool passRecord = (bool)action["passRecord"];
-
-
-            if (passRecord)
-                navigateElement.RegisterCallback<ClickEvent>(evt => NavigateToWithRecord(evt, destinationScreen));
-            else
-                navigateElement.RegisterCallback<ClickEvent>(evt => NavigateToWithBlankRecord(evt, destinationScreen));
         }
     }
+
 
     protected void NavigateToWithRecord(ClickEvent evt, string targetScreen)
     {
@@ -109,12 +137,28 @@ public class StandardListScreen : MonoBehaviour
         navigationManager.NavigateToWithRecord(targetScreen, argument);
     }
 
+
+    public void NavigateTo(string targetScreen, bool hideAll = true)
+    {
+        if (targetScreen.Length == 0)
+            throw new System.Exception("No Target Screen selected");
+
+        var navigatorObject = GameObject.Find("Navigator");
+        var navigationManager = navigatorObject.GetComponent<NavigationManager>();
+        navigationManager.NavigateTo(targetScreen, hideAll);
+    }
+
   
     private int __dataRevision = 0;
 
     // Method to load repositories and display them in the list
     protected void LoadDatasource()
     {
+        if (datasource == null)
+        {
+            Debug.LogError($"{this.name}: Missing Required Datasource");
+            return;
+        }
         int dataRevision = datasource.GetDataRevision();
         if (__dataRevision == dataRevision)
         {
