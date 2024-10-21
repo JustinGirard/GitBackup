@@ -3,6 +3,15 @@
     <Style src="project://database/Assets/Resources/SystemStyle.uss?fileID=7433441132597879392&amp;guid=fc40ef5de768b4108b0bf86c5b9e0dd5&amp;type=3#SystemStyle" />
     <ui:VisualElement name="VisualElement" style="flex-grow: 1; background-color: rgb(200, 200, 200);">
         <ui:Label tabindex="-1" text="Active Jobs" parse-escape-sequences="true" display-tooltip-when-elided="true" style="background-color: rgba(171, 171, 171, 0);" />
+        <ui:VisualElement name="Titles" style="height: 29px;">
+            <Style src="project://database/Assets/Resources/SystemStyle.uss?fileID=7433441132597879392&amp;guid=fc40ef5de768b4108b0bf86c5b9e0dd5&amp;type=3#SystemStyle" />
+            <ui:VisualElement class="repo-list-item" style="flex-grow: 1; flex-direction: row; max-height: 32px; height: 100px;">
+                <ui:Label tabindex="-1" text="Name " parse-escape-sequences="true" display-tooltip-when-elided="true" name="job_name" class="repo-list-item-label" style="width: 73px; height: 29px; overflow: hidden;" />
+                <ui:Label tabindex="-1" text="Status" parse-escape-sequences="true" display-tooltip-when-elided="true" name="job_status" class="repo-list-item-label" style="width: 73px; height: 29px; overflow: hidden;" />
+                <ui:Label tabindex="-1" text="Running" parse-escape-sequences="true" display-tooltip-when-elided="true" name="job_running" class="repo-list-item-label" style="width: 73px; height: 29px; overflow: hidden;" />
+                <ui:Label tabindex="-1" text="ID" parse-escape-sequences="true" display-tooltip-when-elided="true" name="job_id" class="repo-list-item-label" style="width: 73px; height: 29px; overflow: hidden;" />
+            </ui:VisualElement>
+        </ui:VisualElement>
         <ui:VisualElement name="job_list_items" style="flex-grow: 1; height: 205px;">
             <ui:Instance template="JobListItem" name="JobListItem" style="height: 29px;" />
         </ui:VisualElement>

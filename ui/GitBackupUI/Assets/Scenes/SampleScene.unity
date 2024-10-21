@@ -286,6 +286,38 @@ Transform:
   - {fileID: 1463881577}
   m_Father: {fileID: 1420471473}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &175635501
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 175635502}
+  m_Layer: 0
+  m_Name: Job
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &175635502
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 175635501}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 1382950075}
+  m_Father: {fileID: 1420471473}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &592263537
 GameObject:
   m_ObjectHideFlags: 0
@@ -733,7 +765,7 @@ RectTransform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 2101509129}
+  m_Father: {fileID: 175635502}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 0, y: 0}
@@ -821,6 +853,7 @@ Transform:
   - {fileID: 2101509129}
   - {fileID: 153596235}
   - {fileID: 1918447548}
+  - {fileID: 175635502}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &1420471474
@@ -1205,7 +1238,6 @@ Transform:
   - {fileID: 1759764816}
   - {fileID: 2081266014}
   - {fileID: 7741968123353061994}
-  - {fileID: 1382950075}
   - {fileID: 114198249}
   m_Father: {fileID: 1420471473}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}

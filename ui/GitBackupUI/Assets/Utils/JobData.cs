@@ -299,12 +299,13 @@ public class JobUtils
     public static Func<Task> CreateJobifiedFunc(
         string id,
         string jobName,
-        Func<Task> taskFunc,
+        Func<Task<object>> taskFunc,
         Func<bool> isRunning,
         Func<bool> cancel,
-        Action onSuccess,
-        Action<Exception> onFailure,
-        bool debugMode = false)
+        Action<object> onSuccess,
+        Action<object> onFailure,
+        bool debugMode)
+
     {
         Func<Task> asyncTaskFunction = async () =>
         {
@@ -347,10 +348,9 @@ public class JobUtils
                 }
 
                 // Update the job status to "running"
-                jobData.UpdateJobStatus(jobId, "starting");
-                await taskFunc();
-                // Update the job status to "finished"
-                //jobData.UpdateJobStatus(jobId, "finished");
+                jobData.UpdateJobStatus(jobId, "started");
+                object result = await taskFunc();
+                jobData.UpdateJobStatus(jobId, "finishing");
 
                 if (debugMode)
                 {
@@ -358,7 +358,8 @@ public class JobUtils
                 }
 
                 // Invoke the success callback
-                RunMainThread(() => onSuccess?.Invoke());
+                RunMainThread(() => onSuccess?.Invoke(result));
+                jobData.UpdateJobStatus(jobId, "finished");
             }
             catch (Exception ex)
             {
@@ -368,17 +369,18 @@ public class JobUtils
                 }
 
                 // Update the job status to "failed"
-                jobData.UpdateJobStatus(jobId, "failed");
+                //jobData.UpdateJobStatus(jobId, "failed");
 
                 // Invoke the failure callback
                 RunMainThread(() => onFailure?.Invoke(ex));
+                jobData.UpdateJobStatus(jobId, "failed");
             }
         };
 
         return asyncTaskFunction;
     }
     
-
+    /*
     public static Func<Task> CreateJobifiedShellTask(
         string jobName,
         string[] command,
@@ -537,7 +539,87 @@ public class JobUtils
             }
         };
         return asyncTaskFunction;
-    }
+    }*/
+
+public static Func<Task> CreateJobifiedShellTask(
+    string jobName,
+    string[] command,
+    DictStrStr arguments,
+    bool isNamedArguments,
+    string workingDirectory,
+    Action<object> onSuccess,
+    Action<object> onFailure,
+    bool debugMode)
+{
+    ShellRun.Response response = new ShellRun.Response();
+    Process process = null;
+    Func<Task<object>> shellTaskFunc = async () =>
+    {
+        try
+        {
+            // Start the process using ShellRun.StartProcess
+            process = ShellRun.StartProcess(command, arguments, isNamedArguments, workingDirectory);
+            Task<string> outputTask = process.StandardOutput.ReadToEndAsync();
+            Task<string> errorTask = process.StandardError.ReadToEndAsync();
+            await Task.Run(() => process.WaitForExit());
+            response.Output = await outputTask;
+            response.Error = await errorTask;
+
+            if (!string.IsNullOrEmpty(response.Error) || string.IsNullOrEmpty(response.Output))
+                throw new System.Exception (response.Error);
+            
+            return (object)response.Output;
+
+        }
+        finally
+        {
+            process?.Dispose();
+        }
+    };
+
+    // Define the isRunning and cancel functions for the JobHandle
+    Func<bool> isRunning = () =>
+    {
+        if (process == null)
+            return false;
+        try
+        {
+            return !process.HasExited;
+        }
+        catch
+        {
+            return false;
+        }
+    };
+
+    Func<bool> cancel = () =>
+    {
+        if (process == null)
+            return false;
+        try
+        {
+            process.Kill();
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
+    };
+
+
+    return CreateJobifiedFunc(
+        id: null, // Generate a new ID inside CreateJobifiedFunc
+        jobName: jobName,
+        taskFunc: shellTaskFunc,
+        isRunning: isRunning,
+        cancel: cancel,
+        onSuccess: onSuccess,
+        onFailure: onFailure,
+        debugMode:debugMode
+    );
+}
+
 }
 
 
@@ -616,14 +698,16 @@ public class JobData : StandardData
         __instance = this;
     }
     void Start(){
-
-        StartExampleLongRunningTask("finish",10);
-        StartExampleLongRunningTask("cancel",1000);
-        StartExampleLongRunningTask("run",1000);
+        /*
+        StartExampleLongRunningTask("finish",10,100);
+        StartExampleLongRunningTask("cancel",1000,2000);
+        StartExampleLongRunningTask("run",1000,2000);
+        StartExampleLongRunningTask("crash",1000,10);
         Task.Delay(2000); // Wait for 1 second
         Debug.Log("Cancelling Result");
         bool result = CancelJob("cancel");
         Debug.Log($"Cancel Result {result}");
+        */
     }
     private static readonly Mutex _mutex = new Mutex();
     public static JobData Instance()
@@ -639,48 +723,39 @@ public class JobData : StandardData
         _mutex.ReleaseMutex();
     }
 
-    void StartExampleLongRunningTask(string id,int seconds)
+    void StartExampleLongRunningTask(string id,int seconds, int exception_seconds)
     {
         bool procDoCancel = false;
         int procCount = 0;
         DateTime lastHeartbeat = DateTime.UtcNow;
         TaskCompletionSource<bool> taskStarted = new TaskCompletionSource<bool>();
         // Define the task function
-        Func<Task> longRunningTask = async () =>
+        Func<Task<object>> longRunningTask = async () =>
         {
-            try
+            taskStarted.SetResult(true);                
+            for (int i = 0; i < seconds; i++)
             {
-                taskStarted.SetResult(true);                
-                // Simulate a long-running operation
-                for (int i = 0; i < seconds; i++)
-                {
-                    procCount = i;
-                    int internali = i;
-                    string internalid = id;
-                    ApplicationState.Instance().Enqueue(() => Debug.Log($"{internalid} is at {internali.ToString()}"));
-                    // Update the heartbeat timestamp
-                    lastHeartbeat = DateTime.UtcNow;
+                procCount = i;
+                int internali = i;
+                string internalid = id;
+                ApplicationState.Instance().Enqueue(() => Debug.Log($"{internalid} is at {internali.ToString()}"));
 
-                    if (procDoCancel)
-                    {
-                        break;
-                    }
+                // Update the heartbeat timestamp
+                lastHeartbeat = DateTime.UtcNow;
 
-                    await Task.Delay(1000); // Wait for 1 second
-                }
+                if (procDoCancel)
+                    break;
+                if (i > exception_seconds)
+                    throw new System.Exception("I failed badly");
+                await Task.Delay(1000); // Wait for 1 second
+                
             }
-            catch (Exception ex)
-            {
-                // Handle exceptions if necessary
-                Debug.LogError($"Exception in longRunningTask: {ex.Message}");
-            }
+            return "id_finished";
         };
 
-        // Function to determine if the task is still running based on the heartbeat
         Func<bool> isRunning = () =>
         {
             TimeSpan timeSinceLastHeartbeat = DateTime.UtcNow - lastHeartbeat;
-            // If the time since the last heartbeat is less than 2 seconds, assume the task is running
             return timeSinceLastHeartbeat.TotalSeconds < 2;
         };
 
@@ -690,14 +765,12 @@ public class JobData : StandardData
             return true;
         };
 
-        // Define success and failure handlers
-        Action onSuccess = () => Debug.Log("Long-running task completed successfully.");
-        Action<Exception> onFailure = (ex) => Debug.LogError($"Long-running task failed: {ex.Message}");
+        Action<object> onSuccess = (object obj) => Debug.Log("Long-running task completed successfully.");
+        Action<object> onFailure = (object obj) => Debug.LogError($"Long-running task failed: ");
 
-        // Create the jobified function
         Func<Task> jobifiedTask = JobUtils.CreateJobifiedFunc(
             id:id,
-            jobName: "LongRunningTask",
+            jobName: "LongTask",
             taskFunc: longRunningTask,
             isRunning: isRunning,
             cancel: cancel,
@@ -706,7 +779,6 @@ public class JobData : StandardData
             debugMode: true
         );
 
-        // Start the task
         Task.Run(jobifiedTask);
         taskStarted.Task.Wait(5000);
     }
@@ -752,19 +824,13 @@ public class JobData : StandardData
                 bool isRunning = IsJobRunning(id);
                 string status = GetRecordField(id,"status");
                 // Update the job status accordingly
-                if (isRunning && status != "cancelling")
+                if (isRunning )
                 {
-                    UpdateJobStatus(id, "running");
+                    UpdateJobRunning(id, "true");
                 }
-                else if (!isRunning && status == "cancelling")
+                else
                 {
-                    // If not running, mark as "finished" (or other statuses if needed)
-                    UpdateJobStatus(id, "cancelled");
-                }
-                else 
-                {
-                    // If not running, mark as "finished" (or other statuses if needed)
-                    UpdateJobStatus(id, "finished");
+                    UpdateJobRunning(id, "false");
                 }
             }
         }
@@ -813,6 +879,7 @@ public class JobData : StandardData
                 { "id", id },
                 { "name", name },
                 { "status", status },
+                { "running", "false" },
                 { "stdout", "" },
                 { "stderr", "" }
             };
@@ -830,22 +897,27 @@ public class JobData : StandardData
     // Update the status of a job
     public bool UpdateJobStatus(string id, string status)
     {
+        return UpdateJobField(id,"status",status);
+    }
+    public bool UpdateJobRunning(string id, string status)
+    {
+        return UpdateJobField(id,"running",status);
+    }
+    public bool UpdateJobField(string id, string field, string status)
+    {
         LockReserve();
         try
         {      
-
             if (!ContainsRecord(id))
                 return false;
-
-            SetRecordField(id, "status", status);
-            return true;
+            return SetRecordField(id, field, status);
         }
         finally
         {
             LockRelease();
         }
 
-    }
+    }    
 
     // Cancel a job and update its status
     public bool CancelJob(string id)

@@ -3,6 +3,7 @@
     <ui:VisualElement class="repo-list-item" style="flex-grow: 1; flex-direction: row; max-height: 32px; height: 100px;">
         <ui:Label tabindex="-1" text="Name " parse-escape-sequences="true" display-tooltip-when-elided="true" name="job_name" class="repo-list-item-label" style="width: 73px; height: 29px; overflow: hidden;" />
         <ui:Label tabindex="-1" text="Status" parse-escape-sequences="true" display-tooltip-when-elided="true" name="job_status" class="repo-list-item-label" style="width: 73px; height: 29px; overflow: hidden;" />
+        <ui:Label tabindex="-1" text="Running" parse-escape-sequences="true" display-tooltip-when-elided="true" name="job_running" class="repo-list-item-label" style="width: 73px; height: 29px; overflow: hidden;" />
         <ui:Label tabindex="-1" text="ID" parse-escape-sequences="true" display-tooltip-when-elided="true" name="job_id" class="repo-list-item-label" style="width: 73px; height: 29px; overflow: hidden;" />
     </ui:VisualElement>
 </ui:UXML>

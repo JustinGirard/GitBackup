@@ -69,6 +69,7 @@ public class JobListScreen : StandardListScreen
         repoListItem.Q<Label>("job_id").text = rec["id"];
         repoListItem.Q<Label>("job_name").text = rec["name"];
         repoListItem.Q<Label>("job_status").text = rec["status"];
+        repoListItem.Q<Label>("job_running").text = rec["running"];
         
         // Add the new item to the repo list container
         listItemContainer.Add(repoListItem);
