@@ -23,6 +23,7 @@ public class StandardData : MonoBehaviour
         return __records;
     }
 
+
     public int GetDataRevision()
     {
         return __dataRevision;
@@ -57,7 +58,24 @@ public class StandardData : MonoBehaviour
         }
     }
 
+    public List<DictStrStr> ListFullRecords()
+    {
+        List<string> repoNameList = ListRecords(); // Simulated call for listing repos
+        List<DictStrStr> repoList = new List<DictStrStr>();
+        foreach (var repo_name in repoNameList)
+        {
+            //Debug.Log($"{this.ToString()}: Found {repo_name}");
+            DictStrStr reporec = GetRecord(repo_name);
+            if (reporec!= null) 
+            {
+                //Debug.Log($"{this.ToString()}: Adding DATA {repo_name} into ");
+                repoList.Add(reporec);
+            }
+        }
 
+        return repoList;
+
+    }
     public virtual List<string> ListRecords()
     {
         BeforeLoadData();     
@@ -140,5 +158,11 @@ public class StandardData : MonoBehaviour
         UpdateDataRevision(4);        
         AfterSaveData();
     }
+    public void  ClearRecords()
+    {
+        __records = new DictTable();   
+        UpdateDataRevision(4);        
+        AfterSaveData();
+    }        
 
 }

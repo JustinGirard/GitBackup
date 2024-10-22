@@ -10,19 +10,32 @@ using DictTable = System.Collections.Generic.Dictionary<string, System.Collectio
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using UnityEngine.UIElements;
+using UnityEditor.Experimental.GraphView;
 
 public class RepoGithubData : StandardData
 {
     ProfileData profileDatasource;  // Use the IRepoData interface for the RepoData class
+    bool __loadMore = true;
+    int __limit = 50;
+    int __offset = 0;
+
     public void Awake()
     {
-        void OnValueChanged(object newValue)
+        void OnUserChanged(object newValue)
         {
-            ReloadData();
+            Debug.Log("Changed Profile: Clearing repos");
+            __loadMore = true;
+            __limit = 5;
+            __offset = 0;
+
+            ClearRecords();
+
+            Debug.Log("Changed Profile: CheckForRepoData");
+            CheckForRepoData();
         }
         var navigatorObject = GameObject.Find("Navigator");
         var appState = navigatorObject.GetComponent<ApplicationState>();
-        appState.RegisterChangeCallback("selected_profile", OnValueChanged);
+        appState.RegisterChangeCallback("selected_profile", OnUserChanged);
 
 
     }
@@ -44,7 +57,7 @@ public class RepoGithubData : StandardData
         profileDatasource = profileData;
 
     }
-    public void ReloadData()
+    public void CheckForRepoData()
     {
         if (profileDatasource == null)
         {
@@ -59,7 +72,7 @@ public class RepoGithubData : StandardData
             Debug.Log("RepoGithubData LoadData halted; selectedProfileName is null");
             return;
         }
-        Debug.Log("RepoGithubData: Doing Hard Reload.");
+        Debug.Log("*****> RepoGithubData: Doing Hard Reload.");
         // Load User
         DictStrStr rec = profileDatasource.GetRecord(selectedProfileName);
         if (rec == null)
@@ -68,7 +81,19 @@ public class RepoGithubData : StandardData
             return;
         }
 
-
+        
+        //Debug.Log("--------------------Running Command:");
+        //Debug.Log("--------------------Running Command:");
+        //Debug.Log("--------------------Running Command:");
+        //Debug.Log( ShellRun.BuildCommandArguments(command, arguments, isNamedArguments)[0]);
+        //Debug.Log( ShellRun.BuildCommandArguments(command, arguments, isNamedArguments)[1]);      
+        //ShellRun.Response r = ShellRun.RunCommand( command, arguments,  isNamedArguments,  workingDirectory );
+        if (__loadMore == false)
+        {
+            Debug.Log("Finished Loading all Repos");
+            return;
+        }
+        string tempCacheFile = System.IO.Path.Combine(Application.temporaryCachePath, "github_repos_cache.json");
         // Build Command 
         var prnt = new DictTable {{"output",rec}};
         //Debug.Log(ShellRun.BuildJsonFromDictTable(prnt));
@@ -76,61 +101,64 @@ public class RepoGithubData : StandardData
         DictStrStr arguments =new DictStrStr {
             {"username",rec["username"]},
             {"access_token",rec["access_key"]},
-            {"limit","3"},
-            {"offset","0"}
+            {"cache_file",tempCacheFile},
+            {"limit",__limit.ToString()},
+            {"offset",__offset.ToString()}
         };
         bool isNamedArguments = true; 
-        
-        //Debug.Log("--------------------Running Command:");
-        //Debug.Log("--------------------Running Command:");
-        //Debug.Log("--------------------Running Command:");
-        //Debug.Log( ShellRun.BuildCommandArguments(command, arguments, isNamedArguments)[0]);
-        //Debug.Log( ShellRun.BuildCommandArguments(command, arguments, isNamedArguments)[1]);      
 
-
-        //ShellRun.Response r = ShellRun.RunCommand( command, arguments,  isNamedArguments,  workingDirectory );
-
-        Func<Task> tsk = JobUtils.CreateShellTask(
+        Func<Task> tsk = JobUtils.CreateJobifiedShellTask(
             jobName: $"list_github_repos",
             command: command,
             arguments: arguments,
             isNamedArguments:isNamedArguments,
             workingDirectory: "/Users/computercomputer/justinops/propagator/datasource",
-            onSuccess: (output) =>
-            {
-                //Debug.Log("LOADING REMOTE REPOS");
-                List<object> jsonObj = (List<object> )JsonParser.ParseJsonObjects(output.Output);
-                string jsonString = JsonConvert.SerializeObject(jsonObj, Formatting.Indented);
-                //Debug.Log(jsonString);
-                jsonString = JsonConvert.SerializeObject(jsonObj[0], Formatting.Indented);
-                //Debug.Log(jsonString);
-                foreach (Dictionary<string,object> folder in jsonObj)
-                {
-                    //Debug.Log("Storing record :"+(string)folder["name"]);
-                    SetRecord( new DictStrStr
-                    {
-                        { "name", (string)folder["name"] },
-                        { "download_status", "undefined" },
-                        { "html_url", (string)folder["html_url"] },
-                        { "clone_url", (string)folder["clone_url"] },
-                        { "ssh_url", (string)folder["ssh_url"] },
-                        { "branch", (string)folder["branch"] } // Default status on creation
-                    });
-                    //Debug.Log("FINISHED REMOTE REPOS");
-   
-                }
-            },
+            onSuccess: SaveRepos,
             onFailure: (error) =>
             {
-                Debug.LogError($"Failed to List Repositories err:"+error.Error);
-            }
+                Debug.LogError($"Failed to List Repositories err:"+((System.Exception)error).ToString());
+            },
+            debugMode:true
         );
         Task.Run(tsk);
 
-
-
+        void SaveRepos(object rawJsonString)
+        {
+            //Debug.Log("LOADING REMOTE REPOS");
+            List<object> jsonObj = (List<object> )JsonParser.ParseJsonObjects((string)rawJsonString);
+            string jsonString = JsonConvert.SerializeObject(jsonObj, Formatting.Indented);
+            //Debug.Log(jsonString);
+            if (jsonObj.Count <= 0)
+            {
+                Debug.Log("Finished Loading Repos");
+                return;
+            }
+            jsonString = JsonConvert.SerializeObject(jsonObj[0], Formatting.Indented);
+            //Debug.Log(jsonString);
+            __loadMore = false;
+            foreach (Dictionary<string,object> folder in jsonObj)
+            {
+                //Debug.Log("Storing record :"+(string)folder["name"]);
+                SetRecord( new DictStrStr
+                {
+                    { "name", (string)folder["name"] },
+                    { "download_status", "undefined" },
+                    { "html_url", (string)folder["html_url"] },
+                    { "clone_url", (string)folder["clone_url"] },
+                    { "ssh_url", (string)folder["ssh_url"] },
+                    { "branch", (string)folder["branch"] } // Default status on creation
+                });
+                Debug.Log("Loading More Repos");
+                //Debug.Log("FINISHED REMOTE REPOS");
+                __loadMore = true;
+                __offset = __offset + __limit;
+            }
+            CheckForRepoData();            
+        }
 
     }
+
+
     public override void AfterSaveData()
     {
         //throw new System.Exception("Can not 'SaveData' in RepoGithubData");
@@ -150,195 +178,6 @@ public class RepoGithubData : StandardData
             NonBlockingDownloadRepo(repoRecord); 
         }
     }
-    /*
-    // Helper function to download a single repository using the new CLI command
-    private async Task<bool> DownloadRepo(DictStrStr repoData)
-    {
-        var navigatorObject = GameObject.Find("Navigator");
-        var appState = navigatorObject.GetComponent<ApplicationState>();
-        string selectedProfileName = (string)appState.Get("selected_profile");        
-        DictStrStr rec = profileDatasource.GetRecord(selectedProfileName);
-        if (rec == null)
-        {
-            Debug.Log("Could not find target user");
-            return false;
-        }
-        // Prepare the CLI command arguments
-        string repoUrl = repoData["html_url"];
-        string branch = repoData["branch"];
-        string[] command = new string[]
-        {
-            "/Users/computercomputer/justinops/propagator/propenv/bin/python3", 
-            "GitBackupManager.py", 
-            "download"
-        };
-
-        DictStrStr arguments = new DictStrStr
-        {
-            { "git_username", rec["username"] },
-            { "git_access_key",  rec["access_key"]  },
-            { "backup_path", Path.Combine(rec["path"], repoData["name"])  },
-            { "encryption_password",  rec["encryption_password"] },
-            { "repo_url", repoUrl },
-            { "branch", branch },
-        };
-        //--
-        Debug.Log("--------------------Running Download Command:");
-        Debug.Log( ShellRun.BuildCommandArguments(command, arguments, isNamedArguments:true)[0]);
-        Debug.Log( ShellRun.BuildCommandArguments(command, arguments, isNamedArguments: true)[1]);      
-        Debug.Log($"Downloading repository: {repoData["name"]}");
-        string workingDirectory = "/Users/computercomputer/justinops/propagator";        
-        ShellRun.Response response = ShellRun.RunCommand(command, arguments, isNamedArguments: true, workingDirectory);
-        //Debug.Log("Some output:--------------"+response.Output);
-        // Debug.Log(r.Error);        
-        //--
-
-        if (!string.IsNullOrEmpty(response.Error))
-        {
-            Debug.LogError($"Failed to download {repoData["name"]}: {response.Error}");
-            return false;
-        }
-
-        Debug.Log($"Successfully downloaded {repoData["name"]}");
-        return true;
-    }*/
-// Updated method to download a repository using JobData
-    /*
-    private void NonBlockingDownloadRepo(DictStrStr repoData)
-    {
-        var navigatorObject = GameObject.Find("Navigator");
-        var appState = navigatorObject.GetComponent<ApplicationState>();
-        string selectedProfileName = (string)appState.Get("selected_profile");        
-        DictStrStr rec = profileDatasource.GetRecord(selectedProfileName);
-        if (rec == null)
-        {
-            Debug.Log("Could not find target user");
-            return;
-        }
-
-        // Prepare the CLI command arguments
-        string repoUrl = repoData["html_url"];
-        string branch = repoData["branch"];
-        string[] command = new string[]
-        {
-            "/Users/computercomputer/justinops/propagator/propenv/bin/python3", 
-            "GitBackupManager.py", 
-            "download"
-        };
-
-        DictStrStr arguments = new DictStrStr
-        {
-            { "git_username", rec["username"] },
-            { "git_access_key",  rec["access_key"]  },
-            { "backup_path", Path.Combine(rec["path"], repoData["name"])  },
-            { "encryption_password",  rec["encryption_password"] },
-            { "repo_url", repoUrl },
-            { "branch", branch },
-        };
-
-        Debug.Log("--------------------Running Download Command:");
-        Debug.Log(ShellRun.BuildCommandArguments(command, arguments, isNamedArguments: true)[0] + ShellRun.BuildCommandArguments(command, arguments, isNamedArguments: true)[1]);
-        Debug.Log($"Downloading repository: {repoData["name"]}");
-
-        // Create the JobData instance
-        var jobData = GameObject.FindObjectOfType<JobData>();
-        if (jobData == null)
-        {
-            Debug.LogError("JobData component not found.");
-            return;
-        }
-
-        // Define the async task function
-        Func<Job, Task> asyncTaskFunction = async (job) =>
-        {
-            string workingDirectory = "/Users/computercomputer/justinops/propagator";
-            ShellRun.Response response = ShellRun.RunCommand(command, arguments, isNamedArguments: true, workingDirectory);
-
-            // Capture the output
-            job.stdout = response.Output;
-            job.stderr = response.Error;
-
-            if (!string.IsNullOrEmpty(response.Error))
-            {
-                SetRecordField(repoData["name"],"download_status", "failed");
-                Debug.LogError($"Failed to download {repoData["name"]}: {response.Error}");
-                throw new Exception(response.Error);
-            }
-            SetRecordField(repoData["name"],"download_status", "finished");
-            Debug.Log($"Successfully downloaded {repoData["name"]}");
-        };
-
-        // Add the job using the JobData class
-        jobData.AddAsyncJob(
-            name: $"DownloadRepo_{repoData["name"]}",
-            taskFunction: asyncTaskFunction,
-            successFunction: () => Debug.Log($"Job succeeded: {repoData["name"]} download completed."),
-            failureFunction: () => Debug.LogError($"Job failed: {repoData["name"]} download failed.")
-        );
-
-        // Optionally refresh the job data to start processing jobs
-        jobData.Refresh();
-    }*/
-    /*
-    private void NonBlockingShellExecution(
-        string jobName,
-        string[] command,
-        DictStrStr arguments,
-        string workingDirectory,
-        Action<string> onSuccess,
-        Action<string> onFailure)
-    {
-        // Create the JobData instance
-
-        // Define the async task function for shell execution
-        Func<Job, Task> asyncTaskFunction = async (job) =>
-        {
-            try
-            {
-                ShellRun.Response response = ShellRun.RunCommand(command, arguments, isNamedArguments: true, workingDirectory);
-
-                // Capture the output
-                job.stdout = response.Output;
-                job.stderr = response.Error;
-
-                if (!string.IsNullOrEmpty(response.Error))
-                {
-                    // Call the failure callback with the error message
-                    onFailure?.Invoke(response.Error);
-                    throw new Exception(response.Error);
-                }
-
-                // Call the success callback with the output message
-                onSuccess?.Invoke(response.Output);
-            }
-            catch (Exception ex)
-            {
-                Debug.LogError($"An error occurred during shell execution: {ex.Message}");
-                throw;
-            }
-        };
-
-        var jobData = GameObject.FindObjectOfType<JobData>();
-        if (jobData == null)
-        {
-            Debug.LogError("JobData component not found.");
-            return;
-        }
-
-        // Add the job using the JobData class
-        jobData.RunAsyncJob(
-            name: jobName,
-            taskFunction: asyncTaskFunction,
-            successFunction: () => Debug.Log($"Job succeeded: {jobName}"),
-            failureFunction: () => Debug.LogError($"Job failed: {jobName}")
-        );
-
-        // Optionally refresh the job data to start processing jobs
-        //jobData.Refresh();
-    }
-    */
-
-
 
     // Example usage for downloading a repository
     private void NonBlockingDownloadRepo(DictStrStr repoData)
@@ -381,13 +220,13 @@ public class RepoGithubData : StandardData
 
         // Call the generalized shell execution method
         Debug.Log($"{this.ToString()}: TEMP OUTER Starting Shell Download {repoData["name"]}");
-        Func<Task> tsk = JobUtils.CreateShellTask(
+        Func<Task> tsk = JobUtils.CreateJobifiedShellTask(
             jobName: $"DownloadRepo_{repoData["name"]}",
             command: command,
             arguments: arguments,
             isNamedArguments:true,
             workingDirectory: "/Users/computercomputer/justinops/propagator",
-            onSuccess: (ShellRun.Response output) =>
+            onSuccess: (output) =>
             {
                 Debug.Log($"TEMP FINAL TEMP Successfully downloaded {repoData["name"]}");
                 SetRecordField(repoData["name"], "download_status", "finished");
@@ -395,33 +234,16 @@ public class RepoGithubData : StandardData
                 //repoDatabase.UpdateDataRevision();
                 repoDatabase.ReloadData();
             },
-            onFailure: (ShellRun.Response  error) =>
+            onFailure: (error) =>
             {
                 Debug.Log($"TEMP FINAL FAILED downloaded {repoData["name"]}");
                 SetRecordField(repoData["name"], "download_status", "failed");
-                Debug.LogError($"TEMP FINAL Failed to download {repoData["name"]}: {error.Error}");
+                Debug.LogError($"TEMP FINAL Failed to download {repoData["name"]}: {((System.Exception)error).ToString()}");
             },
             debugMode:true
         );
         Debug.Log($"{this.ToString()}: TEMP OUTER Starting Shell Download {repoData["name"]}");
         Task.Run(tsk);
-        /*
-        NonBlockingShellExecution(
-            jobName: $"DownloadRepo_{repoData["name"]}",
-            command: command,
-            arguments: arguments,
-            workingDirectory: "/Users/computercomputer/justinops/propagator",
-            onSuccess: (output) =>
-            {
-                SetRecordField(repoData["name"], "download_status", "finished");
-                Debug.Log($"Successfully downloaded {repoData["name"]}");
-            },
-            onFailure: (error) =>
-            {
-                SetRecordField(repoData["name"], "download_status", "failed");
-                Debug.LogError($"Failed to download {repoData["name"]}: {error}");
-            }
-        );*/
     }
 
 

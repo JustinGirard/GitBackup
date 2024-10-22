@@ -26,6 +26,8 @@ public class StandardListScreen : MonoBehaviour
         LoadDatasource();
     }
 
+
+
     protected virtual IEnumerable<Dictionary<string, object>> GenerateNavigationActions()
     {
         throw new System.Exception("Unimplemented navigation actions");
@@ -151,8 +153,11 @@ public class StandardListScreen : MonoBehaviour
   
     private int __dataRevision = 0;
 
+    protected virtual List<DictStrStr>  PreProcessList(List<DictStrStr> records){
+        return records;
+    }
     // Method to load repositories and display them in the list
-    protected void LoadDatasource()
+    public void LoadDatasource()
     {
         if (datasource == null)
         {
@@ -172,8 +177,9 @@ public class StandardListScreen : MonoBehaviour
         listItemContainer.Clear();
 
         // Retrieve the list of repositories from RepoData
-        List<string> repoNameList = datasource.ListRecords(); // Simulated call for listing repos
+        /*List<string> repoNameList = datasource.ListRecords(); // Simulated call for listing repos
         List<DictStrStr> repoList = new List<DictStrStr>();
+
         foreach (var repo_name in repoNameList)
         {
             //Debug.Log($"{this.ToString()}: Found {repo_name}");
@@ -183,7 +189,10 @@ public class StandardListScreen : MonoBehaviour
                 //Debug.Log($"{this.ToString()}: Adding DATA {repo_name} into ");
                 repoList.Add(reporec);
             }
-        }
+        }*/
+
+        List<DictStrStr> repoList = datasource.ListFullRecords();
+        repoList = PreProcessList(repoList);
 
         foreach (var repoData in repoList)
         {

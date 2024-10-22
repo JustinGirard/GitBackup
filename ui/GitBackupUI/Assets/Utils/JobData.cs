@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 using System.Diagnostics;
 
 using Debug = UnityEngine.Debug;
+using System.Runtime.InteropServices;
 /*
 
    private Func<Task> CreateShellTaskOLD(
@@ -235,7 +236,7 @@ public class JobUtils
     {
         ApplicationState.Instance().Enqueue(action);
     }
-
+    /*
     public static Func<Task> CreateShellTask(
         string jobName,
         string[] command,
@@ -294,7 +295,7 @@ public class JobUtils
         };
         return asyncTaskFunction;
     }
-
+    */
 
     public static Func<Task> CreateJobifiedFunc(
         string id,
@@ -558,6 +559,13 @@ public static Func<Task> CreateJobifiedShellTask(
         try
         {
             // Start the process using ShellRun.StartProcess
+            //Debug.Log("--------------------Running Download Command:");
+            RunMainThread(() =>
+            {
+                Debug.Log("Running Command:"+ShellRun.BuildCommandArguments(command, arguments, isNamedArguments: true)[0] +
+                        ShellRun.BuildCommandArguments(command, arguments, isNamedArguments: true)[1]);
+            });
+            
             process = ShellRun.StartProcess(command, arguments, isNamedArguments, workingDirectory);
             Task<string> outputTask = process.StandardOutput.ReadToEndAsync();
             Task<string> errorTask = process.StandardError.ReadToEndAsync();
@@ -623,15 +631,6 @@ public static Func<Task> CreateJobifiedShellTask(
 }
 
 
-
-/*
-    public string id;
-    public string name;
-    public string status;
-    public string stout;
-    public string sterr;
-
-*/
 public class JobHandle
 {
     public DictStrStr dataframe; // Data associated with the job

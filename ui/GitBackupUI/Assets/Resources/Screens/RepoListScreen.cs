@@ -36,6 +36,43 @@ public class RepoListScreen : StandardListScreen, NavigationManager.ICanInitaliz
     void Update(){
         BaseUpdate();        
     }
+
+    protected override List<DictStrStr>  PreProcessList(List<DictStrStr> sourceRecords){
+
+        if(__repoSource == "local")
+        {
+            return sourceRecords;
+        }
+        else if(__repoSource == "github")
+        {
+            var navigatorObject = GameObject.Find("Navigator");
+            RepoData repoData = navigatorObject.GetComponent<RepoData>();
+             List<DictStrStr> alreadyDownloadedRecords  = repoData.ListFullRecords();
+
+            List<DictStrStr> neededRecords = new List<DictStrStr>();
+            HashSet<string> downloadedNames = new HashSet<string>();
+            foreach (var record in alreadyDownloadedRecords)
+            {
+                if (record.ContainsKey("name"))
+                {
+                    downloadedNames.Add(record["name"]);
+                }
+            }
+
+            foreach (var record in sourceRecords)
+            {
+                if (record.ContainsKey("name") && !downloadedNames.Contains(record["name"]))
+                {
+                    neededRecords.Add(record);
+                }
+            }
+
+            return neededRecords;
+         }    
+         return null;    
+    }
+
+
     protected override VisualElement AddToList(DictStrStr rec)
     {
         // Create a new instance of the RepoListItem template
