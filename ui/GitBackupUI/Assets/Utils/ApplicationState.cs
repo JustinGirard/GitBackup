@@ -139,19 +139,51 @@ public class ApplicationState : MonoBehaviour
         }
     }*/
 
-    private readonly ConcurrentQueue<Action> _actionQueue = new ConcurrentQueue<Action>();
-
+   
+    /*
+ private readonly ConcurrentQueue<Action> _actionQueue = new ConcurrentQueue<Action>();
     public void Enqueue(Action action)
     {
         _actionQueue.Enqueue(action);
     }
-
     void Update()
     {
         while (_actionQueue.TryDequeue(out var action))
         {
             action?.Invoke();
         }
-    }    
+    }      
+  */
+    private readonly ConcurrentQueue<(Delegate Action, object? Parameter)> _actionQueue 
+        = new ConcurrentQueue<(Delegate, object?)>();
+
+    public void Enqueue(Action action)
+    {
+        // Enqueue a parameterless action, casting to Delegate
+        _actionQueue.Enqueue((action as Delegate, null));
+    }
+
+    public void Enqueue(Action<object> action, object parameter = null)
+    {
+        // Enqueue an action with a parameter, casting to Delegate
+        _actionQueue.Enqueue((action as Delegate, parameter));
+    }
+
+    void Update()
+    {
+        while (_actionQueue.TryDequeue(out var queuedAction))
+        {
+            // Check the type of the action and invoke accordingly
+            if (queuedAction.Action is Action<object> actionWithParam && queuedAction.Parameter != null)
+            {
+                actionWithParam.Invoke(queuedAction.Parameter);
+            }
+            else if (queuedAction.Action is Action actionWithoutParam)
+            {
+                actionWithoutParam.Invoke();
+            }
+        }
+    }
+  
 
 }

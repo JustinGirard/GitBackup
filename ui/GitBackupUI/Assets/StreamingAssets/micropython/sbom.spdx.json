@@ -1,0 +1,95 @@
+{
+  "SPDXID": "SPDXRef-DOCUMENT",
+  "spdxVersion": "SPDX-2.3",
+  "name": "SBOM-SPDX-micropython-1.24.0",
+  "creationInfo": {
+    "created": "2024-10-29T17:29:14Z",
+    "creators": [
+      "Tool: https://github.com/Homebrew/brew@4.4.2"
+    ]
+  },
+  "dataLicense": "CC0-1.0",
+  "documentNamespace": "https://formulae.brew.sh/spdx/micropython-1.24.0.json",
+  "documentDescribes": [
+    "SPDXRef-Archive-micropython-src",
+    "SPDXRef-Compiler",
+    "SPDXRef-Bottle-micropython"
+  ],
+  "files": [
+
+  ],
+  "packages": [
+    {
+      "SPDXID": "SPDXRef-Archive-micropython-src",
+      "name": "micropython",
+      "versionInfo": "1.24.0",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "builtDate": "2024-10-26 11:07:28 UTC",
+      "licenseConcluded": "MIT",
+      "downloadLocation": "https://github.com/micropython/micropython/releases/download/v1.24.0/micropython-1.24.0.tar.xz",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "cde2a6795280945100089c053ba85f842d85f3038229d743da35a3673bc1786b"
+        }
+      ]
+    },
+    {
+      "SPDXID": "SPDXRef-Compiler",
+      "name": "clang",
+      "versionInfo": "14.3.1",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "licenseConcluded": "NOASSERTION",
+      "copyrightText": "NOASSERTION",
+      "downloadLocation": "NOASSERTION",
+      "checksums": [
+
+      ],
+      "externalRefs": [
+
+      ]
+    },
+    {
+      "SPDXID": "SPDXRef-Bottle-micropython",
+      "name": "micropython",
+      "versionInfo": "1.24.0",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "builtDate": "2024-10-26 11:07:28 UTC",
+      "licenseConcluded": "MIT",
+      "downloadLocation": "https://ghcr.io/v2/homebrew/core/micropython/blobs/sha256:0b67ffae89e9c8f5007e21b4694fa1feb587997112c72a6dad729640cab2c82e",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceLocator": "pkg:brew/homebrew/core/micropython@1.24.0",
+          "referenceType": "purl"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "0b67ffae89e9c8f5007e21b4694fa1feb587997112c72a6dad729640cab2c82e"
+        }
+      ]
+    }
+  ],
+  "relationships": [
+    {
+      "spdxElementId": "SPDXRef-File-micropython",
+      "relationshipType": "PACKAGE_OF",
+      "relatedSpdxElement": "SPDXRef-Archive-micropython-src"
+    },
+    {
+      "spdxElementId": "SPDXRef-Compiler",
+      "relationshipType": "BUILD_TOOL_OF",
+      "relatedSpdxElement": "SPDXRef-Package-micropython-src"
+    }
+  ]
+}

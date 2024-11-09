@@ -1,0 +1,22 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" xsi="http://www.w3.org/2001/XMLSchema-instance" engine="UnityEngine.UIElements" editor="UnityEditor.UIElements" noNamespaceSchemaLocation="../../../UIElementsSchema/UIElements.xsd" editor-extension-mode="False">
+    <ui:Template name="SetupStageBar" src="project://database/Assets/Resources/Controls/RepoListItem/SetupStageBar.uxml?fileID=9197481963319205126&amp;guid=51ce7bb40f4d74c33b85ec595c4a8bd2&amp;type=3#SetupStageBar" />
+    <ui:Template name="StatusBar" src="project://database/Assets/StatusBar.uxml?fileID=9197481963319205126&amp;guid=063fb282f59444c18b4fefad4cf6c8e6&amp;type=3#StatusBar" />
+    <ui:VisualElement style="flex-grow: 1;">
+        <ui:Instance template="StatusBar" name="StatusBar" />
+        <ui:Label tabindex="-1" text="Setup Process" parse-escape-sequences="true" display-tooltip-when-elided="true" name="Title" style="height: 33px; width: 58px; max-width: 58px;" />
+        <ui:Label tabindex="-1" text="Please Setup the following stages" parse-escape-sequences="true" display-tooltip-when-elided="true" name="Instruction" style="height: 33px; width: 58px; max-width: 58px;" />
+        <ui:VisualElement style="flex-grow: 1; flex-direction: row; height: 30px; max-height: 30px;">
+            <ui:Label tabindex="-1" text="Status&#10;" parse-escape-sequences="true" display-tooltip-when-elided="true" name="SetupStatus" style="height: 33px; width: 58px; max-width: 58px;" />
+            <ui:Label tabindex="-1" text="UNKNOWN" parse-escape-sequences="true" display-tooltip-when-elided="true" name="SetupStatus" style="height: 33px; width: 58px; max-width: 58px;" />
+        </ui:VisualElement>
+        <ui:VisualElement style="flex-grow: 1; background-color: rgb(0, 0, 0); opacity: 1; height: 2px; max-height: 2px;" />
+        <ui:VisualElement name="stage_list_items" style="flex-grow: 1; height: 150px;">
+            <ui:Instance template="SetupStageBar" name="SetupStageBar" />
+            <ui:Instance template="SetupStageBar" name="SetupStageBar" />
+            <ui:Instance template="SetupStageBar" name="SetupStageBar" />
+        </ui:VisualElement>
+    </ui:VisualElement>
+    <ui:VisualElement style="flex-grow: 1; flex-direction: row; height: 101px; position: absolute; bottom: 0;">
+        <ui:Button text="Continue" parse-escape-sequences="true" display-tooltip-when-elided="true" name="Continue" class="list-repos-button" style="width: 212px;" />
+    </ui:VisualElement>
+</ui:UXML>

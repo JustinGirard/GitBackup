@@ -1,0 +1,8 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" editor-extension-mode="False">
+    <ui:VisualElement name="VisualElement" style="flex-grow: 1; flex-direction: row; height: 38px; max-height: 38px;">
+        <ui:Label tabindex="-1" text="Verification" parse-escape-sequences="true" display-tooltip-when-elided="true" name="stage_name" style="width: 150px; max-width: 150px;" />
+        <ui:Button text="Verify" parse-escape-sequences="true" display-tooltip-when-elided="true" name="Verify" style="width: 58px; max-width: 58px;" />
+        <ui:Button text="Run" parse-escape-sequences="true" display-tooltip-when-elided="true" name="Run" style="width: 58px; max-width: 58px;" />
+        <ui:Label tabindex="-1" text="pending" parse-escape-sequences="true" display-tooltip-when-elided="true" name="stage_status" style="width: 58px; max-width: 58px;" />
+    </ui:VisualElement>
+</ui:UXML>

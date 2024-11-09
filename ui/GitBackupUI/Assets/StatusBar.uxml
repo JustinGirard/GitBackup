@@ -1,5 +1,21 @@
-<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements">
-    <ui:VisualElement name="StatusBar" style="flex-grow: 1; height: 25px; max-height: 25px;">
-        <ui:Button text="Jobs" parse-escape-sequences="true" display-tooltip-when-elided="true" name="Jobs" class="list-repos-button" style="height: 10px;" />
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" editor-extension-mode="False">
+    <Style src="project://database/Assets/Resources/SystemStyle.uss?fileID=7433441132597879392&amp;guid=fc40ef5de768b4108b0bf86c5b9e0dd5&amp;type=3#SystemStyle" />
+    <ui:VisualElement name="StatusBar" style="flex-grow: 1; height: 120px; max-height: 150px; width: auto;">
+        <ui:VisualElement name="StatusVerticalSections" style="flex-grow: 1; flex-direction: row;">
+            <ui:VisualElement name="LogoCard" class="summary_card" style="flex-grow: 1;">
+                <ui:VisualElement name="LogoImage" style="flex-grow: 1; height: 37px; width: 45px; max-width: 30px; max-height: 30px; min-width: 30px; min-height: 30px;" />
+                <ui:Label tabindex="-1" text="Justin" parse-escape-sequences="true" display-tooltip-when-elided="true" name="LogoLabel" />
+            </ui:VisualElement>
+            <ui:VisualElement name="JobsCard" class="summary_card" style="flex-grow: 1;">
+                <ui:Label tabindex="-1" text="running" parse-escape-sequences="true" display-tooltip-when-elided="true" name="SetupLabel" />
+                <ui:Label tabindex="-1" text="241 synced" parse-escape-sequences="true" display-tooltip-when-elided="true" name="ReposLabel" />
+                <ui:Label tabindex="-1" text="connected" parse-escape-sequences="true" display-tooltip-when-elided="true" name="ConnectionLabel" />
+                <ui:Label tabindex="-1" text="running" parse-escape-sequences="true" display-tooltip-when-elided="true" name="DownloadingLabel" />
+            </ui:VisualElement>
+            <ui:VisualElement name="StatusCard" class="summary_card" style="flex-grow: 1; align-self: auto; align-items: flex-end;">
+                <ui:Button text="Jobs" parse-escape-sequences="true" display-tooltip-when-elided="true" name="JobsButton" class="list-repos-button" style="height: 10px; width: 95px;" />
+                <ui:Button text="Downloads" parse-escape-sequences="true" display-tooltip-when-elided="true" name="DownloadsButton" class="list-repos-button" style="height: 10px; width: 96px;" />
+            </ui:VisualElement>
+        </ui:VisualElement>
     </ui:VisualElement>
 </ui:UXML>

@@ -32,11 +32,33 @@ public class ProfileListScreen : StandardListScreen//, NavigationManager.ICanIni
         };
         yield return new Dictionary<string, object> {
             { "buttonName", "Open" },
-            { "destinationScreen", "RepoListScreen" },
-            { "passRecord", true }
+            { "destinationScreen", "SetupScreen" },
+            { "passRecord", false }
         };
     }
+    protected override VisualElement AddToList(DictStrStr rec)
+    {
+        string name = rec["name"];
 
+        // Create a new instance of the RepoListItem template
+        var repoListItem = new VisualElement();
+        var repoListItemTemplate = Resources.Load<VisualTreeAsset>("Controls/RepoListItem/ProfileListItem");
+        repoListItemTemplate.CloneTree(repoListItem);
+        repoListItem.style.height = 40; // TODO TOTAL HACK. 
+        // Set the repository attributes (repo_name, repo_status, repo_branch)
+        repoListItem.Q<Label>("profile_name").text = name;
+
+        // Add the new item to the repo list container
+        listItemContainer.Add(repoListItem);
+
+        var navigatorObject = GameObject.Find("Navigator"); //TODO ew so wasteful. HACK
+        var navigationManager = navigatorObject.GetComponent<NavigationManager>();
+
+        //repoListContainer.Add(repoListItem);
+        // Register click event for highlighting
+        repoListItem.RegisterCallback<ClickEvent>(evt => OnRepoItemClick(repoListItem, name));
+        return repoListItem;
+    }
     void OnEnable()
     {
         RegisterEvents();
@@ -82,27 +104,5 @@ public class ProfileListScreen : StandardListScreen//, NavigationManager.ICanIni
     }
 
 
-    protected override VisualElement AddToList(DictStrStr rec)
-    {
-        string name = rec["name"];
 
-        // Create a new instance of the RepoListItem template
-        var repoListItem = new VisualElement();
-        var repoListItemTemplate = Resources.Load<VisualTreeAsset>("Controls/RepoListItem/ProfileListItem");
-        repoListItemTemplate.CloneTree(repoListItem);
-        repoListItem.style.height = 40; // TODO TOTAL HACK. 
-        // Set the repository attributes (repo_name, repo_status, repo_branch)
-        repoListItem.Q<Label>("profile_name").text = name;
-
-        // Add the new item to the repo list container
-        listItemContainer.Add(repoListItem);
-
-        var navigatorObject = GameObject.Find("Navigator"); //TODO ew so wasteful. HACK
-        var navigationManager = navigatorObject.GetComponent<NavigationManager>();
-
-        //repoListContainer.Add(repoListItem);
-        // Register click event for highlighting
-        repoListItem.RegisterCallback<ClickEvent>(evt => OnRepoItemClick(repoListItem, name));
-        return repoListItem;
-    }
 }

@@ -1,6 +1,6 @@
+using System;
 using System.Collections.Generic;
-using UnityEditor.MemoryProfiler;
-using UnityEditor.UI;
+using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.UIElements;
 using DictStrStr = System.Collections.Generic.Dictionary<string, string>;
@@ -17,6 +17,9 @@ public class StandardListScreen : MonoBehaviour
     public string __selectedCoundId = "SelectedCount";        
 
 
+
+
+    // Cr
     protected void BaseStart()
     {
         LoadDatasource();               // Load and display repos in the UI
@@ -24,6 +27,7 @@ public class StandardListScreen : MonoBehaviour
     protected void BaseUpdate()
     {
         LoadDatasource();
+        UpdateStatusBar();
     }
 
 
@@ -59,6 +63,56 @@ public class StandardListScreen : MonoBehaviour
             { "passRecord", true }
         };*/
     }
+
+    ///
+    /// ///
+    /// 
+    /// 
+    /// 
+    /// 
+    /// 
+    /// <summary>
+    /// 
+    ///  Inline status bar. TODO refactor into new class in a future project.
+    /// </summary>
+    /// <exception cref="System.Exception"></exception>
+    
+
+    private DictStrStr __guiIDToDataID = new DictStrStr() {
+        {"ReposLabel","repo_data"},
+        {"SetupLabel","setup_data"},
+        {"ConnectionLabel","repogithub_data"},
+        {"DownloadingLabel","job_data"},
+        //{"ProfileLabel","profile_data"}
+    };
+    
+    private VisualElement _visualElement_statusRoot = null;
+    private float _statusBar_needsRefresh = 0;
+    private Dictionary<string,StandardData> __dataModules = new Dictionary<string, StandardData>();
+    private VisualElement GetStatusBar()
+    {
+        if (_visualElement_statusRoot == null)
+        {
+            var navigatorObject = GameObject.Find("Navigator");
+            var navigationManager = navigatorObject.GetComponent<NavigationManager>();
+            var root = GetComponent<UIDocument>().rootVisualElement;
+
+            __dataModules["setup_data"] = navigatorObject.GetComponent<SetupData>();
+            __dataModules["profile_data"] = navigatorObject.GetComponent<ProfileData>();
+            __dataModules["job_data"] = navigatorObject.GetComponent<JobData>();
+            __dataModules["repo_data"] = navigatorObject.GetComponent<RepoData>();
+            __dataModules["repogithub_data"] = navigatorObject.GetComponent<RepoGithubData>();
+
+            // Add Status Bar Control
+            var statusBarName = "StatusBar";
+            if (statusBarName.Length == 0)
+                throw new System.Exception("StatusBarName was empty");
+            var barElement = root.Q<VisualElement>(statusBarName);
+            _visualElement_statusRoot = barElement;
+        }
+        return _visualElement_statusRoot;
+    }
+
     protected void RegisterStandardEvents()
     {
         var navigatorObject = GameObject.Find("Navigator");
@@ -93,6 +147,7 @@ public class StandardListScreen : MonoBehaviour
 
     protected void RegisterStatusBarEvents()
     {
+        /*
         var navigatorObject = GameObject.Find("Navigator");
         var navigationManager = navigatorObject.GetComponent<NavigationManager>();
         var root = GetComponent<UIDocument>().rootVisualElement;
@@ -101,18 +156,65 @@ public class StandardListScreen : MonoBehaviour
         var statusBarName = "StatusBar";
         if (statusBarName.Length == 0)
             throw new System.Exception("StatusBarName was empty");
-        var barElement = root.Q<VisualElement>(statusBarName);
+        var barElement = root.Q<VisualElement>(statusBarName);*/
+        
+
+
+        var barElement = GetStatusBar();
         if (barElement != null)
         {
-            var navigateElement = barElement.Q<Button>("Jobs");
+            var navigateElement = barElement.Q<Button>("JobsButton");
             if (navigateElement == null)
                 throw new System.Exception("Could not find Jobs button");
-            
             navigateElement.RegisterCallback<ClickEvent>(evt => NavigateTo("JobListScreen",hideAll:false));
-
+            barElement.Q<Button>("DownloadsButton").RegisterCallback<ClickEvent>(evt => NavigateTo("JobListScreen",hideAll:false));
         }
     }
+    public string GetLoadingSuffix()
+    {
 
+        float secondsSinceLastMinute = Time.time % 60f;
+        float twoSecondTimer = (secondsSinceLastMinute % 1.5f)/1.5f;
+        var suffix = "";
+        if ( twoSecondTimer  < 1.0f ) suffix = "...";
+        if ( twoSecondTimer  < 0.7f ) suffix = "..";
+        if ( twoSecondTimer  < 0.5f ) suffix = ".";
+        if ( twoSecondTimer  < 0.2f ) suffix = "";
+        return suffix;
+    }
+    protected string GetLabel(string guiLabelId)
+    {
+         if (__guiIDToDataID.ContainsKey(guiLabelId) == false)
+            throw new System.Exception($"Missing GUI label {guiLabelId}");
+        return __guiIDToDataID[guiLabelId];
+    }    
+    protected StandardData GetGUIStatus(string guiLabelId)
+    {
+       string dataModelId =  GetLabel(guiLabelId);
+        return __dataModules[dataModelId];
+    }
+    protected void UpdateStatusBar()
+    {
+        if (_statusBar_needsRefresh <= 1)
+            _statusBar_needsRefresh = Time.time;
+
+        if ( Time.time > _statusBar_needsRefresh)
+            return;
+        VisualElement  barElement = GetStatusBar();
+        if (barElement == null)
+            return; // No status bar
+        string suffix = GetLoadingSuffix(); 
+
+        List<string> statusLabels = new List<string>(__guiIDToDataID.Keys);
+        
+        foreach (string labelId in statusLabels)
+        {
+            StandardData standardData = GetGUIStatus( labelId);
+            barElement.Q<Label>(labelId).text = $"{GetLabel(labelId)}: {standardData.GetStatusLabel()} {suffix}";
+        }
+
+        _statusBar_needsRefresh = Time.time + 10000f;
+    }
 
     protected void NavigateToWithRecord(ClickEvent evt, string targetScreen)
     {
@@ -167,36 +269,19 @@ public class StandardListScreen : MonoBehaviour
         int dataRevision = datasource.GetDataRevision();
         if (__dataRevision == dataRevision)
         {
-            //Debug.Log($"Revision is old{__dataRevision.ToString()}");            
             return;
         }
         __dataRevision = dataRevision;
-        Debug.Log($"{this.ToString()}: GUI.LoadDatasource() Refreshing Elements");
         // Clear the list of repository items
         listItemContainer = GetComponent<UIDocument>().rootVisualElement.Q<VisualElement>(listContainerId);
         listItemContainer.Clear();
 
-        // Retrieve the list of repositories from RepoData
-        /*List<string> repoNameList = datasource.ListRecords(); // Simulated call for listing repos
-        List<DictStrStr> repoList = new List<DictStrStr>();
-
-        foreach (var repo_name in repoNameList)
-        {
-            //Debug.Log($"{this.ToString()}: Found {repo_name}");
-            DictStrStr reporec = datasource.GetRecord(repo_name);
-            if (reporec!= null) 
-            {
-                //Debug.Log($"{this.ToString()}: Adding DATA {repo_name} into ");
-                repoList.Add(reporec);
-            }
-        }*/
 
         List<DictStrStr> repoList = datasource.ListFullRecords();
         repoList = PreProcessList(repoList);
 
         foreach (var repoData in repoList)
         {
-            //Debug.Log($"{this.ToString()}: Adding ELEMENT {repoData["name"]} into ");
             string repoName = repoData["name"];
             VisualElement repoListItem = AddToList(repoData);
             foreach (string highlightedListItem in highlightedListItems)
@@ -233,7 +318,6 @@ public class StandardListScreen : MonoBehaviour
         if (highlightSingle == true)
         {
             highlightedListItems = new List<string>();
-
         }
 
         // Always: Toggle current selection

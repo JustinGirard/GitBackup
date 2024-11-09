@@ -1,0 +1,7 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements">
+    <ui:VisualElement name="SummaryCard" class="summary_card" style="flex-grow: 1;">
+        <ui:Label tabindex="-1" text="summary&#10;" parse-escape-sequences="true" display-tooltip-when-elided="true" name="SummaryLabel" />
+        <ui:Label tabindex="-1" text="100" parse-escape-sequences="true" display-tooltip-when-elided="true" name="SummaryValue" />
+        <ui:Label tabindex="-1" text="footer data" parse-escape-sequences="true" display-tooltip-when-elided="true" name="Summary" />
+    </ui:VisualElement>
+</ui:UXML>

@@ -8,13 +8,123 @@ using Newtonsoft.Json.Linq;
 using DictStrStr = System.Collections.Generic.Dictionary<string, string>;
 using DictTable = System.Collections.Generic.Dictionary<string, System.Collections.Generic.Dictionary<string, string>>;
 
-using System.Threading.Tasks;
+using System.Text;
 
-using UnityEngine;
+public class JsonTools
+{
+    public static string Stringify(object jsonObject, int indentLevel = 0)
+    {
+        var sb = new StringBuilder();
+        BuildJsonTreeString(jsonObject, sb, indentLevel);
+        return sb.ToString();
+    }
+
+    private static void BuildJsonTreeString(object jsonObject, StringBuilder sb, int indentLevel)
+    {
+        string indent = new string(' ', indentLevel * 4);
+
+        if (jsonObject is Dictionary<string, object> dict)
+        {
+            sb.AppendLine($"{indent}{{");  // Opening brace for a dictionary
+            foreach (var kvp in dict)
+            {
+                sb.Append($"{indent}    \"{kvp.Key}\": ");
+                BuildJsonTreeString(kvp.Value, sb, indentLevel + 1);
+            }
+            sb.AppendLine($"{indent}}}");  // Closing brace for a dictionary
+        }
+        else if (jsonObject is List<object> list)
+        {
+            sb.AppendLine($"{indent}[");  // Opening bracket for a list
+            foreach (var item in list)
+            {
+                BuildJsonTreeString(item, sb, indentLevel + 1);
+            }
+            sb.AppendLine($"{indent}]");  // Closing bracket for a list
+        }
+        else
+        {
+            // Print value directly if it’s a primitive type
+            if (jsonObject is string)
+            {
+                sb.AppendLine($"\"{jsonObject}\"");
+            }
+            else
+            {
+                sb.AppendLine($"{jsonObject}");
+            }
+        }
+    }
+    public static Dictionary<string, object> Parse(string json)
+    {
+        // Deserialize the JSON to a JObject first
+        var jsonObject = JsonConvert.DeserializeObject<JObject>(json);
+
+        // Recursively convert JObject to a Dictionary
+        return ParseJObject(jsonObject);
+    }
+
+    private static Dictionary<string, object> ParseJObject(JObject jObject)
+    {
+        var dictionary = new Dictionary<string, object>();
+
+        foreach (var property in jObject.Properties())
+        {
+            var value = property.Value;
+
+            if (value is JObject nestedObject)
+            {
+                // Recursively convert JObject to Dictionary
+                dictionary[property.Name] = ParseJObject(nestedObject);
+            }
+            else if (value is JArray array)
+            {
+                // Convert JArray to a List of objects
+                dictionary[property.Name] = ParseJArray(array);
+            }
+            else
+            {
+                // Add simple values directly
+                dictionary[property.Name] = ((JValue)value).Value;
+            }
+        }
+
+        return dictionary;
+    }
+
+    private static List<object> ParseJArray(JArray array)
+    {
+        var list = new List<object>();
+
+        foreach (var item in array)
+        {
+            if (item is JObject nestedObject)
+            {
+                // Recursively convert JObject to Dictionary
+                list.Add(ParseJObject(nestedObject));
+            }
+            else if (item is JArray nestedArray)
+            {
+                // Recursively convert nested JArray to List
+                list.Add(ParseJArray(nestedArray));
+            }
+            else
+            {
+                // Add simple values directly
+                list.Add(((JValue)item).Value);
+            }
+        }
+
+        return list;
+    }
+}
 
 
 public class JsonParser
 {
+
+
+    
     public static object ParseJsonObjects(string input)
     {
         List<object> parsedResults = new List<object>();
@@ -282,43 +392,44 @@ public class ShellRun
     }
 
 
-public static Process StartProcess(string[] command, DictStrStr arguments, bool isNamedArguments = false, string workingDirectory = null)
-{
-    Process process = new Process();
-
-    try
+    public static Process StartProcess(string[] command, DictStrStr arguments, bool isNamedArguments = false, string workingDirectory = null)
     {
-        string[] commandAndArgs = BuildCommandArguments(command, arguments, isNamedArguments);
-        process.StartInfo.FileName = commandAndArgs[0];
-        process.StartInfo.Arguments = commandAndArgs[1];
-        process.StartInfo.RedirectStandardOutput = true;
-        process.StartInfo.RedirectStandardError = true;
-        process.StartInfo.UseShellExecute = false;
-        process.StartInfo.CreateNoWindow = true;
+        Process process = new Process();
 
-        if (workingDirectory != null)
+        try
         {
-            process.StartInfo.WorkingDirectory = workingDirectory;
+            string[] commandAndArgs = BuildCommandArguments(command, arguments, isNamedArguments);
+            process.StartInfo.FileName = commandAndArgs[0];
+            process.StartInfo.Arguments = commandAndArgs[1];
+            process.StartInfo.RedirectStandardOutput = true;
+            process.StartInfo.RedirectStandardError = true;
+            process.StartInfo.UseShellExecute = false;
+            process.StartInfo.CreateNoWindow = true;
+            process.StartInfo.StandardOutputEncoding = System.Text.Encoding.UTF8;
+            process.StartInfo.StandardErrorEncoding = System.Text.Encoding.UTF8;            
+
+            if (workingDirectory != null)
+            {
+                process.StartInfo.WorkingDirectory = workingDirectory;
+            }
+
+            process.Start();
+        }
+        catch (Exception ex)
+        {
+            process.Dispose();
+            throw new Exception($"Exception occurred while starting process: {ex.Message}");
         }
 
-        process.Start();
+        return process;
     }
-    catch (Exception ex)
-    {
-        process.Dispose();
-        throw new Exception($"Exception occurred while starting process: {ex.Message}");
-    }
-
-    return process;
-}
-
 
    
     public static string[] BuildCommandArguments(string[] commands, Dictionary<string, string> arguments, bool isNamedArguments)
     {
         // The command is the first element in the commands array (e.g., "ls" or "git")
         string command = commands[0];
-
+        //if (command.Contains(" ")) command = $"\"{command}\"";
         // Build the arguments string by joining the remaining commands (if any)
         string argumentStr = "";
         

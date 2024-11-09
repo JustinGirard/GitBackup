@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using UnityEditor.UI;
 using UnityEngine;
 using UnityEngine.UIElements;
 using DictStrStr = System.Collections.Generic.Dictionary<string, string>;
@@ -207,9 +206,10 @@ public class RepoListScreen : StandardListScreen, NavigationManager.ICanInitaliz
 
         async void DoDownload()
         {
-            Debug.Log($"!******Doing Download of  {downloadString}");
-            ((RepoGithubData)datasource).DownloadAll(selectedRepos);            
+            //((RepoGithubData)datasource).DownloadAll(selectedRepos);   
+            StartCoroutine(((RepoGithubData)datasource).DownloadAllCoroutine(selectedRepos));         
             //Debug.Log($"Finished Download of  {downloadString}");
+
             navigationManager.NavigateTo("RepoListScreen");
         }
 

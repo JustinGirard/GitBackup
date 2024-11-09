@@ -20,7 +20,11 @@ public class ProfileData : StandardData
                 SetRecords(data);
         }
     }
-    public bool AddProfile(string name, string username, string path, string accessKey,string encryption_password)
+    public bool AddProfile(string name, 
+                          string username, 
+                          string path, 
+                          string accessKey,
+                          string encryption_password)
     {
         //LoadData();
         if (string.IsNullOrEmpty(name))
@@ -40,6 +44,15 @@ public class ProfileData : StandardData
             { "username", username },
             { "access_key", accessKey },
             { "encryption_password", encryption_password },
+            { "python_install_dir", "Tools/Python/" },
+            { "ipfs_install_dir", "Tools/IPFS/" },
+            { "git_install_dir",  "Tools/Git/" },
+            { "venv_path", "Tools/venv/" },
+            { "decelium_wallet_url", "https://github.com/Decelium/decelium_wallet" },
+            { "decelium_wallet_dir", "Tools/decelium_wallet/"  },
+            { "propagator_url", "https://github.com/Decelium/propagator"  },
+            { "propagator_dir", "Tools/propagator/"  }
+            
         });
 
     }
@@ -50,6 +63,9 @@ public class ProfileData : StandardData
         string json = ShellRun.BuildJsonFromDictTable(GetRecords());
         //PrintRecordsToDebugLog();
         File.WriteAllText(filePath, json);
+        // Debug.Log("Saving User");
+        // Debug.Log(json);
+
     }
     public override void BeforeLoadData()
     {

@@ -13,6 +13,16 @@ public class StandardData : MonoBehaviour
     private DictTable __records = new DictTable();
     private int __dataRevision = 0;
     private System.Random random = new System.Random(); // Create a Random instance
+    protected string __statusLabel = "";
+
+    protected void SetStatusLabel(string newStatus)
+    {
+        __statusLabel = newStatus;
+    }
+    public string GetStatusLabel( )
+    {
+        return __statusLabel;
+    }
 
     public virtual void  Refresh()
     {
@@ -72,10 +82,10 @@ public class StandardData : MonoBehaviour
                 repoList.Add(reporec);
             }
         }
-
+        //Debug.Log($"Listing Records for {this.ToString()}: {repoList.Count.ToString()}");        
         return repoList;
-
     }
+
     public virtual List<string> ListRecords()
     {
         BeforeLoadData();     
@@ -104,6 +114,12 @@ public class StandardData : MonoBehaviour
         return null; // Repo not found
     }
 
+    public bool  ContainsKey (string name)
+    {
+        return __records.ContainsKey(name);
+    }
+
+
     public virtual string GetRecordField(string name,string field)
     {
         BeforeLoadData();     
@@ -129,6 +145,7 @@ public class StandardData : MonoBehaviour
             return false;
         }
         __records[name][field] = value;
+        
         UpdateDataRevision(1);   
         AfterSaveData();     
         return true;

@@ -6,14 +6,21 @@
         <ui:VisualElement name="Titles" style="height: 29px;">
             <Style src="project://database/Assets/Resources/SystemStyle.uss?fileID=7433441132597879392&amp;guid=fc40ef5de768b4108b0bf86c5b9e0dd5&amp;type=3#SystemStyle" />
             <ui:VisualElement class="repo-list-item" style="flex-grow: 1; flex-direction: row; max-height: 32px; height: 100px;">
+                <ui:Label tabindex="-1" text="Parent" parse-escape-sequences="true" display-tooltip-when-elided="true" name="job_parent_id" class="repo-list-item-label" style="width: 73px; height: 29px; overflow: hidden;" />
                 <ui:Label tabindex="-1" text="Name " parse-escape-sequences="true" display-tooltip-when-elided="true" name="job_name" class="repo-list-item-label" style="width: 73px; height: 29px; overflow: hidden;" />
                 <ui:Label tabindex="-1" text="Status" parse-escape-sequences="true" display-tooltip-when-elided="true" name="job_status" class="repo-list-item-label" style="width: 73px; height: 29px; overflow: hidden;" />
                 <ui:Label tabindex="-1" text="Running" parse-escape-sequences="true" display-tooltip-when-elided="true" name="job_running" class="repo-list-item-label" style="width: 73px; height: 29px; overflow: hidden;" />
                 <ui:Label tabindex="-1" text="ID" parse-escape-sequences="true" display-tooltip-when-elided="true" name="job_id" class="repo-list-item-label" style="width: 73px; height: 29px; overflow: hidden;" />
             </ui:VisualElement>
         </ui:VisualElement>
-        <ui:VisualElement name="job_list_items" style="flex-grow: 1; height: 205px;">
-            <ui:Instance template="JobListItem" name="JobListItem" style="height: 29px;" />
+        <ui:VisualElement name="job_list_items_old" style="flex-grow: 1; height: 205px;">
+            <ui:ScrollView name="job_list_items">
+                <ui:Instance template="JobListItem" name="JobListItem" style="height: 90px; max-height: 90px; min-height: 90px;" />
+                <ui:Instance template="JobListItem" name="JobListItem" style="height: 90px; max-height: 90px; min-height: 90px;" />
+                <ui:Instance template="JobListItem" name="JobListItem" style="height: 90px; max-height: 90px; min-height: 90px;" />
+                <ui:Instance template="JobListItem" name="JobListItem" style="height: 90px; max-height: 90px; min-height: 90px;" />
+                <ui:Instance template="JobListItem" name="JobListItem" style="height: 90px; max-height: 90px; min-height: 90px;" />
+            </ui:ScrollView>
         </ui:VisualElement>
         <ui:VisualElement style="flex-grow: 1; flex-direction: row; height: 101px; position: absolute; bottom: 0;">
             <ui:Button text="Delete" parse-escape-sequences="true" display-tooltip-when-elided="true" name="Delete" class="list-repos-button" />

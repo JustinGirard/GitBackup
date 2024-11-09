@@ -1,9 +1,15 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" xsi="http://www.w3.org/2001/XMLSchema-instance" engine="UnityEngine.UIElements" editor="UnityEditor.UIElements" noNamespaceSchemaLocation="../../../../UIElementsSchema/UIElements.xsd" editor-extension-mode="False">
     <Style src="project://database/Assets/Resources/SystemStyle.uss?fileID=7433441132597879392&amp;guid=fc40ef5de768b4108b0bf86c5b9e0dd5&amp;type=3#SystemStyle" />
-    <ui:VisualElement class="repo-list-item" style="flex-grow: 1; flex-direction: row; max-height: 32px; height: 100px;">
-        <ui:Label tabindex="-1" text="Name " parse-escape-sequences="true" display-tooltip-when-elided="true" name="job_name" class="repo-list-item-label" style="width: 73px; height: 29px; overflow: hidden;" />
-        <ui:Label tabindex="-1" text="Status" parse-escape-sequences="true" display-tooltip-when-elided="true" name="job_status" class="repo-list-item-label" style="width: 73px; height: 29px; overflow: hidden;" />
-        <ui:Label tabindex="-1" text="Running" parse-escape-sequences="true" display-tooltip-when-elided="true" name="job_running" class="repo-list-item-label" style="width: 73px; height: 29px; overflow: hidden;" />
-        <ui:Label tabindex="-1" text="ID" parse-escape-sequences="true" display-tooltip-when-elided="true" name="job_id" class="repo-list-item-label" style="width: 73px; height: 29px; overflow: hidden;" />
+    <ui:VisualElement style="flex-grow: 1; height: 167px; min-height: 150px; max-height: 150px; border-top-width: 1px; border-right-width: 1px; border-bottom-width: 1px; border-left-width: 1px; border-left-color: rgb(0, 0, 0); border-right-color: rgb(0, 0, 0); border-top-color: rgb(0, 0, 0); border-bottom-color: rgb(0, 0, 0);">
+        <ui:VisualElement name="job_toprow" class="repo-list-item" style="flex-grow: 1; flex-direction: row; max-height: 32px; height: 100px;">
+            <ui:Label tabindex="-1" text="Parent" parse-escape-sequences="true" display-tooltip-when-elided="true" name="job_parent_id" class="repo-list-item-label" style="width: 73px; height: 29px; overflow: hidden;" />
+            <ui:Label tabindex="-1" text="Name " parse-escape-sequences="true" display-tooltip-when-elided="true" name="job_name" class="repo-list-item-label" style="width: 73px; height: 29px; overflow: hidden;" />
+            <ui:Label tabindex="-1" text="Status" parse-escape-sequences="true" display-tooltip-when-elided="true" name="job_status" class="repo-list-item-label" style="width: 73px; height: 29px; overflow: hidden;" />
+            <ui:Label tabindex="-1" text="Running" parse-escape-sequences="true" display-tooltip-when-elided="true" name="job_running" class="repo-list-item-label" style="width: 73px; height: 29px; overflow: hidden;" />
+            <ui:Label tabindex="-1" text="ID" parse-escape-sequences="true" display-tooltip-when-elided="true" name="job_id" class="repo-list-item-label" style="width: 25px; height: 29px; overflow: hidden; max-width: 25px;" />
+        </ui:VisualElement>
+        <ui:VisualElement name="job_bottomrow" class="repo-list-item" style="flex-grow: 1; flex-direction: row; max-height: 32px; height: 100px;">
+            <ui:Label tabindex="-1" text="Progress" parse-escape-sequences="true" display-tooltip-when-elided="true" name="job_progress" class="repo-list-item-label" style="width: 531px; height: 120px; overflow: hidden; max-width: 420px; max-height: 120px; border-top-width: 1px; border-right-width: 1px; border-bottom-width: 1px; border-left-width: 1px; white-space: normal; font-size: 12px;" />
+        </ui:VisualElement>
     </ui:VisualElement>
 </ui:UXML>

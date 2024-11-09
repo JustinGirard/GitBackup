@@ -39,10 +39,29 @@ public class ProfileEditScreen : StandardEditScreen, NavigationManager.ICanInita
 
         }
 
-
+        /*
+        { "name", name },
+        { "path", path },
+        { "username", username },
+        { "access_key", accessKey },
+        { "encryption_password", encryption_password },
+        { "python_install_dir", Application.persistentDataPath +"/tools/python/" },
+        { "ipfs_install_dir", Application.persistentDataPath +"/tools/ipfs/" },
+        { "git_install_dir",  Application.persistentDataPath +"/tools/git/" },
+        { "venv_path", Application.persistentDataPath +"/tools/venv/" },
+        { "decelium_wallet_url", "https://github.com/Decelium/decelium_wallet" },
+        { "decelium_wallet_dir", Application.persistentDataPath +"/tools/decelium_wallet/"  },
+        { "propagator_url", "https://github.com/Decelium/propagator"  },
+        { "propagator_dir", Application.persistentDataPath +"/tools/propagator/"  }
+        */
 
         // Add the repo if validation passes
-        bool addedSuccessfully = ((ProfileData)repoData).AddProfile(formData["ProfileName"], formData["GitUser"], formData["StorageLocation"], formData["GitKey"], formData["EncryptionPassword"]);
+        bool addedSuccessfully = ((ProfileData)repoData).AddProfile(
+                                    formData["ProfileName"], 
+                                    formData["GitUser"], 
+                                    formData["StorageLocation"], 
+                                    formData["GitKey"], 
+                                    formData["EncryptionPassword"]);
         if (!addedSuccessfully)
         {
             navigationManager.NotifyError("Failed to add repository. Please try again.");

@@ -1,0 +1,365 @@
+class Stages:
+
+    class Base:
+        name = ""
+        id = ""
+        def verify(settings):
+            pass
+        def execute(settings):
+            pass
+
+    class PythonNative(Base):
+        name = "Verify Python Installation"
+
+        @staticmethod
+        def verify(settings):
+            try:
+                subprocess.run(["python3", "--version"], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                return '{"status":True}'
+            except subprocess.CalledProcessError:
+                return '{"status":True}'
+
+        @staticmethod
+        def execute(settings):
+            raise RuntimeError("Python installation is not implemented. Please install Python manually.")
+
+    class Venv(Base):
+        name = "Setup Virtual Environment"
+
+        @staticmethod
+        def verify(settings):
+            assert 'venv_path' in settings, "'venv_path' is missing from settings"
+            return os.path.exists(settings['venv_path'])
+
+        @staticmethod
+        def execute(settings):
+            assert 'venv_path' in settings, "'venv_path' is missing from settings"
+            print("Setting up virtual environment...")
+            subprocess.run(["python3", "-m", "venv", settings['venv_path']], check=True)
+            print("Virtual environment setup complete.")
+
+    class ClonedRepo(Base):
+        def __init__(self, repo_key, repo_url_key):
+            self.repo_key = repo_key
+            self.repo_url_key = repo_url_key
+            self.name = f"Clone Repository {repo_key}"
+
+        def verify(self, settings):
+            assert self.repo_key in settings, f"'{self.repo_key}' is missing from settings"
+            return os.path.exists(settings[self.repo_key])
+
+        def execute(self, settings):
+            assert self.repo_key in settings, f"'{self.repo_key}' is missing from settings"
+            assert self.repo_url_key in settings, f"'{self.repo_url_key}' is missing from settings"
+            repo_path = settings[self.repo_key]
+            repo_url = settings[self.repo_url_key]
+            print(f"Cloning repository from {repo_url} to {repo_path}...")
+            subprocess.run(["git", "clone", repo_url, repo_path], check=True)
+            print(f"Repository cloned to {repo_path}.")
+
+    # --- Main Execution ---
+
+    class PurgeData(Base):
+        name = "Purge Data"
+
+        @staticmethod
+        def verify(settings):
+            # If neither the venv nor repos exist, consider the purge complete
+            venv_exists = os.path.exists(settings['venv_path'])
+            repo1_exists = os.path.exists(settings['repo1_path'])
+            repo2_exists = os.path.exists(settings['repo2_path'])
+            return not (venv_exists or repo1_exists or repo2_exists)
+
+        @staticmethod
+        def execute(settings):
+            # Remove virtual environment
+            if os.path.exists(settings['venv_path']):
+                print(f"Removing virtual environment at {settings['venv_path']}...")
+                subprocess.run(["rm", "-rf", settings['venv_path']], check=True)
+                print("Virtual environment removed.")
+
+            # Remove first repository
+            if os.path.exists(settings['repo1_path']):
+                print(f"Removing repository at {settings['repo1_path']}...")
+                subprocess.run(["rm", "-rf", settings['repo1_path']], check=True)
+                print("Repository 1 removed.")
+
+            # Remove second repository
+            if os.path.exists(settings['repo2_path']):
+                print(f"Removing repository at {settings['repo2_path']}...")
+                subprocess.run(["rm", "-rf", settings['repo2_path']], check=True)
+                print("Repository 2 removed.")
+ 
+ 
+    class DownloadPythonPkg(Base):
+        name = "Download Python Pkg"
+        id = "download_python_pkg"
+
+        @staticmethod
+        def verify(settings):
+            target_path = os.path.join(settings['python_install_dir'], 'v2/bin/python3')
+            return os.path.exists(target_path)
+
+        @staticmethod
+        def execute(settings):
+            assert 'python_install_dir' in settings, "'python_install_dir' is missing from settings"
+            package_dir = settings['python_install_dir']
+            python_dir = os.path.join(package_dir, "v2")
+            install_dir = os.path.join(package_dir, "install")
+
+            # Clear the installation directory if it already exists
+            if os.path.exists(package_dir):
+                print(f"Clearing the existing installation directory: {package_dir}")
+                shutil.rmtree(package_dir, ignore_errors=True)
+                time.sleep(1)
+                if os.path.exists(package_dir):
+                    raise Exception(f"Failed to delete the directory: {package_dir}")
+            print(f"Cleaned directory {package_dir}")
+            
+            # Recreate the installation directories
+            os.makedirs(package_dir)
+            os.makedirs(install_dir)
+
+            # Download the Python macOS package
+            pkg_path = os.path.join(install_dir, "python-macos.pkg")
+            print("Downloading Python for macOS...")
+            result = run_subprocess([
+                "curl", "-L", "https://www.python.org/ftp/python/3.9.7/python-3.9.7-macosx10.9.pkg",
+                "-o", pkg_path
+            ])
+            print("Download stdout:", result['stdout'])
+            print("Download stderr:", result['stderr'])
+
+            # Extract the package contents using pkgutil
+            expanded_pkg_dir = os.path.join(install_dir, "expanded_pkg")
+            print("Expanding the .pkg file...")
+            result = run_subprocess([
+                "pkgutil", "--expand", pkg_path, expanded_pkg_dir
+            ])
+            print("Expand stdout:", result['stdout'])
+            print("Expand stderr:", result['stderr'])
+
+            # Process each sub-package
+            for sub_pkg in ["Python_Framework.pkg", "Python_Command_Line_Tools.pkg"]:
+                sub_pkg_dir = os.path.join(expanded_pkg_dir, sub_pkg)
+                payload_path = os.path.join(sub_pkg_dir, "Payload")
+
+                # Check if Payload file exists
+                if not os.path.exists(payload_path):
+                    print(f"No Payload found in {sub_pkg_dir}")
+                    continue
+
+                # Extract the Payload using cpio if it's not a tar file
+                extracted_dir = os.path.join(install_dir, f"{sub_pkg}_extracted")
+                os.makedirs(extracted_dir, exist_ok=True)
+                print(f"Extracting {payload_path} using cpio...")
+                result = run_subprocess([
+                    "cat", payload_path, "|", "cpio", "-id", "--quiet", "-D", extracted_dir
+                ], shell=True)
+                print("Extraction stdout:", result['stdout'])
+                print("Extraction stderr:", result['stderr'])
+
+                # Move the extracted files to the v2 directory
+                for item in os.listdir(extracted_dir):
+                    item_path = os.path.join(extracted_dir, item)
+                    shutil.move(item_path, python_dir)
+
+            # Clean up
+            os.remove(pkg_path)
+            shutil.rmtree(expanded_pkg_dir)
+
+            # Verify the Python installation
+            python_executable = os.path.join(python_dir, 'Python.framework/Versions/3.9/bin/python3')
+            print("Running the first Python command...")
+            result = run_subprocess([python_executable, "--version"])
+            print("Python version stdout:", result['stdout'])
+            print("Python version stderr:", result['stderr'])
+
+
+
+    ###
+    ###
+
+    class DownloadPythonMiniconda(Base):
+        name = "Download Python"
+        id = "download_python_miniconda"
+
+        @staticmethod
+        def verify(settings):
+            #assert 'python_install_dir' in settings, "'python_install_dir' is missing from settings"
+            if not 'python_install_dir' in settings:
+                return {"status":False}
+            target_path = os.path.join(settings['python_install_dir'], 'v1/bin/python')
+            return {"status":os.path.exists(target_path)}
+
+        @classmethod
+        def execute(cls,settings):
+            verified:bool = cls.verify(settings)
+            if verified:
+                print("Verified install")
+                return verified
+            
+            assert 'python_install_dir' in settings, "'python_install_dir' is missing from settings"
+            package_dir = settings['python_install_dir']
+            python_dir = os.path.join(settings['python_install_dir'],"v1")
+            install_dir = os.path.join(settings['python_install_dir'],"install")
+            
+            #miniconda_script_path = os.path.join(package_dir,"install", 'Miniconda3-latest-MacOSX-x86_64.sh')
+            
+            # Clear the installation directory if it already exists
+            if os.path.exists(package_dir):
+                print(f"Clearing the existing installation directory: {package_dir}")
+                shutil.rmtree(package_dir, ignore_errors=True)
+                # Wait a bit to ensure the filesystem updates
+                time.sleep(1)
+                if os.path.exists(package_dir):
+                    raise Exception(f"Failed to delete the directory: {package_dir}")
+            print(f"Cleaned directory {package_dir}")
+            #return False
+            # Recreate the installation directory
+            os.makedirs(package_dir)
+            os.makedirs(install_dir)
+            # DO NOT MAKE THE os.makedirs(python_dir)
+
+            # Download Miniconda for macOS
+            script_path =  os.path.join(install_dir,"Miniconda3-latest-MacOSX-x86_64.sh")
+            print("Downloading Miniconda for macOS...")
+            result = run_subprocess([
+                "curl", "-L", "https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-x86_64.sh",
+                "-o", script_path
+            ])
+            print("Download stdout:", result['stdout'])
+            print("Download stderr:", result['stderr'])
+            # Set execute permissions for the installer
+            os.chmod(script_path, 0o755)
+
+            # Install Miniconda to the specified directory
+            print("Installing Miniconda...")
+            result = run_subprocess([
+                "bash", script_path, "-b", "-p", python_dir
+            ])
+            print("Install stdout:", result['stdout'])
+            print("Install stderr:", result['stderr'])
+            
+
+            print("Miniconda installation completed.")
+            
+            # Clean up the installer
+            os.remove(script_path)
+            
+            # Full path to the Miniconda-installed Python
+            python_executable = os.path.join(python_dir, 'bin/python')
+            
+            # Verify the Python installation by running the version command
+            print("Running the first Python command...")
+            result = run_subprocess([python_executable, "--version"])
+            print("Python version stdout:", result['stdout'])
+            print("Python version stderr:", result['stderr'])
+ 
+    class DownloadIPFS(Base):
+        name = "Download IPFS"
+        id = "download_ipfs"
+
+        @staticmethod
+        def verify(settings):
+            # Verify that the IPFS binary exists and can run the version command
+            assert 'ipfs_install_dir' in settings, "'ipfs_install_dir' is missing from settings"
+            ipfs_executable = os.path.join(settings['ipfs_install_dir'], 'ipfs')
+            
+            # Check if the IPFS binary exists
+            if not os.path.exists(ipfs_executable):
+                return False
+            
+            # Run the version command to confirm IPFS is correctly installed
+            try:
+                result = subprocess.run([ipfs_executable, "--version"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, check=True)
+                print(f"IPFS version check output: {result.stdout}")
+                return True
+            except subprocess.CalledProcessError as e:
+                print(f"IPFS version command failed: {e.stderr}")
+                return False
+
+        @classmethod
+        def execute(cls, settings):
+            # Check if IPFS is already verified
+            if cls.verify(settings):
+                print("IPFS is already installed and verified.")
+                return True
+            
+            # Ensure the IPFS installation directory is present in the settings
+            assert 'ipfs_install_dir' in settings, "'ipfs_install_dir' is missing from settings"
+            ipfs_dir = settings['ipfs_install_dir']
+            ipfs_archive = os.path.join(ipfs_dir, 'go-ipfs.tar.gz')
+            
+            # Create the IPFS installation directory if it does not exist
+            os.makedirs(ipfs_dir, exist_ok=True)
+
+            # Download IPFS for macOS to the specified directory
+            print("Downloading IPFS for macOS...")
+            subprocess.run([
+                "curl", "-L", "https://dist.ipfs.io/go-ipfs/v0.11.0/go-ipfs_v0.11.0_darwin-amd64.tar.gz",
+                "-o", ipfs_archive
+            ], check=True)
+            
+            # Extract IPFS to the installation directory
+            print("Extracting IPFS...")
+            subprocess.run(["tar", "-xvzf", ipfs_archive, "-C", ipfs_dir, "--strip-components=1"], check=True)
+            print("IPFS download and extraction completed.")
+            
+            # Verify the installation
+            return cls.verify(settings)
+
+
+
+    class DownloadGit(Base):
+        name = "Download Git"
+        id = "download_git"
+
+        @staticmethod
+        def verify(settings):
+            # Verify that the Git binary exists and can run the version command
+            assert 'git_install_dir' in settings, "'git_install_dir' is missing from settings"
+            git_executable = os.path.join(settings['git_install_dir'], 'bin/git')
+            
+            # Check if the Git binary exists
+            if not os.path.exists(git_executable):
+                return False
+            
+            # Run the version command to confirm Git is correctly installed
+            try:
+                result = subprocess.run([git_executable, "--version"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, check=True)
+                print(f"Git version check output: {result.stdout}")
+                return True
+            except subprocess.CalledProcessError as e:
+                print(f"Git version command failed: {e.stderr}")
+                return False
+
+        @classmethod
+        def execute(cls, settings):
+            # Check if Git is already verified
+            if cls.verify(settings):
+                print("Git is already installed and verified.")
+                return True
+            
+            # Ensure the Git installation directory is present in the settings
+            assert 'git_install_dir' in settings, "'git_install_dir' is missing from settings"
+            git_dir = settings['git_install_dir']
+            git_archive = os.path.join(git_dir, 'git-macos.tar.gz')
+            
+            # Create the Git installation directory if it does not exist
+            os.makedirs(git_dir, exist_ok=True)
+
+            # Download Git for macOS to the specified directory
+            print("Downloading Git for macOS...")
+            subprocess.run([
+                "curl", "-L", "https://sourceforge.net/projects/git-osx-installer/files/git-2.33.0-intel-universal-mavericks.dmg/download",
+                "-o", git_archive
+            ], check=True)
+            
+            # Extract Git to the installation directory
+            print("Extracting Git...")
+            subprocess.run(["tar", "-xvzf", git_archive, "-C", git_dir, "--strip-components=1"], check=True)
+            print("Git download and extraction completed.")
+            
+            # Verify the installation
+            return cls.verify(settings) 
