@@ -2,8 +2,8 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UIElements;
-using DictStrStr = System.Collections.Generic.Dictionary<string, string>;
-using DictTable = System.Collections.Generic.Dictionary<string, System.Collections.Generic.Dictionary<string, string>>;
+using DictStrObj = System.Collections.Generic.Dictionary<string, object>;
+using DictOnjTable = System.Collections.Generic.Dictionary<string, System.Collections.Generic.Dictionary<string, object>>;
 
 
 public class NotificationScreen : MonoBehaviour, NavigationManager.ICanInitalize
@@ -26,7 +26,7 @@ public class NotificationScreen : MonoBehaviour, NavigationManager.ICanInitalize
 
     }
 
-    public void InitData(DictStrStr record)
+    public void InitData(DictStrObj record)
     {
         var root = GetComponent<UIDocument>().rootVisualElement;
         var ele = root.Q<Label>("Message");
@@ -37,7 +37,7 @@ public class NotificationScreen : MonoBehaviour, NavigationManager.ICanInitalize
         {
             //Debug.Log("Got Message");
             //Debug.Log(record["message"]);
-            ele.text = record["message"];
+            ele.text = (string)record["message"];
         }
         else
            Debug.Log("No Message");

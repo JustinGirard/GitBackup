@@ -3,8 +3,8 @@ using System.Collections.Generic;
 using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.UIElements;
-using DictStrStr = System.Collections.Generic.Dictionary<string, string>;
-using DictTable = System.Collections.Generic.Dictionary<string, System.Collections.Generic.Dictionary<string, string>>;
+using DictStrObj = System.Collections.Generic.Dictionary<string, object>;
+using DictObjTable = System.Collections.Generic.Dictionary<string, System.Collections.Generic.Dictionary<string, object>>;
 
 public class StandardListScreen : MonoBehaviour
 {
@@ -15,8 +15,6 @@ public class StandardListScreen : MonoBehaviour
     protected VisualElement listItemContainer;
     protected string listContainerId = "";
     public string __selectedCoundId = "SelectedCount";        
-
-
 
 
     // Cr
@@ -78,7 +76,7 @@ public class StandardListScreen : MonoBehaviour
     /// <exception cref="System.Exception"></exception>
     
 
-    private DictStrStr __guiIDToDataID = new DictStrStr() {
+    private DictStrObj __guiIDToDataID = new DictStrObj() {
         {"ReposLabel","repo_data"},
         {"SetupLabel","setup_data"},
         {"ConnectionLabel","repogithub_data"},
@@ -186,7 +184,7 @@ public class StandardListScreen : MonoBehaviour
     {
          if (__guiIDToDataID.ContainsKey(guiLabelId) == false)
             throw new System.Exception($"Missing GUI label {guiLabelId}");
-        return __guiIDToDataID[guiLabelId];
+        return (string)__guiIDToDataID[guiLabelId];
     }    
     protected StandardData GetGUIStatus(string guiLabelId)
     {
@@ -225,7 +223,7 @@ public class StandardListScreen : MonoBehaviour
         var navigatorObject = GameObject.Find("Navigator");
         var navigationManager = navigatorObject.GetComponent<NavigationManager>();
 
-        DictStrStr argument = new DictStrStr { { "name", highlightedListItems[0] } };
+        DictStrObj argument = new DictStrObj { { "name", highlightedListItems[0] } };
         navigationManager.NavigateToWithRecord(targetScreen, argument);
     }
 
@@ -237,7 +235,7 @@ public class StandardListScreen : MonoBehaviour
         var navigatorObject = GameObject.Find("Navigator");
         var navigationManager = navigatorObject.GetComponent<NavigationManager>();
 
-        DictStrStr argument = new DictStrStr { };
+        DictStrObj argument = new DictStrObj { };
         navigationManager.NavigateToWithRecord(targetScreen, argument);
     }
 
@@ -255,7 +253,7 @@ public class StandardListScreen : MonoBehaviour
   
     private int __dataRevision = 0;
 
-    protected virtual List<DictStrStr>  PreProcessList(List<DictStrStr> records){
+    protected virtual List<DictStrObj>  PreProcessList(List<DictStrObj> records){
         return records;
     }
     // Method to load repositories and display them in the list
@@ -277,12 +275,12 @@ public class StandardListScreen : MonoBehaviour
         listItemContainer.Clear();
 
 
-        List<DictStrStr> repoList = datasource.ListFullRecords();
+        List<DictStrObj> repoList = datasource.ListFullRecords();
         repoList = PreProcessList(repoList);
 
         foreach (var repoData in repoList)
         {
-            string repoName = repoData["name"];
+            string repoName = (string)repoData["name"];
             VisualElement repoListItem = AddToList(repoData);
             foreach (string highlightedListItem in highlightedListItems)
             {
@@ -295,7 +293,7 @@ public class StandardListScreen : MonoBehaviour
     }
 
     // Method to add a repository entry to the list using the RepoListItem template
-    protected virtual VisualElement AddToList(DictStrStr rec)
+    protected virtual VisualElement AddToList(DictStrObj rec)
     {
         throw new  System.Exception("Not implemented. See an example implementation");
         return new VisualElement();

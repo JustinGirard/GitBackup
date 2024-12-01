@@ -30,7 +30,7 @@ class PythonSetupManager(BaseService):
         manager = PythonSetupManager()
         the_stages = manager.stages.keys()
         assert id in list(manager.stages.keys()), f"Stage id:{id} does not seem to be registered, the stages avail: {''.join(the_stages)}"
-        assert mode in ['execute','verify'], f"Command must be 'execute' or 'verify' "
+        assert mode in ['execute','verify','progress'], f"Command must be 'execute' or 'verify' "
         stage:Stages.Base =  manager.stages[id]
         if mode == "execute":
             return stage.execute(kwargs)            

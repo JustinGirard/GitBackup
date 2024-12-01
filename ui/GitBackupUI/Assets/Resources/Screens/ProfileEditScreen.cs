@@ -2,8 +2,7 @@
 using UnityEngine;
 using System.Collections.Generic;
 using UnityEngine.UIElements;
-using DictStrStr = System.Collections.Generic.Dictionary<string, string>;
-using DictTable = System.Collections.Generic.Dictionary<string, System.Collections.Generic.Dictionary<string, string>>;
+using DictStrObj = System.Collections.Generic.Dictionary<string, object>;
 
 
 public class ProfileEditScreen : StandardEditScreen, NavigationManager.ICanInitalize
@@ -78,7 +77,7 @@ public class ProfileEditScreen : StandardEditScreen, NavigationManager.ICanInita
         RegisterButtonCallbacks(GetComponent<UIDocument>(), "Save", "Cancel");
     }
 
-    public void InitData(Dictionary<string, string> dataframe)
+    public void InitData(Dictionary<string, object> dataframe)
     {
         var root = GetComponent<UIDocument>().rootVisualElement;
 
@@ -92,16 +91,16 @@ public class ProfileEditScreen : StandardEditScreen, NavigationManager.ICanInita
         {
             Debug.Log($"RepoInfo.InitData for {dataframe["name"]} ");
             Debug.Log($"ProfileData LOADING ----------------------");
-            DictStrStr record = repoData.GetRecord(dataframe["name"]);
+            DictStrObj record = repoData.GetRecord((string)dataframe["name"]);
             foreach (var pair in record)
             {
                 Debug.Log($"{pair.Key}: {pair.Value}");
             }
-            SetTextboxText(root, "ProfileName", record["name"]);
-            SetTextboxText(root, "GitUser", record["username"]);
-            SetTextboxText(root, "GitKey", record["access_key"]);
-            SetTextboxText(root, "StorageLocation", record["path"]);
-            SetTextboxText(root, "EncryptionPassword", record["encryption_password"]);
+            SetTextboxText(root, "ProfileName", (string)record["name"]);
+            SetTextboxText(root, "GitUser", (string)record["username"]);
+            SetTextboxText(root, "GitKey", (string)record["access_key"]);
+            SetTextboxText(root, "StorageLocation", (string)record["path"]);
+            SetTextboxText(root, "EncryptionPassword", (string)record["encryption_password"]);
         }
         else
         {

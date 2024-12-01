@@ -5,19 +5,147 @@ using System.Collections.Generic;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
-using DictStrStr = System.Collections.Generic.Dictionary<string, string>;
-using DictTable = System.Collections.Generic.Dictionary<string, System.Collections.Generic.Dictionary<string, string>>;
+using DictStrObj = System.Collections.Generic.Dictionary<string, object>;
+using DictObjTable = System.Collections.Generic.Dictionary<string, System.Collections.Generic.Dictionary<string, object>>;
 
 using System.Text;
 
-public class JsonTools
+
+using System.IO;
+using UnityEngine;
+
+public static class ImageLoader
 {
+    /// <summary>
+    /// Loads an image from a given file path and converts it to a Sprite.
+    /// </summary>
+    /// <param name="filePath">The full file path of the image.</param>
+    /// <param name="pivot">The pivot point of the sprite. Defaults to (0.5, 0.5).</param>
+    /// <returns>The loaded Sprite, or null if the file doesn't exist or the image fails to load.</returns>
+    public static Sprite LoadSpriteFromFile(string filePath, Vector2 pivot = default)
+    {
+        if (pivot == default)
+            pivot = new Vector2(0.5f, 0.5f); // Default pivot at the center
+
+        if (!File.Exists(filePath))
+        {
+            throw new System.Exception($"Image file not found at path: {filePath}");
+        }
+
+        // Read the file into a byte array
+        byte[] fileData = File.ReadAllBytes(filePath);
+
+        // Create a new texture and load the image data
+        Texture2D texture = new Texture2D(2, 2); // Minimum size, will resize as needed
+        if (texture.LoadImage(fileData))
+        {
+            // Create a sprite from the texture
+            return Sprite.Create(
+                texture,
+                new Rect(0, 0, texture.width, texture.height),
+                pivot
+            );
+        }
+        else
+        {
+            throw new System.Exception($"Failed to load image as Texture2D: {filePath}");
+        }
+    }
+}
+
+
+public class DJson
+{
+
+    public static void SafeCopyKey(string key, DictStrObj dest, Dictionary<string, object> src)
+    {
+        if (src == null)
+        {
+            throw new ArgumentNullException(nameof(src), "Source dictionary is null.");
+        }
+
+        if (src.TryGetValue(key, out var value))
+        {
+            if (value is string strValue)
+            {
+                dest[key] = strValue;
+            }
+            else if  (value is DateTime dtTime)
+            {
+                 dest[key] = dtTime.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ");
+            }
+            else
+            {
+                throw new InvalidCastException($"Value for key '{key}' is not a string.");
+            }
+        }
+        else
+        {
+            throw new KeyNotFoundException($"Key '{key}' is missing in the source dictionary.");
+        }
+    }
+
     public static string Stringify(object jsonObject, int indentLevel = 0)
     {
         var sb = new StringBuilder();
         BuildJsonTreeString(jsonObject, sb, indentLevel);
         return sb.ToString();
     }
+    public static (bool isValid, string error) ValidateJsonSchema(Dictionary<string, object> json, Dictionary<string, object> schema)
+    {
+        foreach (var key in schema.Keys)
+        {
+            // Check if the key exists in the json object
+            if (!json.ContainsKey(key))
+            {
+                return (false, $"Missing required key: {key}");
+            }
+
+            // Get the expected type from the schema
+            var expectedType = schema[key];
+            var actualValue = json[key];
+
+            // Check for nested dictionary structure
+            if (expectedType is Dictionary<string, object> nestedSchema)
+            {
+                if (actualValue is not Dictionary<string, object> nestedJson)
+                {
+                    return (false, $"Expected '{key}' to be a nested object, but got {actualValue.GetType()}");
+                }
+                
+                // Recursive call for nested validation
+                var (isNestedValid, nestedError) = ValidateJsonSchema(nestedJson, nestedSchema);
+                if (!isNestedValid)
+                {
+                    return (false, nestedError); // Return first encountered error in nested object
+                }
+            }
+            else
+            {
+                // Check the type of the current field
+                if (!IsValidType(actualValue, expectedType))
+                {
+                    return (false, $"Invalid type for '{key}': Expected {expectedType}, got {actualValue.GetType()}");
+                }
+            }
+        }
+
+        // If all checks passed, return true
+        return (true, "");
+    }
+
+    private static bool IsValidType(object value, object expectedType)
+    {
+        return expectedType switch
+        {
+            "string" => value is string,
+            "int" => value is int,
+            "bool" => value is bool,
+            _ => throw new InvalidOperationException($"Unknown type in schema: {expectedType}")
+        };
+    }
+
+    // Example usage
 
     private static void BuildJsonTreeString(object jsonObject, StringBuilder sb, int indentLevel)
     {
@@ -55,6 +183,16 @@ public class JsonTools
             }
         }
     }
+    public static Dictionary<string, string> ToDictStrStr(Dictionary<string, object> input)
+    {
+        var result = new Dictionary<string, string>();
+        foreach (var kvp in input)
+        {
+            result[kvp.Key] = (string)kvp.Value; // Hard cast, will throw if incompatible
+        }
+        return result;
+    }
+
     public static Dictionary<string, object> Parse(string json)
     {
         // Deserialize the JSON to a JObject first
@@ -263,9 +401,9 @@ public class ShellRun
         public string Error { get; set; }
     }
 
-    public static DictTable ParseJsonToDictTable(string json)
+    public static DictObjTable ParseJsonToDictTable(string json)
     {
-        var result = new DictTable();
+        var result = new DictObjTable();
 
         // Remove outer braces and split into individual entries
         json = json.Trim().TrimStart('{').TrimEnd('}');
@@ -284,7 +422,7 @@ public class ShellRun
             string innerJson = parts[1].Trim(' ', '}');
 
             // Now we need to parse the inner dictionary
-            var innerDict = new DictStrStr();
+            var innerDict = new DictStrObj();
             var innerEntries = innerJson.Split(new string[] { "\",\"" }, System.StringSplitOptions.None);
 
             foreach (var innerEntry in innerEntries)
@@ -307,7 +445,7 @@ public class ShellRun
 
 
     // using DictTable = System.Collections.Generic.Dictionary<string, System.Collections.Generic.Dictionary<string, string>>;
-    public static string BuildJsonFromDictTable(DictTable records)
+    public static string BuildJsonFromDictTable(DictObjTable records)
     {
         System.Text.StringBuilder jsonBuilder = new System.Text.StringBuilder();
         jsonBuilder.Append("{");
@@ -353,7 +491,7 @@ public class ShellRun
     /// <param name="isNamedArguments">If true, the arguments are treated as named key-value pairs.</param>
     /// <param name="workingDirectory">The working directory for the command execution. If null, it defaults to the current directory.</param>
     /// <returns>A Response object containing the output and error.</returns>
-    public static Response RunCommand(string[] command,  DictStrStr arguments, bool isNamedArguments = false, string workingDirectory = null)
+    public static Response RunCommand(string[] command,  DictStrObj arguments, bool isNamedArguments = false, string workingDirectory = null)
     {
         var response = new Response();
 
@@ -392,7 +530,7 @@ public class ShellRun
     }
 
 
-    public static Process StartProcess(string[] command, DictStrStr arguments, bool isNamedArguments = false, string workingDirectory = null)
+    public static Process StartProcess(string[] command, DictStrObj arguments, bool isNamedArguments = false, string workingDirectory = null)
     {
         Process process = new Process();
 
@@ -425,7 +563,7 @@ public class ShellRun
     }
 
    
-    public static string[] BuildCommandArguments(string[] commands, Dictionary<string, string> arguments, bool isNamedArguments)
+    public static string[] BuildCommandArguments(string[] commands, DictStrObj arguments, bool isNamedArguments)
     {
         // The command is the first element in the commands array (e.g., "ls" or "git")
         string command = commands[0];

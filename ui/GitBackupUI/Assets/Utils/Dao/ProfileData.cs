@@ -1,8 +1,65 @@
 using System.Collections.Generic;
 using UnityEngine;
-using DictStrStr = System.Collections.Generic.Dictionary<string, string>;
-using DictTable = System.Collections.Generic.Dictionary<string, System.Collections.Generic.Dictionary<string, string>>;
+using DictStrObj = System.Collections.Generic.Dictionary<string, object>;
+using DictObjTable = System.Collections.Generic.Dictionary<string, System.Collections.Generic.Dictionary<string, object>>;
 using System.IO;
+using System.Threading;
+
+using System.Collections.Concurrent;
+
+class FileUtils
+{
+    private static readonly ConcurrentDictionary<string, Mutex> _mutexes = new ConcurrentDictionary<string, Mutex>();
+
+    private static Mutex GetMutex(string filePath)
+    {
+        return _mutexes.GetOrAdd(filePath, _ => new Mutex());
+    }
+
+    public static void LockReserve(string filePath)
+    {
+        GetMutex(filePath).WaitOne();
+    }
+
+    public static void LockRelease(string filePath)
+    {
+        GetMutex(filePath).ReleaseMutex();
+    }
+
+    public static object SafeReadJsonFile(string filePath)
+    {
+        LockReserve(filePath);
+        try
+        {
+            if (File.Exists(filePath))
+            {
+                string json = File.ReadAllText(filePath);
+                return ShellRun.ParseJsonToDictTable(json);
+            }
+        }
+        finally
+        {
+            LockRelease(filePath);
+        }
+        return null;
+    }
+
+    public static bool SafeWriteJsonFile(string filePath, DictObjTable records)
+    {
+        LockReserve(filePath);
+        try
+        {
+            string json = ShellRun.BuildJsonFromDictTable(records);
+            File.WriteAllText(filePath, json);
+            return true;
+        }
+        finally
+        {
+            LockRelease(filePath);
+        }
+    }
+}
+
 
 public class ProfileData : StandardData
 {
@@ -12,13 +69,11 @@ public class ProfileData : StandardData
         filePath = Application.persistentDataPath + "/profiles.json";
         //LoadData();
         // Debug.Log("1. Loading Profile data");
-        if (File.Exists(filePath))
-        {
-            string json = File.ReadAllText(filePath);
-            var data = ShellRun.ParseJsonToDictTable(json);
-            if (data != null )
-                SetRecords(data);
-        }
+        // TODO implement secure password storage
+        //Dictionary<string,object> results = DJson.Parse((string)obj);
+        var data = FileUtils.SafeReadJsonFile(filePath);
+        if (data != null )
+            SetRecords((DictObjTable)data);
     }
     public bool AddProfile(string name, 
                           string username, 
@@ -37,7 +92,7 @@ public class ProfileData : StandardData
             throw new System.Exception("Null is accessKey");
         if (string.IsNullOrEmpty(encryption_password))
             throw new System.Exception("Null is encryption_password");
-        return SetRecord(new DictStrStr
+        return SetRecord(new DictStrObj
         {
             { "name", name },
             { "path", path },
@@ -60,9 +115,7 @@ public class ProfileData : StandardData
     public override void AfterSaveData()
     {
         // Debug.Log("FILE OP: Saving Data");
-        string json = ShellRun.BuildJsonFromDictTable(GetRecords());
-        //PrintRecordsToDebugLog();
-        File.WriteAllText(filePath, json);
+        FileUtils.SafeWriteJsonFile(filePath,GetRecords());
         // Debug.Log("Saving User");
         // Debug.Log(json);
 

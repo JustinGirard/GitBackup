@@ -1,8 +1,10 @@
+using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.UIElements;
-using DictStrStr = System.Collections.Generic.Dictionary<string, string>;
-using DictTable = System.Collections.Generic.Dictionary<string, System.Collections.Generic.Dictionary<string, string>>;
+using DictStrObj = System.Collections.Generic.Dictionary<string, object>;
+using DictObjTable = System.Collections.Generic.Dictionary<string, System.Collections.Generic.Dictionary<string, object>>;
 
 public class RepoListScreen : StandardListScreen, NavigationManager.ICanInitalize
 {
@@ -36,7 +38,7 @@ public class RepoListScreen : StandardListScreen, NavigationManager.ICanInitaliz
         BaseUpdate();        
     }
 
-    protected override List<DictStrStr>  PreProcessList(List<DictStrStr> sourceRecords){
+    protected override List<DictStrObj>  PreProcessList(List<DictStrObj> sourceRecords){
 
         if(__repoSource == "local")
         {
@@ -46,21 +48,21 @@ public class RepoListScreen : StandardListScreen, NavigationManager.ICanInitaliz
         {
             var navigatorObject = GameObject.Find("Navigator");
             RepoData repoData = navigatorObject.GetComponent<RepoData>();
-             List<DictStrStr> alreadyDownloadedRecords  = repoData.ListFullRecords();
+             List<DictStrObj> alreadyDownloadedRecords  = repoData.ListFullRecords();
 
-            List<DictStrStr> neededRecords = new List<DictStrStr>();
+            List<DictStrObj> neededRecords = new List<DictStrObj>();
             HashSet<string> downloadedNames = new HashSet<string>();
             foreach (var record in alreadyDownloadedRecords)
             {
                 if (record.ContainsKey("name"))
                 {
-                    downloadedNames.Add(record["name"]);
+                    downloadedNames.Add((string)record["name"]);
                 }
             }
 
             foreach (var record in sourceRecords)
             {
-                if (record.ContainsKey("name") && !downloadedNames.Contains(record["name"]))
+                if (record.ContainsKey("name") && !downloadedNames.Contains((string)record["name"]))
                 {
                     neededRecords.Add(record);
                 }
@@ -72,7 +74,7 @@ public class RepoListScreen : StandardListScreen, NavigationManager.ICanInitaliz
     }
 
 
-    protected override VisualElement AddToList(DictStrStr rec)
+    protected override VisualElement AddToList(DictStrObj rec)
     {
         // Create a new instance of the RepoListItem template
         var repoListItem = new VisualElement();
@@ -80,18 +82,25 @@ public class RepoListScreen : StandardListScreen, NavigationManager.ICanInitaliz
         {
             var repoListItemTemplate = Resources.Load<VisualTreeAsset>("Controls/RepoListItem/RepoListItem");
             repoListItemTemplate.CloneTree(repoListItem);
-            repoListItem.style.height = 40; // TODO TOTAL HACK. 
-            repoListItem.Q<Label>("repo_name").text = rec["name"];
-            repoListItem.Q<Label>("repo_status").text = rec["status"];
-            repoListItem.Q<Label>("repo_branch").text = rec["branch"];
+            repoListItem.style.height = 100; // TODO TOTAL HACK. 
+            repoListItem.style.minHeight = 100;
+            repoListItem.style.maxHeight = 100;
+            repoListItem.Q<Label>("repo_name").text = "a."+rec["name"];
+            repoListItem.Q<Label>("repo_status").text = (string)rec["status"];
+            repoListItem.Q<Label>("repo_branch").text = (string)rec["branch"];
+            repoListItem.Q<Label>("repo_latest_commit_hash").text = ((string)rec["latest_commit_hash"]).Substring(0, 5);
+            repoListItem.Q<Label>("repo_gh_latest_commit_hash").text = ((string)rec["gh_latest_commit_hash"]).Substring(0, 5);
+
+            //repoListItem.Q<Label>("repo_gh_last_download_datetime").text = rec["gh_last_download_datetime"];   
+            
         }
         if(__repoSource == "github")
         {
             var repoListItemTemplate = Resources.Load<VisualTreeAsset>("Controls/RepoListItem/RepoListItemSelect");
             repoListItemTemplate.CloneTree(repoListItem);
             repoListItem.style.height = 40; // TODO TOTAL HACK. 
-            repoListItem.Q<Label>("repo_name").text = rec["name"];
-            repoListItem.Q<Label>("repo_branch").text = rec["branch"];
+            repoListItem.Q<Label>("repo_name").text = (string)rec["name"];
+            repoListItem.Q<Label>("repo_branch").text = (string)rec["branch"];
         }
 
         // Add the new item to the repo list container
@@ -102,7 +111,7 @@ public class RepoListScreen : StandardListScreen, NavigationManager.ICanInitaliz
 
         //repoListContainer.Add(repoListItem);
         // Register click event for highlighting
-        repoListItem.RegisterCallback<ClickEvent>(evt => OnRepoItemClick(repoListItem, rec["name"]));
+        repoListItem.RegisterCallback<ClickEvent>(evt => OnRepoItemClick(repoListItem, (string)rec["name"]));
         return repoListItem;
     }
 
@@ -206,10 +215,9 @@ public class RepoListScreen : StandardListScreen, NavigationManager.ICanInitaliz
 
         async void DoDownload()
         {
-            //((RepoGithubData)datasource).DownloadAll(selectedRepos);   
-            StartCoroutine(((RepoGithubData)datasource).DownloadAllCoroutine(selectedRepos));         
-            //Debug.Log($"Finished Download of  {downloadString}");
-
+            bool debugMode = true;
+            bool downloadDebugMode = true;
+            ((RepoGithubData)datasource).RunTaskDownloadAll(selectedRepos,debugMode,downloadDebugMode);
             navigationManager.NavigateTo("RepoListScreen");
         }
 
@@ -237,7 +245,7 @@ public class RepoListScreen : StandardListScreen, NavigationManager.ICanInitaliz
     }
 
 
-    public void InitData(Dictionary<string, string> dataframe)
+    public void InitData(DictStrObj dataframe)
     {
         //throw new System.NotImplementedException();
     }

@@ -1,8 +1,8 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UIElements;
-using DictStrStr = System.Collections.Generic.Dictionary<string, string>;
-using DictTable = System.Collections.Generic.Dictionary<string, System.Collections.Generic.Dictionary<string, string>>;
+using DictStrObj = System.Collections.Generic.Dictionary<string, object>;
+using DictTable = System.Collections.Generic.Dictionary<string, System.Collections.Generic.Dictionary<string, object>>;
 //public class RepoListScreen : TemplateListScreen, NavigationManager.ICanInitalize
 public class ProfileListScreen : StandardListScreen//, NavigationManager.ICanInitalize
 {
@@ -36,9 +36,9 @@ public class ProfileListScreen : StandardListScreen//, NavigationManager.ICanIni
             { "passRecord", false }
         };
     }
-    protected override VisualElement AddToList(DictStrStr rec)
+    protected override VisualElement AddToList(DictStrObj rec)
     {
-        string name = rec["name"];
+        string name = (string)rec["name"];
 
         // Create a new instance of the RepoListItem template
         var repoListItem = new VisualElement();

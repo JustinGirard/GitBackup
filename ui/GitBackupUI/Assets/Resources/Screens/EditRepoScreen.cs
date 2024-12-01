@@ -1,8 +1,7 @@
 using UnityEngine;
 using System.Collections.Generic;
 using UnityEngine.UIElements;
-using DictStrStr = System.Collections.Generic.Dictionary<string, string>;
-using DictTable = System.Collections.Generic.Dictionary<string, System.Collections.Generic.Dictionary<string, string>>;
+using DictStrObj = System.Collections.Generic.Dictionary<string, object>;
 
 public class EditRepoScreen : StandardEditScreen, NavigationManager.ICanInitalize
 {
@@ -58,7 +57,7 @@ public class EditRepoScreen : StandardEditScreen, NavigationManager.ICanInitaliz
         navigationManager.NavigateTo("RepoListScreen");
     }
 
-    public void InitData(Dictionary<string, string> dataframe)
+    public void InitData(DictStrObj dataframe)
     {
         var root = GetComponent<UIDocument>().rootVisualElement;
 
@@ -67,7 +66,8 @@ public class EditRepoScreen : StandardEditScreen, NavigationManager.ICanInitaliz
         if (dataframe.ContainsKey("name"))
         {
             Debug.Log($"RepoInfo.InitData for {dataframe["name"]} ");
-            RecordRepoFull record = new RecordRepoFull(repoData.GetRecord(dataframe["name"]));
+            DictStrObj strRec = repoData.GetRecord((string)dataframe["name"]);
+            RecordRepoFull record = new RecordRepoFull(strRec);
             SetTextboxText(root, "Name", record.name);
             SetTextboxText(root, "GitURL", record.url);
             SetTextboxText(root, "Branch", record.branch);

@@ -1,16 +1,20 @@
 using System.Collections.Generic;
 using UnityEngine;
-using DictStrStr = System.Collections.Generic.Dictionary<string, string>;
-using DictTable = System.Collections.Generic.Dictionary<string, System.Collections.Generic.Dictionary<string, string>>;
+using DictStrObj = System.Collections.Generic.Dictionary<string, object>;
+using DictObjTable = System.Collections.Generic.Dictionary<string, System.Collections.Generic.Dictionary<string, object>>;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Unity.VisualScripting;
 
 
+using System.Collections;
+
+
+
 
 public class StandardData : MonoBehaviour
 {
-    private DictTable __records = new DictTable();
+    private DictObjTable __records = new DictObjTable();
     private int __dataRevision = 0;
     private System.Random random = new System.Random(); // Create a Random instance
     protected string __statusLabel = "";
@@ -27,12 +31,27 @@ public class StandardData : MonoBehaviour
     public virtual void  Refresh()
     {
     }
-    public DictTable  GetRecords()
+    public DictObjTable  GetRecords()
     {
         BeforeLoadData();     
         return __records;
     }
+    public bool AddToRecordField(string name,string field,object value,bool create=true,string keyfield="name")
+    {
+        Debug.Log($"AddToRecordField is saving keytfield {keyfield}: name {name}");
+        object oldVal = GetRecordField( name,field);
+        if (oldVal == null)
+            oldVal = 0f;
+        return SetRecordField(name:name,field:field,value:(float)oldVal+(float)value,create:create,keyfield: keyfield);
+    }
 
+    public bool SubtractFromRecordField(string name,string field,object value,bool create=true,string keyfield="name")
+    {
+            object oldVal = GetRecordField( name,field);
+            if (oldVal == null)
+                oldVal = 0f;
+            return SetRecordField(name,field,(float)value-(float)oldVal,create,keyfield);
+    }
 
     public int GetDataRevision()
     {
@@ -45,10 +64,8 @@ public class StandardData : MonoBehaviour
         return __records.ContainsKey(name);
     }
 
-    // Method to assign a new random revision number
     public void UpdateDataRevision(int code)
     {
-        // Debug.Log($"++++++UpdateDataRevision Code "+code.ToString());
         __dataRevision = random.Next(1, int.MaxValue); // Assign a new random number, avoiding zero
     }
 
@@ -58,31 +75,26 @@ public class StandardData : MonoBehaviour
         foreach (var outerEntry in __records)
         {
             string key = outerEntry.Key;
-            DictStrStr innerDict = outerEntry.Value;
-            //Debug.Log($"Record Name: {key}");
+            DictStrObj innerDict = outerEntry.Value;
             foreach (var innerEntry in innerDict)
             {
                 Debug.Log($"{innerEntry.Key}: {innerEntry.Value}");
             }
-            //Debug.Log("------------------------");
         }
     }
 
-    public List<DictStrStr> ListFullRecords()
+    public List<DictStrObj> ListFullRecords()
     {
         List<string> repoNameList = ListRecords(); // Simulated call for listing repos
-        List<DictStrStr> repoList = new List<DictStrStr>();
+        List<DictStrObj> repoList = new List<DictStrObj>();
         foreach (var repo_name in repoNameList)
         {
-            //Debug.Log($"{this.ToString()}: Found {repo_name}");
-            DictStrStr reporec = GetRecord(repo_name);
+            DictStrObj reporec = GetRecord(repo_name);
             if (reporec!= null) 
             {
-                //Debug.Log($"{this.ToString()}: Adding DATA {repo_name} into ");
                 repoList.Add(reporec);
             }
         }
-        //Debug.Log($"Listing Records for {this.ToString()}: {repoList.Count.ToString()}");        
         return repoList;
     }
 
@@ -101,10 +113,14 @@ public class StandardData : MonoBehaviour
 
         
     }
+    public virtual DictStrObj AfterAlterRecord(DictStrObj rec)
+    {
+        return rec;
+    }
 
 
     // Simulate getting repository info
-    public virtual DictStrStr GetRecord(string name)
+    public virtual DictStrObj GetRecord(string name)
     {
         BeforeLoadData();     
         if (__records.ContainsKey(name))
@@ -120,7 +136,7 @@ public class StandardData : MonoBehaviour
     }
 
 
-    public virtual string GetRecordField(string name,string field)
+    public virtual object GetRecordField(string name,string field)
     {
         BeforeLoadData();     
         if (!__records.ContainsKey(name))
@@ -134,30 +150,47 @@ public class StandardData : MonoBehaviour
         return __records[name][field];
     }  
 
-    public virtual bool SetRecordField(string name,string field,string value)
+    public virtual bool SetRecordField(string name,string field,object value,bool create=true, string keyfield="name")
     {
         if (!__records.ContainsKey(name))
         {
-            return false;
+            if(create == false)
+                return false;
+
+            if(create == true)
+                SetRecord(new DictStrObj{
+                    {keyfield,name}
+                },keyfield:keyfield);
         }
+
         if (!__records[name].ContainsKey(field))
         {
-            return false;
+            if(create == false)
+                return false;
         }
         __records[name][field] = value;
         
         UpdateDataRevision(1);   
-        AfterSaveData();     
+         __records[name] = AfterAlterRecord( __records[name]);   
+        AfterSaveData();  
         return true;
     }
-    protected bool SetRecord(DictStrStr rec,string keyfield="name" )
+    protected bool SetRecord(DictStrObj rec,string keyfield="name" )
     {
-        string name = rec[keyfield];
+        if (rec.ContainsKey(keyfield) == false)
+        {
+            Debug.LogError($"Coould not set a record, as the key '{keyfield}' was missing from keys. The Data: {DJson.Stringify(rec)}");
+            return false;
+        }
+        string name = (string)rec[keyfield];
         __records[name] = rec;
         UpdateDataRevision(2);   
-        AfterSaveData();     
+         __records[name] = AfterAlterRecord( __records[name]);   
+        AfterSaveData();  
         return true; 
     }
+
+
     public virtual bool DeleteRecord(string name)
     {
         if (__records.ContainsKey(name))
@@ -169,15 +202,17 @@ public class StandardData : MonoBehaviour
         AfterSaveData();
         return true;
     }
-    public void  SetRecords(DictTable records)
+    public void  SetRecords(DictObjTable records)
     {
         __records = records;
         UpdateDataRevision(4);        
         AfterSaveData();
     }
+
+
     public void  ClearRecords()
     {
-        __records = new DictTable();   
+        __records = new DictObjTable();   
         UpdateDataRevision(4);        
         AfterSaveData();
     }        

@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
-using DictStrStr = System.Collections.Generic.Dictionary<string, string>;
-using DictTable = System.Collections.Generic.Dictionary<string, System.Collections.Generic.Dictionary<string, string>>;
+using DictStrObj = System.Collections.Generic.Dictionary<string, object>;
+using DictObjTable = System.Collections.Generic.Dictionary<string, System.Collections.Generic.Dictionary<string, object>>;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
@@ -11,7 +11,69 @@ using System.Runtime.InteropServices;
 using UnityEngine.AI;
 using Unity.VisualScripting;
 using System.Text;
+using UnityEditor;
+/// <summary>
+/// Step result is created before each job step, and passed to the function
+/// Its main role is to cause a process to crash if it is not finalized properly. That way
+/// all jobs will be forced to maintain proper reporting behaviour on each iteration
+/// </summary>
+public class JobResult
+{
+    bool flagCancel = false;
+    bool flagFinished = false;
+    float minProgress = 0;
+    float maxProgress = 100;
+    string progressJson =      $"{"value"}:0.1,{"message"}:{"job was initalized, but not started"}";
+    bool flagCancelChecked = false;
+    bool flagProgressUpdated = false;
+    public void ResetFlags()
+    {
+        flagCancelChecked = false;
+        flagProgressUpdated = false;
+    }    
+    public bool SetCancel()
+    {
+        flagCancel = true;
+        return true;
+    }
+    public bool SetFinished()
+    {
+        flagFinished = true;
+        return true;
+    }    
+    public bool GetFinished()
+    {
+        return flagFinished;
+    }    
+    public bool ReadCancel()
+    {
+        flagCancelChecked = true;
+        return flagCancel;
+    }
+    public bool SetProgress(float progress, string message )
+    {
+        flagProgressUpdated = true;
+        //throw new System.Exception($"Progress was UPDATED ");
+        if (progress > maxProgress || progress <minProgress)
+            throw new System.Exception($"Progress was supplied an invalid value {progress}");
+        progressJson =  $"{"value"}:{progress},{"message"}:{message}";
+        return true;
+    }
+    public string ReadProgress()
+    {
+        return progressJson;
+    } 
 
+    public bool WasCancelChecked()
+    {
+        return flagCancelChecked;
+    }
+    public bool WasProgressUpdated()
+    {
+        return flagProgressUpdated;
+    }
+
+}
 
 public class JobUtils
 {
@@ -22,6 +84,90 @@ public class JobUtils
     private static void AsyncRunMainThread(Action<object> action,object param)
     {
         ApplicationState.Instance().Enqueue(action,param);
+    }
+
+
+
+
+    public static Func<Task> CreateStepJob(
+                                        string jobName,
+                                        Func<JobResult, Task<object>> stepJob, 
+                                        string jobId=null, 
+                                        string parentId="",
+                                        Action<object> doOnSuccess=null,
+                                        Action<object> doOnFailure=null, 
+                                        Action<object> doOnProgress=null, 
+                                        bool debugMode=false)
+    {
+        // bool procDoCancel = false; Cant cancel tasks
+        DateTime lastHeartbeat = DateTime.UtcNow;
+        bool waitingOnStep = false;
+        JobResult culmulativeStepResult = new JobResult();
+
+        // Function to check if the job is still running based on heartbeat
+        Func<bool> isRunning = () =>
+        {
+            TimeSpan timeSinceLastHeartbeat = DateTime.UtcNow - lastHeartbeat;
+            //ApplicationState.Instance().Enqueue(() => Debug.Log($">Step function reportiong  {rindex.ToString()}"));
+
+            return timeSinceLastHeartbeat.TotalSeconds < 2 || waitingOnStep == true;
+        };
+
+        Func<bool> cancel = () =>
+        {
+            culmulativeStepResult.SetCancel();
+            return false;
+        };
+
+        Func<object> readProgress = () => culmulativeStepResult.ReadProgress();
+        Action<object> onSuccess = doOnSuccess!= null ? doOnSuccess: (object obj) => {};
+        Action<object> onFailure = doOnFailure!= null ? doOnFailure: (object obj) => Debug.LogError("Task failed: " + obj.ToString());
+        Action<object> onProgress = doOnProgress!= null ? doOnProgress: (object obj) => {};
+
+        Func<Task<object>> wrappedLongJob = async () =>
+        {
+            object returnVal = null;
+            culmulativeStepResult.ResetFlags();
+            while(culmulativeStepResult.GetFinished() == false)
+            {
+                lastHeartbeat = DateTime.UtcNow;
+                waitingOnStep = true;
+                try
+                {
+                    returnVal = await Task.Run(() => stepJob(culmulativeStepResult));
+                }
+                finally
+                {
+                    waitingOnStep = false;
+                }
+                if (returnVal!= null)
+                {
+                    culmulativeStepResult.SetFinished();
+                    return returnVal;
+                }
+                if (culmulativeStepResult.WasCancelChecked() == false)
+                    throw new System.Exception($"Cancel was not checked by {jobId}.{jobName}");
+                if (culmulativeStepResult.WasProgressUpdated() == false)
+                    throw new System.Exception($"Progress was not checked by {jobId}.{jobName}");
+                culmulativeStepResult.ResetFlags();
+            }
+            return returnVal;
+        };
+
+
+        return CreateJobifiedFunc(
+            id: jobId,
+            jobName: jobName,
+            taskFunc: wrappedLongJob,
+            isRunning: isRunning,
+            cancel: cancel,
+            readProgress: readProgress,
+            onSuccess: onSuccess,
+            onProgress: onProgress,
+            onFailure: onFailure,
+            debugMode: debugMode,
+            parentId: parentId
+        );
     }
 
 
@@ -49,7 +195,12 @@ public class JobUtils
 
             // Register the job with JobData
             JobData jobData = JobData.Instance();
-            jobData.RegisterJob(id:jobId, name:jobName, parentId:parentId);
+            if (jobData.RegisterJob(id:jobId, name:jobName, parentId:parentId)==false)
+            {
+                AsyncRunMainThread(() => onFailure?.Invoke(new System.Exception("Can not start job, it is already running")));
+                // jobData.UpdateJobStatus(jobId, "failed");
+                return;
+            }
             // Create JobHandle
             object progressJson = "UNKNOWN";
             JobHandle jobHandle = new JobHandle
@@ -59,7 +210,6 @@ public class JobUtils
                 Poll = () =>
                 {
                     progressJson = readProgress();
-                    Debug.Log("Read "+progressJson);
                     onProgress(progressJson); // TODO Consider injecting progress logic somewhere else
 
                     return true;
@@ -69,27 +219,36 @@ public class JobUtils
                 },
                 GetData = () =>
                 {
-                    return new DictStrStr();
+                    return new DictStrObj();
                 }
             };
             jobData.AttachJobHandle(jobId, jobHandle);
 
             try
             {
-                if (debugMode)
-                {
-                    AsyncRunMainThread(() => Debug.Log($"Starting task for job '{jobName}' with ID '{jobId}'"));
-                }
 
-                // Update the job status to "running"
+                // Update the job status to "finishing"
                 jobData.UpdateJobStatus(jobId, "started");
-                object result = await taskFunc();
-                jobData.UpdateJobStatus(jobId, "finishing");
-
+                //object result = await taskFunc();
+                Task<object> task = taskFunc();
+                if (task.Status == TaskStatus.Faulted)
+                {
+                    jobData.UpdateJobStatus(jobId, "crashed");
+                    if (debugMode) AsyncRunMainThread(() => Debug.Log($"6++++++Core Job: Task crashed for job '{jobName}'"));
+                    throw new System.Exception($"Job {jobName} crashed on start");
+                }
                 if (debugMode)
                 {
-                    AsyncRunMainThread(() => Debug.Log($"Task completed successfully for job '{jobName}'"));
+                    AsyncRunMainThread(() => Debug.Log($"6++++++Core Job:Starting task for job '{jobName}' with ID '{jobId}'"));
                 }
+                jobData.UpdateJobRunning(jobId, "true"); 
+                object result = await task;
+                jobData.UpdateJobStatus(jobId, "finishing");
+                if (debugMode)
+                {
+                    AsyncRunMainThread(() => Debug.Log($"6++++++Core Job:Task completed for job '{jobName}'"));
+                }
+
 
                 // Invoke the success callback
                 AsyncRunMainThread(() => onSuccess?.Invoke(result));
@@ -99,7 +258,9 @@ public class JobUtils
             {
                 if (debugMode)
                 {
-                    AsyncRunMainThread(() => Debug.Log($"Task failed for job '{jobName}': Exception: {ex.Message}"));
+                    AsyncRunMainThread(() => {
+                                                Debug.LogError($"Task failed for job '{jobName}':\n Exception: {ex.Message}\n {ex.StackTrace}");
+                                            });
                 }
                 AsyncRunMainThread(() => onFailure?.Invoke(ex));
                 jobData.UpdateJobStatus(jobId, "failed");
@@ -135,7 +296,7 @@ public class JobUtils
     public static Func<Task> CreateJobifiedShellTask(
         string jobName,
         string[] command,
-        DictStrStr arguments,
+        DictStrObj arguments,
         bool isNamedArguments,
         string workingDirectory,
         Action<object> onSuccess,
@@ -155,7 +316,7 @@ public class JobUtils
                 { 
                     AsyncRunMainThread(() =>
                     {
-                        Debug.Log("AM Running Command:"+ShellRun.BuildCommandArguments(command, arguments, isNamedArguments: true)[0] +" "+
+                        Debug.Log("4++++AM Running Command:"+ShellRun.BuildCommandArguments(command, arguments, isNamedArguments: true)[0] +" "+
                                 ShellRun.BuildCommandArguments(command, arguments, isNamedArguments: true)[1]);
                         Debug.Log(workingDirectory);
                     });
@@ -171,7 +332,7 @@ public class JobUtils
                     {
                         AsyncRunMainThread(() =>
                         {
-                            Debug.LogError("Very bad: STILL RUNNING!!!!! Command:"+ShellRun.BuildCommandArguments(command, arguments, isNamedArguments: true)[0] +" "+
+                            Debug.LogError("4++++Very bad: STILL RUNNING!!!!! Command:"+ShellRun.BuildCommandArguments(command, arguments, isNamedArguments: true)[0] +" "+
                                 ShellRun.BuildCommandArguments(command, arguments, isNamedArguments: true)[1]);
                             Debug.LogError("!!! Process is still running.");
                             Debug.LogError("!!! Process is still running.");
@@ -182,7 +343,7 @@ public class JobUtils
                     {
                         AsyncRunMainThread(() =>
                         {
-                            Debug.Log("EXITED! Command:"+ShellRun.BuildCommandArguments(command, arguments, isNamedArguments: true)[0] +" "+
+                            Debug.Log("4++++EXITED! Command:"+ShellRun.BuildCommandArguments(command, arguments, isNamedArguments: true)[0] +" "+
                                 ShellRun.BuildCommandArguments(command, arguments, isNamedArguments: true)[1]);
                         });
 
@@ -196,15 +357,10 @@ public class JobUtils
                 { 
                     AsyncRunMainThread((object param) =>
                     {
-                        DictStrStr data = (DictStrStr)param;
-
-                        Debug.Log("FINISHED COMMAND Command:"+ShellRun.BuildCommandArguments(command, arguments, isNamedArguments: true)[0] + " " +
+                        DictStrObj data = (DictStrObj)param;
+                        Debug.Log("4++++FINISHED COMMAND Command:"+ShellRun.BuildCommandArguments(command, arguments, isNamedArguments: true)[0] + " " +
                                 ShellRun.BuildCommandArguments(command, arguments, isNamedArguments: true)[1]);
-                        //Debug.Log(data["text_value"]);
-                        //Debug.Log(data["exit_code"]);
-                        //Debug.Log(data["output"]);
-                        //Debug.Log(data["error"]);
-                    },new DictStrStr {
+                    },new DictStrObj {
                         {"text_value","Some Value"},
                         {"exit_code",process.ExitCode.ToString()},
                         {"output",response.Output.ToString()},
@@ -279,13 +435,24 @@ public class JobUtils
             parentId:parentId
         );
     }
+/**
+SYNC Version (example)
+      var prnt = new DictTable {{"output",rec}};
+        string[] command = new string[] { venvPythonPath,"propagator/datasource/UtilGit.py","list_local_repos" };
+        DictStrStr arguments =new DictStrStr {{"backup_directory",rec["path"]}} ;
+        bool isNamedArguments = true; 
 
-
+        ShellRun.Response r = ShellRun.RunCommand( command, arguments,  isNamedArguments,  setDat.GetPythonWorkDir() );
+        List<object> jsonObj = (List<object> )JsonParser.ParseJsonObjects(r.Output);
+        string jsonString = JsonConvert.SerializeObject(jsonObj, Formatting.Indented);
+        if (jsonObj.Count == 0)
+            return;
+**/
 
 
     public static Func<Task> CreateShellTask(
         string[] command,
-        DictStrStr arguments,
+        DictStrObj arguments,
         bool isNamedArguments,
         string workingDirectory,
         Action<object> onSuccess,
@@ -322,10 +489,17 @@ public class JobUtils
                 {
                     AsyncRunMainThread(() =>
                     {
-                        if (process.HasExited)
-                            Debug.Log("Process exited successfully.");
-                        else
-                            Debug.LogError("Process is still running.");
+                        try
+                        {
+                            if (process.HasExited)
+                                Debug.Log("Process exited successfully.");
+                            else
+                                Debug.LogError("Process is still running.");
+                        }
+                        catch(Exception e)
+                        {
+                                Debug.LogError(e);
+                        }
                     });
                 }
 
@@ -337,12 +511,12 @@ public class JobUtils
                 {
                     AsyncRunMainThread(param =>
                     {
-                        var data = (DictStrStr)param;
+                        var data = (DictStrObj)param;
                         Debug.Log("Command Finished: " + data["command"]);
                         Debug.Log("Exit Code: " + data["exit_code"]);
                         Debug.Log("Output: " + data["output"]);
                         Debug.Log("Error: " + data["error"]);
-                    }, new DictStrStr
+                    }, new DictStrObj
                     {
                         {"command", ShellRun.BuildCommandArguments(command, arguments, isNamedArguments)[1]},
                         {"exit_code", process.ExitCode.ToString()},
@@ -359,7 +533,8 @@ public class JobUtils
                     systemError = GetErrorCodeMessage(process.ExitCode);
 
                 completeError = systemError + processError;
-                if (!string.IsNullOrEmpty(completeError) || string.IsNullOrEmpty(output))
+                //if (!string.IsNullOrEmpty(completeError) || string.IsNullOrEmpty(output))
+                if (!string.IsNullOrEmpty(completeError) || process.ExitCode!= 0)
                     throw new System.Exception(completeError);
 
                 // Invoke the success callback
@@ -387,11 +562,11 @@ public class JobUtils
 
 public class JobHandle
 {
-    public DictStrStr dataframe; // Data associated with the job
+    public DictStrObj dataframe; // Data associated with the job
     public Func<bool> IsRunning; // Function that returns whether the job is currently running
     public Func<bool> Cancel;    // Function that attempts to cancel the job and returns whether the cancellation was successful
     public Func<bool> Poll; // A job that can trigger an update to data, progress, and any job internals. Typically used to populate GetData and GetProgress
-    public Func<DictStrStr> GetData; // Function that returns additional data related to the job
+    public Func<DictStrObj> GetData; // Function that returns additional data related to the job
 
     public Func<object> GetProgress; // Function that returns additional data related to the job
 }
@@ -416,13 +591,13 @@ public class JobData : StandardData
         
         //StartExampleLongRunningTask("finish",10,100);
         //StartExampleLongRunningTask("cancel",10,2000);
-        //StartExampleLongRunningTask("run",10,2000);
+        //StartExampleStepRunningTask("run",10,2000);
         //StartExampleLongRunningTask("run2",15,2000);
         //StartExampleLongRunningTask("crash",1000,10);
-        Task.Delay(2000); // Wait for 1 second
-        Debug.Log("Cancelling Result");
-        bool result = CancelJob("cancel");
-        Debug.Log($"Cancel Result {result}");
+        //Task.Delay(2000); // Wait for 1 second
+        //Debug.Log("Cancelling Result");
+        //bool result = CancelJob("cancel");
+        //Debug.Log($"Cancel Result {result}");
         
     }
     private static readonly Mutex _mutex = new Mutex();
@@ -438,63 +613,29 @@ public class JobData : StandardData
     {
         _mutex.ReleaseMutex();
     }
-
-    /*
-    public IEnumerator DownloadAllCoroutine(List<string> repoNames)
+    void StartExampleStepRunningTask(string id,int seconds, int exception_seconds)
     {
-        Debug.Log($"!******Doing Download of  REPOS");
-        foreach (var repoName in repoNames)
+        int currentSeconds = 0;
+        Func<Task> tsk = JobUtils.CreateStepJob(jobName:$"Example Job {id}",
+        stepJob:async (JobResult jobResult) =>
         {
-            if (!ContainsRecord(repoName))
-            {
-                throw new System.Exception($"!{repoName} is missing from the repos. Some strange error with repos");
-            }
+            /// *** IMPORTANT (Job management)
+            float progress = (float)currentSeconds*100/((float)seconds*100);
+            jobResult.SetProgress(progress,"ran iteration normally");
+            if (jobResult.ReadCancel()) return $"id_{id}_cancelled"; 
+            if (currentSeconds >= seconds) return $"id_{id}_finished";         // jobResult.SetFinished(); can be used if one needs to return null on finish
+            
+            // Do the normal work.
+            if (currentSeconds >= exception_seconds) 
+                throw new System.Exception("I failed as planned");
+            ApplicationState.Instance().Enqueue(() => Debug.Log($"{id} is at {currentSeconds.ToString()}"));
+            await Task.Delay(1000); // Wait for 1 second
+            currentSeconds += 1;
+            return null;        
+        },debugMode:true);
+        Task.Run(tsk);
+    }
 
-            DictStrStr repoRecord = GetRecord(repoName);
-            SetRecordField(repoName, "download_status", "downloading");
-
-            // Use a flag to track completion status
-            bool isCompleted = false;
-            bool isSuccessful = false;
-
-            // Create the download task
-            Func<Task> tsk = CreateDownloadRepoTask(
-                repoRecord,
-                onSuccess: (obj) =>
-                {
-                    Debug.Log($"Finished Download of {repoName}");
-                    isSuccessful = true;
-                    isCompleted = true;
-                },
-                onFailure: (err) =>
-                {
-                    Debug.Log($"Failed Download of {repoName}");
-                    isSuccessful = false;
-                    isCompleted = true;
-                },
-                debugMode: false
-            );
-
-            Debug.Log($"Starting download for {repoName}");
-            var task = Task.Run(tsk);
-
-            while (!task.IsCompleted)
-            {
-                yield return null; // Wait for the task to complete
-            }
-            if (isSuccessful)
-            {
-                Debug.Log($"Downloaded successfully: {repoName}");
-            }
-            else
-            {
-                Debug.Log($"Download failed: {repoName}");
-            }
-        }
-        Debug.Log($"!******FINISH Download of  REPOS");
-
-    }    
-    */
     void StartExampleLongRunningTask(string id,int seconds, int exception_seconds)
     {
         bool procDoCancel = false;
@@ -645,7 +786,6 @@ public class JobData : StandardData
                 {
                     if(isRunning==true)
                     {
-                        Debug.Log("Running Poll A");
                         PollJob(id); // Tell the job to update
                         object progressData = GetJobProgress(id);
                         UpdateJobField(id,  "progress",$"uX-{StringifyProcessResp(progressData)}");
@@ -653,13 +793,9 @@ public class JobData : StandardData
                 }
                 if(doIsRunning==true)
                 {
-                    //string flagStatus = GetRecordField(id,"status");
-                    string flagRunning =  GetRecordField(id,"running");
-                    // Detect if the running status is out of sync, and sync it.
+                    string flagRunning =  (string)GetRecordField(id,"running");
                     if (isRunning && flagRunning != "true" )
                     {
-                        // Put in inital status right away
-                        Debug.Log("Running Poll B");
                         PollJob(id);
                         object progressData = GetJobProgress(id);
                         UpdateJobField(id,  "progress",$"u0-{StringifyProcessResp(progressData)}");
@@ -667,16 +803,13 @@ public class JobData : StandardData
                     }
                     if (!isRunning && flagRunning == "true" )
                     {
-                        // Update status, shut down job
-                        Debug.Log("Running Poll C");
                         PollJob(id); // Tell the job to update
                         object progressData = GetJobProgress(id);
                         UpdateJobField(id,  "progress",$"un-{StringifyProcessResp(progressData)}");
                         UpdateJobRunning(id, "false");
                     }
-                    if (!isRunning && GetRecordField(id,  "progress") == "")
+                    if (!isRunning && (string)GetRecordField(id,  "progress") == "")
                     {
-                        Debug.Log("Running Poll F");
                         PollJob(id); // Tell the job to update
                         object progressData = GetJobProgress(id);
                         UpdateJobField(id,  "progress",$"uf-{StringifyProcessResp(progressData)}");
@@ -723,9 +856,15 @@ public class JobData : StandardData
                 throw new System.Exception("Job ID cannot be null");
             if (string.IsNullOrEmpty(name))
                 throw new System.Exception("Job name cannot be null");
+            DictStrObj currentRecord = GetRecord(id);
+            if (currentRecord != null && (string)currentRecord["status"]=="running")
+            {
+                return false;
+
+            }
 
             // Create a job record and add it to __records
-            var jobRecord = new DictStrStr
+            var jobRecord = new DictStrObj
             {
                 { "id", id },
                 { "name", name },
@@ -850,7 +989,7 @@ public class JobData : StandardData
         LockReserve();
         try
         {      
-            return GetRecordField(id, "status");
+            return (string)GetRecordField(id, "status");
         }
         finally
         {
@@ -880,7 +1019,7 @@ public class JobData : StandardData
     }
 
     // Get the data associated with a job
-    public DictStrStr GetJobData(string id)
+    public DictStrObj GetJobData(string id)
     {
         LockReserve();
         try
@@ -888,7 +1027,7 @@ public class JobData : StandardData
             if (__handles.ContainsKey(id))
             {
                 var handle = __handles[id];
-                return (DictStrStr)handle.GetData?.Invoke();
+                return (DictStrObj)handle.GetData?.Invoke();
             }
             return null;
         }
@@ -908,7 +1047,7 @@ public class JobData : StandardData
             var matchingJobs = new List<string>();
             foreach (var job in ListRecords())
             {
-                if (GetRecordField(job, "status") == status)
+                if ((string)GetRecordField(job, "status") == status)
                 {
                     matchingJobs.Add(job);
                 }
@@ -987,7 +1126,7 @@ public class JobData : StandardData
     public override void  AfterSaveData()
     {
 
-        DictTable records = GetRecords();
+        DictObjTable records = GetRecords();
 
         SetStatusLabel($"total {records.Keys.Count}");
 

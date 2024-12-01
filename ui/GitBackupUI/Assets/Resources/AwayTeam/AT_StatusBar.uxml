@@ -1,0 +1,36 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" editor-extension-mode="False">
+    <Style src="project://database/Assets/Resources/AwayTeam/AT_style.uss?fileID=7433441132597879392&amp;guid=fc0760072fa88400fa6de4c0b3140d22&amp;type=3#AT_style" />
+    <ui:VisualElement class="top-bar">
+        <ui:VisualElement class="resource-counters">
+            <ui:VisualElement class="resource-item">
+                <ui:Label text="x" class="resource-icon" />
+                <ui:Label text="34" class="resource-value" />
+            </ui:VisualElement>
+            <ui:VisualElement class="resource-item">
+                <ui:Label text="Icon1" class="resource-icon" />
+                <ui:Label text="18" class="resource-value" />
+            </ui:VisualElement>
+            <ui:VisualElement class="resource-item">
+                <ui:Label text="Icon2" class="resource-icon" />
+                <ui:Label text="12" class="resource-value" />
+            </ui:VisualElement>
+        </ui:VisualElement>
+        <ui:VisualElement class="player-stats">
+            <ui:VisualElement class="stat-item">
+                <ui:Label text="y" class="stat-icon" />
+                <ui:Label text="7" class="stat-value" />
+            </ui:VisualElement>
+            <ui:VisualElement class="stat-item">
+                <ui:Label text="z" class="stat-icon" />
+                <ui:Label text="88" class="stat-value" />
+            </ui:VisualElement>
+            <ui:VisualElement class="stat-item">
+                <ui:Label text="a" class="stat-icon" />
+                <ui:Label text="11" class="stat-value" />
+            </ui:VisualElement>
+        </ui:VisualElement>
+        <ui:Button name="settings-button" class="settings-button">
+            <ui:Label text="x" />
+        </ui:Button>
+    </ui:VisualElement>
+</ui:UXML>

@@ -10,7 +10,7 @@ public class ApplicationState : MonoBehaviour
     private Dictionary<string, object> stateDictionary = new Dictionary<string, object>();
 
     // Dictionary to store callbacks for specific keys
-    private Dictionary<string, Action<object>> changeCallbacks = new Dictionary<string, Action<object>>();
+    private Dictionary<string, Action<string,object>> changeCallbacks = new Dictionary<string, Action<string,object>>();
 
     // Ensure only one instance exists
     private void Awake()
@@ -30,7 +30,7 @@ public class ApplicationState : MonoBehaviour
     /// Sets a value in the application state.
     /// Notifies registered callbacks if the value has changed.
     /// </summary>
-    public void Set(string key, object value)
+    public bool Set(string key, object value)
     {
         bool valueChanged = !stateDictionary.ContainsKey(key) || !Equals(stateDictionary[key], value);
         stateDictionary[key] = value;
@@ -38,7 +38,13 @@ public class ApplicationState : MonoBehaviour
         // If the value changed, notify registered callbacks
         if (valueChanged && changeCallbacks.ContainsKey(key))
         {
-            changeCallbacks[key]?.Invoke(value);
+            changeCallbacks[key]?.Invoke(key,value);
+            return true;
+        }
+        else
+        {
+            //Debug.Log($"Value change ? ({valueChanged}) for key {key} did not change for ");
+            return false;
         }
     }
 
@@ -82,7 +88,7 @@ public class ApplicationState : MonoBehaviour
     /// </summary>
     /// <param name="key">The key to watch for changes.</param>
     /// <param name="callback">The callback function to invoke when the key's value changes.</param>
-    public void RegisterChangeCallback(string key, Action<object> callback)
+    public void RegisterChangeCallback(string key, Action<string,object> callback)
     {
         if (changeCallbacks.ContainsKey(key))
         {
@@ -99,7 +105,7 @@ public class ApplicationState : MonoBehaviour
     /// </summary>
     /// <param name="key">The key whose callback should be removed.</param>
     /// <param name="callback">The callback function to remove.</param>
-    public void UnregisterChangeCallback(string key, Action<object> callback)
+    public void UnregisterChangeCallback(string key, Action<string,object> callback)
     {
         if (changeCallbacks.ContainsKey(key))
         {

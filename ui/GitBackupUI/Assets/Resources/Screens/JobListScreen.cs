@@ -1,8 +1,8 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UIElements;
-using DictStrStr = System.Collections.Generic.Dictionary<string, string>;
-using DictTable = System.Collections.Generic.Dictionary<string, System.Collections.Generic.Dictionary<string, string>>;
+using DictStrObj = System.Collections.Generic.Dictionary<string, object>;
+using DictObjTable = System.Collections.Generic.Dictionary<string, System.Collections.Generic.Dictionary<string, object>>;
 
 public class JobListScreen : StandardListScreen
 {
@@ -24,14 +24,14 @@ public class JobListScreen : StandardListScreen
         yield return null;
     }
 
-    protected override List<DictStrStr> PreProcessList(List<DictStrStr> records)
+    protected override List<DictStrObj> PreProcessList(List<DictStrObj> records)
     {
         return records;
-        List<DictStrStr> filteredRecords = new List<DictStrStr>();
+        List<DictStrObj> filteredRecords = new List<DictStrObj>();
 
         foreach (var record in records)
         {
-            if (record.ContainsKey("name") && record["name"].ToLower().Contains("download"))
+            if (record.ContainsKey("name") && ((string)record["name"]).ToLower().Contains("download"))
             {
                 filteredRecords.Add(record);
             }
@@ -76,7 +76,7 @@ public class JobListScreen : StandardListScreen
     }
 
 
-    protected override VisualElement AddToList(DictStrStr rec)
+    protected override VisualElement AddToList(DictStrObj rec)
     {
 
         // Create a new instance of the RepoListItem template
@@ -86,18 +86,18 @@ public class JobListScreen : StandardListScreen
         //repoListItem.style.height = 90; // TODO TOTAL HACK. 
         
         // Set the data
-        repoListItem.Q<Label>("job_parent_id").text = rec["parent_id"];
-        repoListItem.Q<Label>("job_id").text = rec["id"];
-        repoListItem.Q<Label>("job_name").text = rec["name"];
-        repoListItem.Q<Label>("job_status").text = rec["status"];
-        repoListItem.Q<Label>("job_running").text = rec["running"];
-        repoListItem.Q<Label>("job_progress").text = rec["progress"];
+        repoListItem.Q<Label>("job_parent_id").text = (string)rec["parent_id"];
+        repoListItem.Q<Label>("job_id").text = (string)rec["id"];
+        repoListItem.Q<Label>("job_name").text = (string)rec["name"];
+        repoListItem.Q<Label>("job_status").text = (string)rec["status"];
+        repoListItem.Q<Label>("job_running").text = (string)rec["running"];
+        repoListItem.Q<Label>("job_progress").text = (string)rec["progress"];
         
         // Add the new item to the repo list container
         listItemContainer.Add(repoListItem);
         var navigatorObject = GameObject.Find("Navigator"); //TODO ew so wasteful. HACK
         var navigationManager = navigatorObject.GetComponent<NavigationManager>();
-        repoListItem.RegisterCallback<ClickEvent>(evt => OnRepoItemClick(repoListItem, rec["id"]));
+        repoListItem.RegisterCallback<ClickEvent>(evt => OnRepoItemClick(repoListItem, (string)rec["id"]));
         return repoListItem;
     }
 }

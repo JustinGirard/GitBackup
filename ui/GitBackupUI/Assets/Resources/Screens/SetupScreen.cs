@@ -9,8 +9,8 @@ using UnityEngine;
 UXML
 
 */
-using DictStrStr = System.Collections.Generic.Dictionary<string, string>;
-using DictTable = System.Collections.Generic.Dictionary<string, System.Collections.Generic.Dictionary<string, string>>;
+using DictStrObj = System.Collections.Generic.Dictionary<string, object>;
+using DictTable = System.Collections.Generic.Dictionary<string, System.Collections.Generic.Dictionary<string, object>>;
 using System.Collections.Generic;
 
 
@@ -30,7 +30,7 @@ public class SetupScreen : StandardListScreen, NavigationManager.ICanInitalize
         }
     }
     // NavigationManager.ICanInitalize
-    public void InitData(DictStrStr dataframe){}
+    public void InitData(DictStrObj dataframe){}
     // NavigationManager.ICanInitalize
     public bool SetAction(string actionLabel, System.Action action ){  return false;}
     void Update()
@@ -59,7 +59,7 @@ public class SetupScreen : StandardListScreen, NavigationManager.ICanInitalize
     }
 
 
-    protected override VisualElement AddToList(DictStrStr rec)
+    protected override VisualElement AddToList(DictStrObj rec)
     {
         // Create a new instance of the RepoListItem template
         var repoListItem = new VisualElement();
@@ -67,12 +67,12 @@ public class SetupScreen : StandardListScreen, NavigationManager.ICanInitalize
         repoListItemTemplate.CloneTree(repoListItem);
         repoListItem.style.height = 40; // TODO TOTAL HACK. 
         // Set the repository attributes (repo_name, repo_status, repo_branch)
-        repoListItem.Q<Label>("stage_name").text = rec["name"];
-        repoListItem.Q<Label>("stage_status").text = rec["status"];
+        repoListItem.Q<Label>("stage_name").text = (string)rec["name"];
+        repoListItem.Q<Label>("stage_status").text = (string)rec["status"];
         // TODO Attache EVents
         repoListItem.Q<Button>("Verify").RegisterCallback<ClickEvent>(evt => {
             ((SetupData)datasource).RunStage( 
-                                        stageId:rec["name"],
+                                        stageId:(string)rec["name"],
                                         action:"verify", 
                                         onSuccess:(obj) => {Debug.Log("VERIFY SUCCEEDED: "+((string)obj));}, 
                                         onFailure:(err) => {Debug.Log("VERIFY FAILED");}
@@ -80,7 +80,7 @@ public class SetupScreen : StandardListScreen, NavigationManager.ICanInitalize
         });
         repoListItem.Q<Button>("Run").RegisterCallback<ClickEvent>(evt => {
             ((SetupData)datasource).RunStage( 
-                                        stageId:rec["name"],
+                                        stageId:(string)rec["name"],
                                         action:"execute", 
                                         onSuccess:(obj) => {Debug.Log("SUCCEEDED: "+((string)obj));}, 
                                         onFailure:(err) => {Debug.Log("FAILED");},

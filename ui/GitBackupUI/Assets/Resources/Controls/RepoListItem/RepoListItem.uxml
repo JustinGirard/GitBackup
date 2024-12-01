@@ -1,9 +1,14 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" xsi="http://www.w3.org/2001/XMLSchema-instance" engine="UnityEngine.UIElements" editor="UnityEditor.UIElements" noNamespaceSchemaLocation="../../../../UIElementsSchema/UIElements.xsd" editor-extension-mode="False">
     <Style src="project://database/Assets/Resources/SystemStyle.uss?fileID=7433441132597879392&amp;guid=fc40ef5de768b4108b0bf86c5b9e0dd5&amp;type=3#SystemStyle" />
-    <ui:VisualElement class="repo-list-item" style="flex-grow: 1; flex-direction: row; max-height: 32px; height: 100px;">
-        <ui:VisualElement name="VisualElement" style="flex-grow: 1; width: 10px; height: 32px; background-image: url(&apos;project://database/Assets/Resources/Controls/RepoListItem/status_error.png?fileID=2800000&amp;guid=76e81d6aa846e4351a0c3a8e0ba3768f&amp;type=3#status_error&apos;); max-width: 32px; border-top-width: 1px; border-right-width: 1px; border-bottom-width: 1px; border-left-width: 1px;" />
-        <ui:Label tabindex="-1" text="Status" parse-escape-sequences="true" display-tooltip-when-elided="true" name="repo_status" class="repo-list-item-label" style="width: 73px; height: 29px;" />
-        <ui:Label tabindex="-1" text="Name " parse-escape-sequences="true" display-tooltip-when-elided="true" name="repo_name" class="repo-list-item-label" style="width: 73px; height: 29px;" />
-        <ui:Label tabindex="-1" text="Branch" parse-escape-sequences="true" display-tooltip-when-elided="true" name="repo_branch" class="repo-list-item-label" style="width: 73px; height: 29px;" />
+    <ui:VisualElement name="VisualElement" class="repo-list-item" style="flex-grow: 1; flex-direction: column; max-height: 150px; height: 150px; min-height: 150px;">
+        <ui:VisualElement style="flex-grow: 1; flex-direction: row; height: 34px; min-height: 34px; max-height: 34px;">
+            <ui:Label tabindex="-1" text="Status" parse-escape-sequences="true" display-tooltip-when-elided="true" name="repo_status" class="repo-list-item-label" style="width: 130px; height: 29px; max-width: 130px; min-width: 130px;" />
+            <ui:Label tabindex="-1" text="Name " parse-escape-sequences="true" display-tooltip-when-elided="true" name="repo_name" class="repo-list-item-label" style="width: 130px; height: 29px; max-width: 130px; min-width: 130px;" />
+            <ui:Label tabindex="-1" text="Branch" parse-escape-sequences="true" display-tooltip-when-elided="true" name="repo_branch" class="repo-list-item-label" style="width: 130px; height: 29px; max-width: 130px; min-width: 130px;" />
+        </ui:VisualElement>
+        <ui:VisualElement style="flex-grow: 1; flex-direction: row; height: 34px; max-height: 34px; min-height: 34px;">
+            <ui:Label tabindex="-1" text="Last Commit Local" parse-escape-sequences="true" display-tooltip-when-elided="true" name="repo_latest_commit_hash" class="repo-list-item-label" style="width: 250px; height: 29px; max-width: 250px; min-width: 250px; font-size: 10px;" />
+            <ui:Label tabindex="-1" text="Last Commit Remote" parse-escape-sequences="true" display-tooltip-when-elided="true" name="repo_gh_latest_commit_hash" class="repo-list-item-label" style="width: 250px; height: 29px; max-width: 250px; min-width: 250px; font-size: 10px;" />
+        </ui:VisualElement>
     </ui:VisualElement>
 </ui:UXML>

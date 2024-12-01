@@ -1,22 +1,26 @@
 using System.Collections.Generic;
 using UnityEngine;
-using DictStrStr = System.Collections.Generic.Dictionary<string, string>;
-using DictTable = System.Collections.Generic.Dictionary<string, System.Collections.Generic.Dictionary<string, string>>;
+using DictStrObj = System.Collections.Generic.Dictionary<string, object>;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Unity.VisualScripting;
+using System.Threading.Tasks;
+using Task = System.Threading.Tasks.Task;
+using UnityEditor.PackageManager;
+using System.Xml.Serialization;
+using System;
 // TODO kill these stupid data classes. They dont really help.
 class RecordRepoReference
 {
     public string name;
-    public RecordRepoReference(DictStrStr record)
+    public RecordRepoReference(DictStrObj record)
     {
-        name = record["name"];
+        name = (string)record["name"];
     }
 
-    public DictStrStr ToDictRecord()
+    public DictStrObj ToDictRecord()
     {
-        DictStrStr d = new DictStrStr { { "name", name } };
+        DictStrObj d = new System.Collections.Generic.Dictionary<string, object> { { "name", name } };
         return d;
     }
 
@@ -30,19 +34,19 @@ class RecordRepoFull
     public string last_updated;
     public string username;
 
-    public RecordRepoFull(DictStrStr record)
+    public RecordRepoFull(DictStrObj record)
     {
-        name = record["name"];
-        url = record["url"];
-        branch = record["branch"];
-        status = record["status"];
-        last_updated = record["last_updated"];
+        name = (string)record["name"];
+        url = (string)record["url"];
+        branch = (string)record["branch"];
+        status = (string)record["status"];
+        last_updated = (string)record["last_updated"];
         //username = record["username"];
     }
 
-    public DictStrStr ToDictRecord()
+    public DictStrObj ToDictRecord()
     {
-        DictStrStr d = new DictStrStr {
+        DictStrObj d = new DictStrObj {
             { "name", name },
             { "url", url },
             { "branch", branch },
@@ -60,8 +64,14 @@ public class RepoData : StandardData
     ProfileData profileDatasource;  // Use the IRepoData interface for the RepoData class
     void Awake()
     {
-        void OnValueChanged(object newValue)
+        void OnValueChanged(string key, object newValue)
         {
+            if (key == "selected_profile")
+                SetStatusLabel($"attached user {newValue}");   
+            else
+            {
+                SetStatusLabel($"attached {key}:{newValue}");   
+            }
             ReloadData();
         }
         var navigatorObject = GameObject.Find("Navigator");
@@ -79,7 +89,7 @@ public class RepoData : StandardData
     public bool AddRepo(string name, string repoUrl, string branch,string status ="UNKNOWN",string lastUpdated ="NEVER")
     {
         throw new System.Exception("Also dead code?!?!");
-        bool success = SetRecord(new DictStrStr
+        bool success = SetRecord(new DictStrObj
         {
             { "name", name },
             { "url", repoUrl },
@@ -100,6 +110,7 @@ public class RepoData : StandardData
     }
     public  void ReloadData()
     {
+       
         if (profileDatasource == null)
         {
             Debug.Log("RepoData: LoadData halted; profileDatasource is null");
@@ -109,70 +120,181 @@ public class RepoData : StandardData
         var appState = navigatorObject.GetComponent<ApplicationState>();
         SetupData setDat = navigatorObject.GetComponent<SetupData>();
 
+    
         if (setDat.IsPythonReady() == false)
         {
-            Debug.Log("ReloadData Cant run, because venv is not configured yet.");
+            //Debug.Log("RepoData: ReloadData Cant run, because venv is not configured yet.");
             return;
         }
 
         string selectedProfileNames = (string)appState.Get("selected_profile");
         string[] profileNames = selectedProfileNames.Split(',');
+        
         foreach ( string selectedProfileName in profileNames)
         {
-            if (selectedProfileNames == null)
-            {
-                Debug.Log("RepoData LoadData halted; selectedProfileName is null");
-                return;
-            }
+            ProcessUser(selectedProfileName);
         }
 
     }
     private void ProcessUser(string selectedProfileName)
     {
-
+        /// Attach Navigator
         var navigatorObject = GameObject.Find("Navigator");
         var appState = navigatorObject.GetComponent<ApplicationState>();
         SetupData setDat = navigatorObject.GetComponent<SetupData>();
+        RepoGithubData ghDat = navigatorObject.GetComponent<RepoGithubData>();
         string venvPythonPath = setDat.GetPythonRoot();
-        DictStrStr rec = profileDatasource.GetRecord(selectedProfileName);
+        DictStrObj rec = profileDatasource.GetRecord(selectedProfileName);
         if (rec == null)
         {
             Debug.Log("Could not find target user");
             return;
         }
-        // propenv/bin/python3
 
-        var prnt = new DictTable {{"output",rec}};
-        string[] command = new string[] { venvPythonPath,"propagator/datasource/UtilGit.py","list_local_repos" };
-        DictStrStr arguments =new DictStrStr {{"backup_directory",rec["path"]}} ;
-        bool isNamedArguments = true; 
-        ShellRun.Response r = ShellRun.RunCommand( command, arguments,  isNamedArguments,  setDat.GetPythonWorkDir() );
-        List<object> jsonObj = (List<object> )JsonParser.ParseJsonObjects(r.Output);
+        System.Func<Task>  tsk = JobUtils.CreateShellTask(
+            command: new string[] { venvPythonPath,"propagator/datasource/UtilGit.py","list_local_repos" },
+            arguments:new DictStrObj {{"backup_directory",rec["path"]}} ,
+            isNamedArguments:true,
+            workingDirectory: setDat.GetPythonWorkDir(),
+            onSuccess:(object rawJson) => {
+                ParseAndSetRecords( (string)rawJson,selectedProfileName,ghDat);
+                ghDat.AfterSaveData();
+            },
+            onFailure:(object error) => {
+                throw (System.Exception)error;
+            },
+            debugMode:false);
+        //Task.Run(tsk); // ASYNC
+        Task.Run(tsk).GetAwaiter().GetResult(); // SYNC                
+        
+    }
+
+    public static class ParserService
+    {
+        public static DateTime? ParseDate(string dateString)
+        {
+            if (DateTime.TryParse(dateString, out DateTime parsedDate))
+            {
+                return parsedDate;
+            }
+            return null;
+        }
+    }    
+    public static string GenerateStatusForRecord(DictStrObj rec, int minutesThreshold = 5)
+    {
+        string status = "unverified";
+
+        // Parse local and GitHub timestamps
+        DateTime? localDownloadDate = ParserService.ParseDate(rec.ContainsKey("latest_download_datetime") ? (string)rec["latest_download_datetime"] : null);
+        DateTime? ghDownloadDate = ParserService.ParseDate(rec.ContainsKey("gh_latest_download_datetime") ? (string)rec["gh_latest_download_datetime"] : null);
+
+        // Check if GitHub data is available
+        bool hasGhData = rec.ContainsKey("gh_latest_commit_hash") && rec["gh_latest_commit_hash"] != "UNKNOWN";
+
+        if (hasGhData)
+        {
+            string localHash = (string)rec["latest_commit_hash"];
+            string ghHash = (string)rec["gh_latest_commit_hash"];
+
+            if (localHash == ghHash)
+            {
+                if (ghDownloadDate.HasValue && (DateTime.UtcNow - ghDownloadDate.Value).TotalMinutes <= minutesThreshold)
+                {
+                    status = "verified"; // Hashes match, GH date within threshold
+                }
+                else if (ghDownloadDate.HasValue && (DateTime.UtcNow - ghDownloadDate.Value).TotalMinutes > minutesThreshold)
+                {
+                    status = "stale"; // Hashes match, but GH date is older than threshold
+                }
+            }
+            else
+            {
+                status = "conflict"; // Hashes do not match
+            }
+        }
+        else if (localDownloadDate.HasValue && (DateTime.UtcNow - localDownloadDate.Value).TotalMinutes <= minutesThreshold)
+        {
+            status = "new"; // No GH data but local date is within threshold
+        }
+
+        return status;
+    }
+
+
+
+    public void ParseAndSetRecords(string rawJson,string selectedProfileName,RepoGithubData ghDat)
+    {
+        var schema = new Dictionary<string, object>
+        {
+            { "directory_name", "string" },
+            { "object", new Dictionary<string, object>
+                {
+                    { "obj_id", "string" },
+                    { "repo_url", "string" },
+                    { "repo_branch", "string" },
+                    { "latest_commit_hash", "string" },
+
+                }
+            }
+        };
+
+        List<object> jsonObj = (List<object> )JsonParser.ParseJsonObjects(rawJson);
         string jsonString = JsonConvert.SerializeObject(jsonObj, Formatting.Indented);
         if (jsonObj.Count == 0)
             return;
+
         jsonString = JsonConvert.SerializeObject(jsonObj[0], Formatting.Indented);
-        // Debug.Log(jsonString);
+        List<DictStrObj> allRemoteRecs = ghDat.ListFullRecords();
         foreach (Dictionary<string,object> folder in jsonObj)
         {
-            // Debug.Log((string)folder["directory_name"]);
-            string name = (string)folder["directory_name"];
-            SetRecord(new DictStrStr
+
+            try
             {
-                { "name", name },
-                { "profile_name", selectedProfileName },
-                { "url", "unknown" },
-                { "branch", "unknown" },
-                { "status", "Active" },
-                { "last_updated", "Never" } // Default status on creation
-            });            
-            SetStatusLabel($"repo_count {GetRecords().Count}");            
+                var (isValid, error) = DJson.ValidateJsonSchema(folder, schema);
+                if (!isValid)
+                    throw new System.Exception($"Validation error: {error}");
+                DateTime theDate = (DateTime)(((Dictionary<string,object>)folder["object"])["latest_download_datetime"]) ;
+                //string utcString = dateTime.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ");
+
+                
+                DictStrObj rec =  new DictStrObj
+                {
+                    { "name", (string)folder["directory_name"] },
+                    { "profile_name", selectedProfileName },
+                    { "url",  (string)(((Dictionary<string,object>)folder["object"])["repo_url"])  },
+                    { "branch", (string)(((Dictionary<string,object>)folder["object"])["repo_branch"])    },
+                    { "obj_id", (string)(((Dictionary<string,object>)folder["object"])["obj_id"])    },
+                    { "latest_commit_hash", (string)(((Dictionary<string,object>)folder["object"])["latest_commit_hash"])    },
+                    { "latest_download_datetime",theDate.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")    },
+                    { "gh_latest_commit_hash", "UNKNOWN"  },
+                    { "gh_latest_download_datetime", "UNKNOWN"  },
+                    { "status", "BAD_INIT_ERROR" },
+                };
+
+
+                SetRecord(rec);                
+
+                SetStatusLabel($"repo_count {GetRecords().Count}");            
+            }
+            catch(System.Exception ex)
+            {
+                string strJson =  DJson.Stringify(folder);
+                Debug.LogError($"Could not parse folder json {strJson}");
+                throw ex;
+            }
+
         }
     }
 
     public override void AfterSaveData()
     {
         
-    }    
+    }
+
+    public override DictStrObj AfterAlterRecord(DictStrObj rec)
+    {
+        rec["status"] = GenerateStatusForRecord( rec);    
+        return rec;    
+    }
 
 }

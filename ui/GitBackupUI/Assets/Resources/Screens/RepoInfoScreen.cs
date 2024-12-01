@@ -3,8 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UIElements;
 
-using DictStrStr = System.Collections.Generic.Dictionary<string, string>;
-using DictTable = System.Collections.Generic.Dictionary<string, System.Collections.Generic.Dictionary<string, string>>;
+using DictStrObj = System.Collections.Generic.Dictionary<string, object>;
 
 public class RepoInfoScreen : MonoBehaviour, NavigationManager.ICanInitalize
 {
@@ -43,7 +42,7 @@ public class RepoInfoScreen : MonoBehaviour, NavigationManager.ICanInitalize
     {
 
     }
-    public void InitData(Dictionary<string, string> dataframe)
+    public void InitData(DictStrObj dataframe)
     {
 
         var root = GetComponent<UIDocument>().rootVisualElement;
@@ -52,7 +51,7 @@ public class RepoInfoScreen : MonoBehaviour, NavigationManager.ICanInitalize
 
 
         Debug.Log($"RepoInfo.InitData for {dataframe["name"]} ");
-        RecordRepoFull record = new RecordRepoFull(repoData.GetRecord(dataframe["name"]));
+        RecordRepoFull record = new RecordRepoFull(repoData.GetRecord((string)dataframe["name"]));
         
 
         // Populate user-generated section

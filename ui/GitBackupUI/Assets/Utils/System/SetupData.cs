@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
-using DictStrStr = System.Collections.Generic.Dictionary<string, string>;
-using DictTable = System.Collections.Generic.Dictionary<string, System.Collections.Generic.Dictionary<string, string>>;
+using DictStrObj = System.Collections.Generic.Dictionary<string, object>;
+using DictObjTable = System.Collections.Generic.Dictionary<string, System.Collections.Generic.Dictionary<string, object>>;
 using System.IO;
 using  System.Threading.Tasks;
 using System;
@@ -30,7 +30,7 @@ public class SetupData : StandardData
                     };           
         
 
-    DictStrStr __mapStageToTargetDir = new DictStrStr {
+    DictStrObj __mapStageToTargetDir = new DictStrObj {
         {"Python","python_install_dir"},
         {"IPFS","ipfs_install_dir"},
         {"setup_venv","venv_path"},
@@ -57,8 +57,7 @@ public class SetupData : StandardData
    }
     void Start()
     {
-        ApplicationState.Instance().RegisterChangeCallback("selected_profile",(object profileString) => {
-            Debug.Log("Refreshing Setup Data");
+        ApplicationState.Instance().RegisterChangeCallback("selected_profile",(string key,object profileString) => {
             foreach(string stageId in GetStages())
             {
                 RunStage(stageId:stageId,action:"verify", onSuccess:null, onFailure:null);            
@@ -73,7 +72,7 @@ public class SetupData : StandardData
 
         if (GetRecordField("Venv","status") == "True")
             return true;
-            
+        //Debug.Log($"VENV Status: {GetRecordField("Venv","status")}"); 
         return false;
     }
     public string GetPythonRoot()
@@ -88,16 +87,16 @@ public class SetupData : StandardData
     }
 
 
-    public string GetTargetDir(string stageId,DictStrStr rec){
+    public string GetTargetDir(string stageId,DictStrObj rec){
 
 
         if(!  __mapStageToTargetDir.ContainsKey(stageId))
             return null;
-        string recKey = __mapStageToTargetDir[stageId];
+        string recKey = (string)__mapStageToTargetDir[stageId];
         if(!  rec.ContainsKey(recKey))
             return null;
 
-        return rec[recKey];
+        return (string)rec[recKey];
         
     }
     public void RunStage(string stageId,string action, System.Action<object> onSuccess, System.Action<object> onFailure,bool debugMode = false)
@@ -110,7 +109,7 @@ public class SetupData : StandardData
                 onFailure("No User Present");
             return;
         }
-        DictStrStr rec = profileDatasource.GetRecord(currentUser);
+        DictStrObj rec = profileDatasource.GetRecord(currentUser);
          
         if (! GetStages().Contains(stageId))
         {
@@ -148,12 +147,15 @@ public class SetupData : StandardData
 
         // TODO string pythonPath = rec["python_install_dir"] +"/v1/bin/python3";
         // Focus on using the user directory as the working dir
-        string workingDir = System.IO.Path.Combine(Application.persistentDataPath , "SetupData",rec["name"]);
+        string workingDir = System.IO.Path.Combine(Application.persistentDataPath , "SetupData",(string) rec["name"]);
         // Get ref to micropython for low level commands
         string microPythonPath = System.IO.Path.Combine(Application.streamingAssetsPath, "micropython/bin/micropython");
         // Get ref to minipython for regular commands
-        string miniPythonPath =System.IO.Path.Combine(workingDir,rec["python_install_dir"],"v1/bin/python3");
-        string venvPythonPath =System.IO.Path.Combine(workingDir,rec["venv_path"],"bin/python3");
+
+
+
+        string miniPythonPath =System.IO.Path.Combine(workingDir,(string)rec["python_install_dir"],"v1/bin/python3");
+        string venvPythonPath =System.IO.Path.Combine(workingDir,(string)rec["venv_path"],"bin/python3");
         __latestPythonRoot = venvPythonPath;
         __latestPythonWorkDir = workingDir;
         // Get ref the setup script
@@ -180,7 +182,7 @@ public class SetupData : StandardData
             return;
         }
 
-        DictStrStr args = new DictStrStr {
+        DictStrObj args = new DictStrObj {
                 {"id",stageScriptId},
                 {"mode",action},
                 {"target_directory",targetDir}};      
@@ -208,12 +210,12 @@ public class SetupData : StandardData
             isNamedArguments:true,
             workingDirectory: workingDir,
             onProgress: (obj) =>{
-                Debug.Log(obj);
-                Debug.LogError($"CORRECTLY Reading progress from {action}_{stageId}");
+                //Debug.Log(obj);
+                //Debug.LogError($"CORRECTLY Reading progress from {action}_{stageId}");
                 
             },
             readProgress:() =>{
-                    DictStrStr progressArgs = new DictStrStr(args);
+                    DictStrObj progressArgs = new DictStrObj(args);
                     progressArgs["mode"]="progress";
                     object progressData =null;
                     Func<Task> tsk = JobUtils.CreateShellTask(
@@ -235,7 +237,7 @@ public class SetupData : StandardData
                     return progressData;
             },            
             onSuccess: (obj) =>{
-                Debug.Log("Ran a setup command, got resut"+obj.ToString());
+                // Debug.Log($"Ran a setup command{stageId}, got resut"+obj.ToString());
                 if (action == "execute")
                 {
                     RunStage(stageId:stageId, action:"verify", onSuccess:onSuccess,onFailure:onFailure,debugMode:debugMode);
@@ -248,28 +250,31 @@ public class SetupData : StandardData
                 }
 
                 //Dictionary<string,object> jsonObject = JsonConvert.DeserializeObject<JObject>((string)obj) as Dictionary<string,object> ;
-                Dictionary<string,object> results = JsonTools.Parse((string)obj);
+                Dictionary<string,object> results = DJson.Parse((string)obj);
                 try
                 {
                     bool fresh_status = (bool)results["status"];
                     SetRecordField(stageId,"status",fresh_status.ToString());
                     string timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff");
-                    ApplicationState.Instance().Set("system_settings_updated",timestamp);
-                    
+                    timestamp = timestamp + $"{stageId} as {results["status"]}";
+                    bool triggeredEvent = ApplicationState.Instance().Set("system_settings_updated",timestamp);
+                    if (triggeredEvent ==false)
+                        Debug.LogError($"Could not trigger an event after status update for {stageId} ");
+
                 }
                 catch (System.Exception ex)
                 {
                     SetRecordField(stageId,"status","False");
                     string timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff");
+                    timestamp = timestamp + $"{stageId} as {false}";
                     ApplicationState.Instance().Set("system_settings_updated",timestamp);
-                    Debug.LogError("Encountered an Exception while running RunStage "+ex.ToString());
-
+                    //Debug.LogError("Encountered an Exception while running RunStage "+ex.ToString());
+                    throw;
                 }
 
                 if (onSuccess!= null)
                     onSuccess(obj);
             },
-            // "/Users/computercomputer/Library/Application Support/DefaultCompany/GitBackupUI/SetupData/Justin4/Tools/Python/v1/bin/python3" /Users/computercomputer/justinops/git_backup/ui/GitBackupUI/Assets/Utils/SetupManager.py stage id='download_repo' mode='verify' target_directory='Tools/propagator/' target_repo='https://github.com/Decelium/propagator' target_branch='master'
             
             onFailure: (error) =>
             {
@@ -302,7 +307,7 @@ public class SetupData : StandardData
         string missingLabel = "";
         foreach (string stageId in GetStages())
         {
-            string fieldStatus = GetRecordField(stageId,"status");
+            string fieldStatus = (string)GetRecordField(stageId,"status");
             if (fieldStatus == "UNKNOWN") unknownCount = unknownCount + 1;
             else if (fieldStatus == "True") trueCount = trueCount + 1;
             else if (fieldStatus == "False") falseCount = falseCount + 1;
@@ -335,7 +340,7 @@ public class SetupData : StandardData
             throw new System.Exception("Null is Name");
         if (string.IsNullOrEmpty(scriptId))
             throw new System.Exception("Null is scriptId");
-        SetRecord(new DictStrStr
+        SetRecord(new DictStrObj
         {
             { "name", name },
             { "script_id", scriptId },

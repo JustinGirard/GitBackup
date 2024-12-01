@@ -1,0 +1,40 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" editor-extension-mode="False">
+    <Style src="project://database/Assets/Resources/AwayTeam/AT_style.uss?fileID=7433441132597879392&amp;guid=fc0760072fa88400fa6de4c0b3140d22&amp;type=3#AT_style" />
+    <ui:VisualElement name="card-container" class="card-container">
+        <ui:VisualElement name="card-image" class="card-image">
+            <ui:Image name="entity-image" class="entity-image" />
+        </ui:VisualElement>
+        <ui:VisualElement name="card-status" class="card-status">
+            <ui:VisualElement name="status-row-1" class="status-row">
+                <ui:VisualElement name="status-item-1-1" class="status-item">
+                    <ui:Image name="status-icon-1-1" class="status-icon" />
+                    <ui:Label name="status-value-1-1" class="status-value" />
+                </ui:VisualElement>
+                <ui:VisualElement name="status-item-1-2" class="status-item">
+                    <ui:Image name="status-icon-1-2" class="status-icon" />
+                    <ui:Label name="status-value-1-2" class="status-value" />
+                </ui:VisualElement>
+            </ui:VisualElement>
+            <ui:VisualElement name="status-row-2" class="status-row">
+                <ui:VisualElement name="status-item-2-1" class="status-item">
+                    <ui:Image name="status-icon-2-1" class="status-icon" />
+                    <ui:Label name="status-value-2-1" class="status-value" />
+                </ui:VisualElement>
+                <ui:VisualElement name="status-item-2-2" class="status-item">
+                    <ui:Image name="status-icon-2-2" class="status-icon" />
+                    <ui:Label name="status-value-2-2" class="status-value" />
+                </ui:VisualElement>
+            </ui:VisualElement>
+        </ui:VisualElement>
+        <ui:VisualElement name="card-details" class="card-details">
+            <ui:Label name="card-title" class="card-title" />
+            <ui:ProgressBar name="main-progress-bar" class="status-bar" />
+            <ui:VisualElement name="segmented-bar" class="segmented-bar">
+                <ui:VisualElement name="segment-red" class="segment segment-red" />
+                <ui:VisualElement name="segment-gray-1" class="segment segment-gray" />
+                <ui:VisualElement name="segment-white" class="segment segment-white" />
+                <ui:VisualElement name="segment-gray-2" class="segment segment-gray" />
+            </ui:VisualElement>
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

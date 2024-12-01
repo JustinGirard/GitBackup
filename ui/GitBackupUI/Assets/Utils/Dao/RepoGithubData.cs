@@ -4,17 +4,19 @@ using System.IO;
 using System;
 
 using UnityEngine;
-using DictStrStr = System.Collections.Generic.Dictionary<string, string>;
-using DictTable = System.Collections.Generic.Dictionary<string, System.Collections.Generic.Dictionary<string, string>>;
+using DictStrObj = System.Collections.Generic.Dictionary<string, object>;
+using DictObjTable = System.Collections.Generic.Dictionary<string, System.Collections.Generic.Dictionary<string, object>>;
 using Newtonsoft.Json;
 using System.Collections;
 using Unity.VisualScripting;
+using System.Threading;
+using System.Net.Http.Headers;
 
 public class RepoGithubData : StandardData
 {
     ProfileData profileDatasource;  // Use the IRepoData interface for the RepoData class
     bool __loadMore = true;
-    int __limit = 50;
+    int __limit = 20;
     int __offset = 0;
 
     int __totalLoaded = 0;
@@ -22,11 +24,13 @@ public class RepoGithubData : StandardData
 
     public void Awake()
     {
-        void OnUserChanged(object newValue)
+        void OnUserChanged(string key,object newValue)
         {
             __loadMore = true;
-            __limit = 5;
+            __limit = 20;
             __offset = 0;
+            if (key == "selected_profile")
+                SetStatusLabel($"attached user {newValue}");   
 
             ClearRecords();
             __totalLoaded = 0;
@@ -50,7 +54,7 @@ public class RepoGithubData : StandardData
         if (GetRecord(name) != null)
             __totalLoaded = __totalLoaded + 1;
         SetStatusLabel($"total loaded {__totalLoaded}");
-        return SetRecord( new DictStrStr
+        return SetRecord( new DictStrObj
         {
             { "name", name },
             { "url", repoUrl },
@@ -65,6 +69,7 @@ public class RepoGithubData : StandardData
         profileDatasource = profileData;
 
     }
+    
     public void CheckForRepoData()
     {
 
@@ -79,7 +84,6 @@ public class RepoGithubData : StandardData
         SetupData setDat = navigatorObject.GetComponent<SetupData>();
         if (setDat.IsPythonReady() == false)
         {
-            Debug.Log("CheckForRepoData Cant run, because system is not configured yet.");
             return;
         }
         string venvPythonPath = setDat.GetPythonRoot();
@@ -93,7 +97,7 @@ public class RepoGithubData : StandardData
             return;
         }
         // Load User
-        DictStrStr rec = profileDatasource.GetRecord(selectedProfileName);
+        DictStrObj rec = profileDatasource.GetRecord(selectedProfileName);
         if (rec == null)
         {
             Debug.Log("Could not find target user");
@@ -105,17 +109,19 @@ public class RepoGithubData : StandardData
         {
             return;
         }
-        string tempCacheFile = System.IO.Path.Combine(Application.temporaryCachePath, "github_repos_cache.json");
+        string tempCacheFile = System.IO.Path.Combine(Application.temporaryCachePath, $"{selectedProfileName}_github_repos_cache.json");
         // Build Command 
-        var prnt = new DictTable {{"output",rec}};
+        var prnt = new DictObjTable {{"output",rec}};
         //Debug.Log(ShellRun.BuildJsonFromDictTable(prnt));
+        string set_limit = __limit.ToString();
+        string set_offset = __offset.ToString();
         string[] command = new string[] {venvPythonPath,"propagator/datasource/UtilGit.py","list_github_repos" };
-        DictStrStr arguments =new DictStrStr {
+        DictStrObj arguments =new DictStrObj {
             {"username",rec["username"]},
             {"access_token",rec["access_key"]},
             {"cache_file",tempCacheFile},
-            {"limit",__limit.ToString()},
-            {"offset",__offset.ToString()}
+            {"limit",set_limit.ToString()},
+            {"offset",set_offset.ToString()}
         };
         bool isNamedArguments = true; 
 
@@ -127,7 +133,7 @@ public class RepoGithubData : StandardData
             workingDirectory:setDat.GetPythonWorkDir(),
             onSuccess: SaveRepos,
             readProgress: () =>{
-                return $"running list_github_repos {__offset.ToString()}";
+                return $"running list_github_repos {set_offset},{set_limit}";
             },
             onProgress: (object obj) =>{
                 
@@ -140,33 +146,60 @@ public class RepoGithubData : StandardData
             parentId:"check_repo"
         );
         Task.Run(tsk);
+        
 
         void SaveRepos(object rawJsonString)
         {
-            //Debug.Log("LOADING REMOTE REPOS");
+            GameObject navigatorObject = GameObject.Find("Navigator");
+            SetupData setDat = navigatorObject.GetComponent<SetupData>();     
+            RepoData repoDatabase = navigatorObject.GetComponent<RepoData>();           
+
+            Debug.Log("LOADING REMOTE REPOS");
+            Debug.Log((string)rawJsonString);
             List<object> jsonObj = (List<object> )JsonParser.ParseJsonObjects((string)rawJsonString);
             string jsonString = JsonConvert.SerializeObject(jsonObj, Formatting.Indented);
-            //Debug.Log(jsonString);
+            Debug.Log(jsonString);
             if (jsonObj.Count <= 0)
             {
+                Debug.Log("NO REPOS LOADED FROM A QUERY. COULD BE FINISHED?");
                 return;
             }
             jsonString = JsonConvert.SerializeObject(jsonObj[0], Formatting.Indented);
             //Debug.Log(jsonString);
             __loadMore = false;
+
+            DictObjTable currentLocalRepos =                 repoDatabase.GetRecords();
+
+
             foreach (Dictionary<string,object> folder in jsonObj)
             {
                 //Debug.Log("Storing record :"+(string)folder["name"]);
-
-                SetRecord( new DictStrStr
+                string[] keys =  new string[] { "name", "html_url", "clone_url", "ssh_url", "latest_commit_hash", "latest_download_datetime", "branch" };
+                DictStrObj rec = new DictStrObj();
+                foreach (string key in keys) { DJson.SafeCopyKey( key:key, dest:rec,src:folder);    }
+                /*
+                DictStrStr rec = new DictStrStr
                 {
                     { "name", (string)folder["name"] },
                     { "download_status", "undefined" },
                     { "html_url", (string)folder["html_url"] },
                     { "clone_url", (string)folder["clone_url"] },
                     { "ssh_url", (string)folder["ssh_url"] },
+                    { "latest_commit_hash", (string)folder["latest_commit_hash"] },
+                    { "last_download_datetime", (string)folder["last_download_datetime"] },
                     { "branch", (string)folder["branch"] } // Default status on creation
-                });
+                    //{ "latest_commit_hash", (string)folder["latest_commit_hash"] } // Default status on creation
+                };*/
+                
+                //Debug.Log(DJson.Stringify(rec));                
+                SetRecord(rec);
+                if( currentLocalRepos.ContainsKey((string)rec["name"]))
+                {
+//                    Debug.Log($"Loading Record into RepoData {(string)rec["name"]}");
+                    repoDatabase.SetRecordField((string)folder["name"],"gh_latest_commit_hash",(string)rec["latest_commit_hash"] );
+                    repoDatabase.SetRecordField((string)folder["name"],"gh_latest_download_datetime",(string)rec["latest_download_datetime"]);
+                }
+                
                 __totalLoaded = GetRecords().Count;
                 SetStatusLabel($"total_indexed {__totalLoaded}");
                 __loadMore = true;
@@ -182,146 +215,96 @@ public class RepoGithubData : StandardData
     {
         //throw new System.Exception("Can not 'SaveData' in RepoGithubData");
     }    
-
-
-    public IEnumerator DownloadAllCoroutine(List<string> repoNames)
+    public void AppEnqueue(System.Action act)
     {
-        foreach (var repoName in repoNames)
-        {
-            if (!ContainsRecord(repoName))
-            {
-                throw new System.Exception($"!{repoName} is missing from the repos. Some strange error with repos");
-            }
-
-            DictStrStr repoRecord = GetRecord(repoName);
-            SetRecordField(repoName, "download_status", "downloading");
-
-            // Use a flag to track completion status
-            bool isCompleted = false;
-            bool isSuccessful = false;
-
-            // Create the download task
-            Func<Task> tsk = CreateDownloadRepoTask(
-                repoRecord,
-                onSuccess: (obj) =>
-                {
-                    Debug.Log($"Finished Download of {repoName}");
-                    isSuccessful = true;
-                    isCompleted = true;
-                },
-                onFailure: (err) =>
-                {
-                    Debug.Log($"Failed Download of {repoName}");
-                    isSuccessful = false;
-                    isCompleted = true;
-                },
-                debugMode: false
-            );
-
-            Debug.Log($"Starting download for {repoName}");
-            var task = Task.Run(tsk);
-            while (!task.IsCompleted)
-            {
-                yield return null; 
-            }
-            if (isSuccessful)
-            {
-                Debug.Log($"Downloaded successfully: {repoName}");
-            }
-            else
-            {
-                Debug.Log($"Download failed: {repoName}");
-            }
-        }
+        ApplicationState.Instance().Enqueue(act);
 
     }
-
-    /*
-   void DownloadAllNew(List<string> repoNames)
+    public void RunTaskDownloadAll(List<string> repoNames,bool debugMode, bool downloadDebugMode)
     {
-        bool procDoCancel = false;
-        DateTime lastHeartbeat = DateTime.UtcNow;
-        TaskCompletionSource<bool> taskStarted = new TaskCompletionSource<bool>();
-        // Define the task function
-        Func<Task<object>> longRunningTask = async () =>
+        GameObject navigatorObject = GameObject.Find("Navigator");
+        SetupData setDat = navigatorObject.GetComponent<SetupData>();     
+        RepoData repoDatabase = navigatorObject.GetComponent<RepoData>();           
+        int rindex = 0;
+        Func<Task> tsk = JobUtils.CreateStepJob(jobId:$"dl_allrepo", jobName:$"dl_allrepo",
+        stepJob:async (JobResult jobResult) =>
         {
-            foreach (var repoName in repoNames)
+            /// Handle Standard Job Updates & termination
+            jobResult.SetProgress( rindex/repoNames.Count,"ran iteration normally");
+            if (jobResult.ReadCancel())
             {
-                taskStarted.SetResult(true);                
-                SetRecordField(repoName,"download_status", "downloading");
-                DictStrStr repoRecord = GetRecord(repoName);
-                NonBlockingDownloadRepo(repoRecord,
-                    onSuccess: (obj) => {
-
-                        
-                    },
-                    onFailure: (err) => {}
-                ); 
-                if(procDoCancel == true)
-                    return new DictStrStr() {{"error","cancelled"}};
-
+                if (debugMode)
+                    Debug.Log($"Download all: Finished - Cancel flag");
+                return -1; 
             }
-        };
+            if(rindex >= repoNames.Count) 
+            {
+                if (debugMode)
+                    Debug.Log($"Download all: Finished all jobs as index {rindex} of {repoNames.Count}");
 
-        Func<bool> isRunning = () =>
-        {
-            TimeSpan timeSinceLastHeartbeat = DateTime.UtcNow - lastHeartbeat;
-            return timeSinceLastHeartbeat.TotalSeconds < 2;
-        };
+                return 1;    
+            }
+            ApplicationState.Instance().Enqueue(() => Debug.Log($"download_repos is at {rindex.ToString()}"));
 
-        Func<bool> cancel = () =>
-        {
-            procDoCancel = true;
-            return true;
-        };
+            // Load Next Download Record
+            string repoName = repoNames[rindex];
+            DictStrObj repoRecord = GetRecord(repoName);
+            SetRecordField(repoName, "download_status", "downloading");
 
-        Action<object> onSuccess = (object obj) => Debug.Log("Long-running task completed successfully.");
-        Action<object> onFailure = (object obj) => Debug.LogError($"Long-running task failed: ");
+            bool downloadSuccess = false;
 
-        Func<Task> jobifiedTask = JobUtils.CreateJobifiedFunc(
-            id:id,
-            jobName: "LongTask",
-            taskFunc: longRunningTask,
-            isRunning: isRunning,
-            cancel: cancel,
-            onSuccess: onSuccess,
-            onFailure: onFailure,
-            debugMode: false
-        );
+            // Download The Record
+            Func<Task> tsk = CreateDownloadRepoTask(
+                repoDatabase,
+                setDat,
+                repoRecord,
+                onSuccess: (obj) => {downloadSuccess = true; Debug.Log($"Inner: Finished Download of {repoName}");},
+                onFailure: (err) => { downloadSuccess = false; Debug.Log($"Failed Download of {repoName}");},
+                debugMode: downloadDebugMode
+            );
+            
+            // Run 
+            if (debugMode)
+               ApplicationState.Instance().Enqueue(() =>  Debug.Log($"Download all: BLOCKING ON download for {repoName} as index {rindex} of {repoNames.Count}"));
+            await Task.Run(tsk);
+            if (debugMode)
+                ApplicationState.Instance().Enqueue(() => Debug.Log($"Download all: FINISHED download for {repoName}"));
 
-        Task.Run(jobifiedTask);
-        taskStarted.Task.Wait(5000);
-    }    */
-    
-    
-    
+            // Save status. iterate.
+            if (downloadSuccess == true)
+                SetRecordField(repoName, "download_status", "finished");
+            else
+                SetRecordField(repoName, "download_status", "failed");
+            rindex ++;
+            return null;   // Returning null means Keep going     
+
+        },debugMode:debugMode);
+        Task.Run(tsk);
+    }
+
 
     // Example usage for downloading a repository
-    private  Func<Task> CreateDownloadRepoTask(DictStrStr repoData,System.Action<object> onSuccess=null, System.Action<object> onFailure=null,bool debugMode=false)
+    private  Func<Task> CreateDownloadRepoTask(RepoData repoDatabase,SetupData setDat , DictStrObj repoData,System.Action<object> onSuccess=null, System.Action<object> onFailure=null,bool debugMode=false)
     {
-        var navigatorObject = GameObject.Find("Navigator");
-        var appState = navigatorObject.GetComponent<ApplicationState>();
-        RepoData repoDatabase = navigatorObject.GetComponent<RepoData>();
+        ApplicationState appState = ApplicationState.Instance();
         string selectedProfileName = (string)appState.Get("selected_profile");
-        DictStrStr rec = profileDatasource.GetRecord(selectedProfileName);
-
-        SetupData setDat = navigatorObject.GetComponent<SetupData>();
+        DictStrObj rec = profileDatasource.GetRecord(selectedProfileName);
         if (setDat.IsPythonReady() == false)
         {
-            Debug.Log("CreateDownloadRepoTask Cant run, because system is not configured yet.");
+           ApplicationState.Instance().Enqueue(() => Debug.Log("CreateDownloadRepoTask Cant run, because system is not configured yet."));
             return null;
         }
         string venvPythonPath = setDat.GetPythonRoot();
 
         if (rec == null)
         {
-            Debug.Log("Could not find target user");
+            ApplicationState.Instance().Enqueue(() =>Debug.Log("Could not find target user"));
             return null;
         }
 
         // Prepare the CLI command arguments
-        string repoUrl = repoData["html_url"];
-        string branch = repoData["branch"];
+        string repoUrl = (string)repoData["html_url"];
+        string branch = (string)repoData["branch"];
         string[] command = new string[]
         {
             venvPythonPath,
@@ -329,11 +312,11 @@ public class RepoGithubData : StandardData
             "download"
         };
 
-        DictStrStr arguments = new DictStrStr
+        DictStrObj arguments = new DictStrObj
         {
             { "git_username", rec["username"] },
             { "git_access_key", rec["access_key"] },
-            { "backup_path", Path.Combine(rec["path"], repoData["name"]) },
+            { "backup_path", Path.Combine((string)rec["path"], (string)repoData["name"]) },
             { "encryption_password", rec["encryption_password"] },
             { "repo_url", repoUrl },
             { "branch", branch }
@@ -341,9 +324,9 @@ public class RepoGithubData : StandardData
 
 
         // Call the generalized shell execution method
-        Debug.Log($"{this.ToString()}: TEMP OUTER Starting Shell Download {repoData["name"]}");
+        ApplicationState.Instance().Enqueue(() =>Debug.Log($"2++{this.ToString()}: TEMP OUTER Starting Shell Download {repoData["name"]}"));
         Func<Task> tsk = JobUtils.CreateJobifiedShellTask(
-            jobName: $"DownloadRepo_{repoData["name"]}",
+            jobName: $"dl_repo_{repoData["name"]}",
             command: command,
             arguments: arguments,
             readProgress:() => {
@@ -355,22 +338,22 @@ public class RepoGithubData : StandardData
             workingDirectory: setDat.GetPythonWorkDir(),
             onSuccess: (output) =>
             {
-                Debug.Log($"TEMP FINAL TEMP Successfully downloaded {repoData["name"]}");
-                SetRecordField(repoData["name"], "download_status", "finished");
-                Debug.Log($"TEMP FINAL Successfully downloaded {repoData["name"]}");
+                Debug.Log($"2++TEMP FINAL TEMP Successfully downloaded {repoData["name"]}");
+                SetRecordField((string)repoData["name"], "download_status", "finished");
+                Debug.Log($"2++TEMP FINAL Successfully downloaded {repoData["name"]}");
                 //repoDatabase.UpdateDataRevision();
                 repoDatabase.ReloadData();
                 onSuccess?.Invoke(output);
             },
             onFailure: (error) =>
             {
-                Debug.Log($"TEMP FINAL FAILED downloaded {repoData["name"]}");
-                SetRecordField(repoData["name"], "download_status", "failed");
-                Debug.LogError($"TEMP FINAL Failed to download {repoData["name"]}: {((System.Exception)error).ToString()}");
+                Debug.Log($"2++TEMP FINAL FAILED downloaded {repoData["name"]}");
+                SetRecordField((string)repoData["name"], "download_status", "failed");
+                Debug.LogError($"2++TEMP FINAL Failed to download {repoData["name"]}: {((System.Exception)error).ToString()}");
                 onFailure?.Invoke(error);
             },
             debugMode:debugMode,
-            parentId:"download"
+            parentId:"dl_allrepo"
         );
         return tsk;
     }

@@ -2,14 +2,13 @@ using UnityEngine;
 using UnityEngine.UIElements;
 using System.Collections.Generic;
 
-using DictStrStr = System.Collections.Generic.Dictionary<string, string>;
-using DictTable = System.Collections.Generic.Dictionary<string, System.Collections.Generic.Dictionary<string, string>>;
+using DictStrObj = System.Collections.Generic.Dictionary<string, object>;
 
 public class NavigationManager : MonoBehaviour
 {
     public interface ICanInitalize
     {
-        public void InitData(DictStrStr dataframe);
+        public void InitData(DictStrObj dataframe);
         public bool SetAction(string actionLabel, System.Action action );
     }
     // Start is called before the first frame update
@@ -22,7 +21,7 @@ public class NavigationManager : MonoBehaviour
     public void NotifyError(string param)
     {
         bool hideAll = false;
-        DictStrStr dataframe = new DictStrStr
+        DictStrObj dataframe = new DictStrObj
         {
             { "message", param },
             { "mode", "error" },
@@ -36,7 +35,7 @@ public class NavigationManager : MonoBehaviour
     }
     public void NotifyConfirm(string param, System.Action onConfirm, System.Action onCancel)
     {
-        DictStrStr dataframe = new DictStrStr
+        DictStrObj dataframe = new DictStrObj
         {
             { "message", param },
             { "mode", "confirm" },
@@ -52,7 +51,7 @@ public class NavigationManager : MonoBehaviour
     }
 
     // Method to navigate to a specific screen by object name
-    public void InitDataOnto(string objectName, DictStrStr dataframe)
+    public void InitDataOnto(string objectName, DictStrObj dataframe)
     {
         // Find the object
         GameObject matchedElement = FindGameObjectByName(objectName);
@@ -133,7 +132,7 @@ public class NavigationManager : MonoBehaviour
         }
     }
 
-    public void NavigateToWithRecord(string objectName,DictStrStr dataframe, bool hideAll = true)
+    public void NavigateToWithRecord(string objectName,DictStrObj dataframe, bool hideAll = true)
     {
         InitDataOnto(objectName, dataframe);
         NavigateTo(objectName, hideAll);
@@ -145,8 +144,13 @@ public class NavigationManager : MonoBehaviour
         var allDocuments = AllDescendants(transform);
         foreach (var doc in allDocuments)
         {
+            try
+            {
             var rootVisualElement = doc.GetComponent<UIDocument>()?.rootVisualElement;
             rootVisualElement.style.display = DisplayStyle.None;
+            }
+            catch{}
+            finally{}
         }
     }
 
