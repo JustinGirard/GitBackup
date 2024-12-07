@@ -1,9 +1,0 @@
-<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" xsi="http://www.w3.org/2001/XMLSchema-instance" engine="UnityEngine.UIElements" editor="UnityEditor.UIElements" noNamespaceSchemaLocation="../../../UIElementsSchema/UIElements.xsd" editor-extension-mode="False">
-    <ui:Template name="AT_StatusBar" src="project://database/Assets/Resources/AwayTeam/AT_StatusBar.uxml?fileID=9197481963319205126&amp;guid=1c83af10f53ca47269d15d55a75e00a9&amp;type=3#AT_StatusBar" />
-    <ui:Template name="AT_EncounterCard" src="project://database/Assets/Resources/AwayTeam/AT_EncounterCard.uxml?fileID=9197481963319205126&amp;guid=50265937849cb406eba24df85aa6aba8&amp;type=3#AT_EncounterCard" />
-    <Style src="project://database/Assets/Resources/AwayTeam/AT_style.uss?fileID=7433441132597879392&amp;guid=fc0760072fa88400fa6de4c0b3140d22&amp;type=3#AT_style" />
-    <ui:VisualElement style="flex-grow: 1;">
-        <ui:Instance template="AT_StatusBar" name="AT_StatusBar" style="max-height: 49px; min-height: 49px;" />
-        <ui:Instance template="AT_EncounterCard" name="AT_EncounterCard" />
-    </ui:VisualElement>
-</ui:UXML>

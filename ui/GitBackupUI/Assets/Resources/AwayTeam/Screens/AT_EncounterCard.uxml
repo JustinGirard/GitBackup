@@ -1,0 +1,10 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" editor-extension-mode="False">
+    <ui:Template name="card-status" src="project://database/Assets/card-status.uxml?fileID=9197481963319205126&amp;guid=db7c1119551684f97b26ca81995b719f&amp;type=3#card-status" />
+    <Style src="project://database/Assets/Resources/AwayTeam/AT_style.uss?fileID=7433441132597879392&amp;guid=fc0760072fa88400fa6de4c0b3140d22&amp;type=3#AT_style" />
+    <ui:VisualElement name="card-container" class="card-container" style="width: auto; background-color: rgba(255, 255, 255, 0.47);">
+        <ui:VisualElement name="card-image" class="card-image">
+            <ui:Image name="entity-image" class="entity-image" />
+        </ui:VisualElement>
+        <ui:Instance template="card-status" name="account-card-status" />
+    </ui:VisualElement>
+</ui:UXML>

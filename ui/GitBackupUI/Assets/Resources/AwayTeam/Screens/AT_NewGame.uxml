@@ -1,0 +1,12 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" editor-extension-mode="False">
+    <ui:VisualElement name="background" style="position: absolute; width: 100%; height: 100%; background-image: url(&apos;background.jpg&apos;); background-size: cover;" />
+    <ui:VisualElement style="flex-grow: 1;">
+        <ui:VisualElement name="content" style="position: absolute; width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px;">
+            <ui:Label name="gameTitle" text="Game Title" style="font-size: 40px; color: white; text-align: center;" />
+            <ui:Label name="subject" text="Welcome" style="font-size: 30px; color: white; text-align: center;" />
+            <ui:VisualElement name="buttons-container" style="flex-grow: 1; height: 100px; max-height: 100px;">
+                <ui:Button name="actionButton" text="Start" style="width: 150px; height: 50px; font-size: 20px;" />
+            </ui:VisualElement>
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

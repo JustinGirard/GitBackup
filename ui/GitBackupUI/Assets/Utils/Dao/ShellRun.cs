@@ -85,10 +85,10 @@ public class DJson
         }
     }
 
-    public static string Stringify(object jsonObject, int indentLevel = 0)
+    public static string Stringify(object jsonObject, int indentLevel = 0,bool debug=false)
     {
         var sb = new StringBuilder();
-        BuildJsonTreeString(jsonObject, sb, indentLevel);
+        BuildJsonTreeString(jsonObject, sb, indentLevel,debug);
         return sb.ToString();
     }
     public static (bool isValid, string error) ValidateJsonSchema(Dictionary<string, object> json, Dictionary<string, object> schema)
@@ -147,7 +147,7 @@ public class DJson
 
     // Example usage
 
-    private static void BuildJsonTreeString(object jsonObject, StringBuilder sb, int indentLevel)
+    private static void BuildJsonTreeString(object jsonObject, StringBuilder sb, int indentLevel,bool debug = false)
     {
         string indent = new string(' ', indentLevel * 4);
 
@@ -172,6 +172,7 @@ public class DJson
         }
         else
         {
+
             // Print value directly if it’s a primitive type
             if (jsonObject is string)
             {
@@ -179,7 +180,7 @@ public class DJson
             }
             else
             {
-                sb.AppendLine($"{jsonObject}");
+                sb.AppendLine($"{jsonObject.ToString()}");
             }
         }
     }

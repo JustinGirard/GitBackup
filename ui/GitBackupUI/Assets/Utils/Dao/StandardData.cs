@@ -38,7 +38,6 @@ public class StandardData : MonoBehaviour
     }
     public bool AddToRecordField(string name,string field,object value,bool create=true,string keyfield="name")
     {
-        Debug.Log($"AddToRecordField is saving keytfield {keyfield}: name {name}");
         object oldVal = GetRecordField( name,field);
         if (oldVal == null)
             oldVal = 0f;
@@ -50,7 +49,8 @@ public class StandardData : MonoBehaviour
             object oldVal = GetRecordField( name,field);
             if (oldVal == null)
                 oldVal = 0f;
-            return SetRecordField(name,field,(float)value-(float)oldVal,create,keyfield);
+            Debug.Log($"Doing subtract {((float)oldVal).ToString()} - {((float)value).ToString()}");
+            return SetRecordField(name,field,(float)oldVal-(float)value,create,keyfield);
     }
 
     public int GetDataRevision()

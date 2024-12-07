@@ -75,6 +75,60 @@ public class JobResult
 
 }
 
+
+
+public class IntervalRunner
+{
+    // Dictionary to store timers for different operations
+    private readonly Dictionary<string, float> timers = new Dictionary<string, float>();
+
+    /// <summary>
+    /// Runs the provided action every specified delay in real-time seconds.
+    /// </summary>
+    /// <param name="id">Unique ID for the operation.</param>
+    /// <param name="delay">Interval in seconds between each execution.</param>
+    /// <param name="deltaTime">Elapsed time since the last update, typically Time.deltaTime.</param>
+    /// <param name="action">The action to execute.</param>
+    public void RunIfTime(string id, float delay, float deltaTime, Action action)
+    {
+        // Check if the timer exists; if not, initialize it
+        if (!timers.ContainsKey(id))
+        {
+            timers[id] = 0f;
+        }
+
+        // Update the timer
+        timers[id] += deltaTime;
+
+        // If the timer exceeds the delay, execute the action and reset the timer
+        if (timers[id] >= delay)
+        {
+            action?.Invoke();
+            timers[id] = 0f;
+        }
+    }
+
+    /// <summary>
+    /// Clears a timer by ID (optional utility method).
+    /// </summary>
+    /// <param name="id">The ID of the timer to clear.</param>
+    public void ClearTimer(string id)
+    {
+        if (timers.ContainsKey(id))
+        {
+            timers.Remove(id);
+        }
+    }
+
+    /// <summary>
+    /// Clears all timers (optional utility method).
+    /// </summary>
+    public void ClearAllTimers()
+    {
+        timers.Clear();
+    }
+}
+
 public class JobUtils
 {
     private static void AsyncRunMainThread(Action action)

@@ -3,8 +3,9 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class SpaceMapUnitAgent : MonoBehaviour
+public class SpaceMapUnitAgent : MonoBehaviour, IPausable
 {
+
     // Private target variables
     private Vector3 targetLookAt = new Vector3(0, 0, 10);
     private Vector3 targetTravelTo = new Vector3(10, 0, 10);
@@ -44,6 +45,23 @@ public class SpaceMapUnitAgent : MonoBehaviour
     SphereCollider detectionCollider;
     float perceptionRadius = 100f;
     float maxForce = 1f;
+
+
+    private bool __is_running = false;
+    public void Run()
+    {
+
+        __is_running = true;
+    }
+    public void Pause()
+    {
+        __is_running = false;
+
+    }
+    public bool IsRunning()
+    {
+        return __is_running;
+    }    
 
     void Start()
     {
@@ -102,6 +120,8 @@ public class SpaceMapUnitAgent : MonoBehaviour
 
     void Update()
     {
+        if (__is_running == false)
+            return;
         timer += Time.deltaTime;
         float driftScale = 0.05f;
         // Reassign random targets every 5 seconds

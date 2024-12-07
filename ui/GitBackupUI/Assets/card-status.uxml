@@ -1,0 +1,44 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" editor-extension-mode="False">
+    <ui:VisualElement name="card-status" class="card-status">
+        <ui:VisualElement name="status-row-1" class="status-row">
+            <ui:VisualElement name="status-item-1-1" class="status-item">
+                <ui:Image name="status-icon-1-1" class="status-icon" />
+                <ui:Label name="status-value-1-1" class="status-value" />
+            </ui:VisualElement>
+            <ui:VisualElement name="status-item-1-2" class="status-item">
+                <ui:Image name="status-icon-1-2" class="status-icon" />
+                <ui:Label name="status-value-1-2" class="status-value" />
+            </ui:VisualElement>
+        </ui:VisualElement>
+        <ui:VisualElement name="status-row-2" class="status-row">
+            <ui:VisualElement name="status-item-2-1" class="status-item">
+                <ui:Image name="status-icon-2-1" class="status-icon" />
+                <ui:Label name="status-value-2-1" class="status-value" />
+            </ui:VisualElement>
+            <ui:VisualElement name="status-item-2-2" class="status-item">
+                <ui:Image name="status-icon-2-2" class="status-icon" />
+                <ui:Label name="status-value-2-2" class="status-value" />
+            </ui:VisualElement>
+        </ui:VisualElement>
+        <ui:VisualElement name="status-row-3" class="status-row">
+            <ui:VisualElement name="status-item-3-1" class="status-item">
+                <ui:Image name="status-icon-3-1" class="status-icon" />
+                <ui:Label name="status-value-3-1" class="status-value" />
+            </ui:VisualElement>
+            <ui:VisualElement name="status-item-3-2" class="status-item">
+                <ui:Image name="status-icon-3-2" class="status-icon" />
+                <ui:Label name="status-value-3-2" class="status-value" />
+            </ui:VisualElement>
+        </ui:VisualElement>
+        <ui:VisualElement name="status-row-4" class="status-row">
+            <ui:VisualElement name="status-item-4-1" class="status-item">
+                <ui:Image name="status-icon-4-1" class="status-icon" />
+                <ui:Label name="status-value-4-1" class="status-value" />
+            </ui:VisualElement>
+            <ui:VisualElement name="status-item-4-2" class="status-item">
+                <ui:Image name="status-icon-4-2" class="status-icon" />
+                <ui:Label name="status-value-4-2" class="status-value" />
+            </ui:VisualElement>
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.InputSystem; // Ensure you have the Input System package installed
+using System;
 
 public class DockedButton : MonoBehaviour
 {
@@ -7,10 +8,14 @@ public class DockedButton : MonoBehaviour
     public float offsetX = 100.0f; // Offset in pixels from the left of the screen
     public float offsetY = 100.0f; // Offset in pixels from the bottom of the screen
 
+    public string commandId;
     private Renderer sphereRenderer; // Renderer for changing the color
 
     private InputAction action01; // Reference to "do_action_01"
+    private bool _isActivated ;
 
+    public Material activeMaterial;
+    public Material inactiveMaterial;
 
     public RenderTexture renderTexture; // Assign the RenderTexture for this button in the Inspector
     public Vector3 cameraOffset = new Vector3(0, 0, -2); // Offset for rendering
@@ -20,21 +25,44 @@ public class DockedButton : MonoBehaviour
     public int renderTextureHeight = 256; // Height of the RenderTexture
 
     [HideInInspector]
+    public event Action<string,string,bool> OnButtonInteracted;
 
-    public void MouseDown(int buttonId, bool within)
+    /// <summary>
+    ///  External Handlers
+    /// </summary>
+    /// <param name="buttonId"></param>
+    /// <param name="within"></param>
+    public void MouseDown(int buttonId, bool within) // CALLED FROM Panel
     {
-        Debug.Log($"{gameObject.name} clicked!");
-        //PerformAction();
-        // Perform button-specific logic here
+        OnButtonInteracted?.Invoke(commandId,"MouseDown",within); 
     }
-    public void MouseUp(int buttonId, bool within)
+    public void MouseUp(int buttonId, bool within) // CALLED FROM Panel
     {
-        if (within == true)
+        OnButtonInteracted?.Invoke(commandId,"MouseUp",within); 
+    }
+    private void OnMouseDown()  // CALLED FROM Button Object
+    {
+        OnButtonInteracted?.Invoke(commandId,"MouseDown",true); 
+    }
+
+    private void HandleInputAction(object action, InputActionChange change) // CALLED FROM Keyboard
+    {
+        if (action is InputAction inputAction && inputAction.name == "do_action_01")
         {
-            PerformAction();
+            if (inputAction.phase == InputActionPhase.Started) // Key down
+            {
+                OnButtonInteracted?.Invoke(commandId, "MouseDown", true);
+            }
+            else if (inputAction.phase == InputActionPhase.Canceled) // Key up
+            {
+                OnButtonInteracted?.Invoke(commandId, "MouseUp", true);
+            }
         }
-        // Perform button-specific logic here
-    }
+}
+    /// <summary>
+    /// End External Handlers
+    /// </summary>
+
     private void Start()
     {
         renderTexture = new RenderTexture(renderTextureWidth, renderTextureHeight, 16)
@@ -46,10 +74,6 @@ public class DockedButton : MonoBehaviour
         };
         renderTexture.Create();
 
-        ///
-        ///
-        ///
-        // Create or retrieve the InputAction for "do_action_01"
         action01 = new InputAction(name: "do_action_01", type: InputActionType.Button);
         action01.AddBinding("<Mouse>/rightButton");
         action01.Enable();
@@ -69,10 +93,9 @@ public class DockedButton : MonoBehaviour
 
         // Cache the renderer for the sphere
         sphereRenderer = GetComponent<Renderer>();
-
-        // Set initial position
+        
         UpdatePosition();
-
+        SetActive(false);
         // Bind to the input manager event
         InputSystem.onActionChange += HandleInputAction;
     }
@@ -83,39 +106,37 @@ public class DockedButton : MonoBehaviour
         // UpdatePosition();
     }
 
+    public void SetState(string state)
+    {
+        //Debug.Log($"Setting state for {commandId}: {state}");
+        if (state == "active")
+        {
+            SetActive(true);
+        }
+        else if (state == "inactive")
+        {
+            SetActive(false);
+        }
+        else
+        {
+            Debug.LogWarning($"Unhandled state: {state}");
+        }
+    }
     private void UpdatePosition()
     {
         if (mainCamera == null) return;
-
-        // Convert screen offsets to world position
-        //Vector3 screenPosition = new Vector3(offsetX, offsetY, mainCamera.nearClipPlane + 1.0f);
-        //Vector3 worldPosition = mainCamera.ScreenToWorldPoint(screenPosition);
-
-        // Set the button's position
-        //transform.position = worldPosition;
     }
 
-    private void OnMouseDown()
+    private void SetActive(bool status)
     {
-        // Trigger the action when clicked
-        PerformAction();
-    }
-
-    private void HandleInputAction(object action, InputActionChange change)
-    {
-        if (action is InputAction inputAction && inputAction.name == "do_action_01" && change == InputActionChange.ActionPerformed)
+        _isActivated = status;
+        if (status == true)
         {
-            // Trigger the action when the event is fired
-            PerformAction();
+            sphereRenderer.material = activeMaterial;
         }
-    }
-
-    private void PerformAction()
-    {
-        // Change the sphere's color to a random one
-        if (sphereRenderer != null)
+        if (status == false)
         {
-            sphereRenderer.material.color = new Color(Random.value, Random.value, Random.value);
+            sphereRenderer.material = inactiveMaterial;
         }
     }
 

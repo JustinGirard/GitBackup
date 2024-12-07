@@ -1,18 +1,43 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class EncounterUnitController : MonoBehaviour
+public class EncounterUnitController : MonoBehaviour, IPausable
 {
     [Header("Settings")]
     // public Vector3 masterPosition = Vector3.zero; // The central "master position"
     public Quaternion masterRotation = Quaternion.identity; // Optional if rotations are needed
 
     [Header("Resources")]
-    public string spaceMapUnitResourcePath = "AwayTeam/SpaceMapUnit"; // Path to SpaceMapUnit prefab in Resources
-    public string veeFormationResourcePath = "AwayTeam/VeeFormation"; // Path to VeeFormation prefab in Resources
+    public string spaceMapUnitResourcePath = "AwayTeam/KeyObjects/SpaceMapUnit"; // Path to SpaceMapUnit prefab in Resources
+    public string veeFormationResourcePath = "AwayTeam/KeyObjects/VeeFormation"; // Path to VeeFormation prefab in Resources
 
     private List<GameObject> spaceMapUnits = new List<GameObject>(); // Tracks spawned SpaceMapUnit instances
     private GameObject veeFormation; // The dynamically loaded VeeFormation instance
+
+    private bool __is_running = false;
+    public void Run()
+    {
+        foreach(GameObject spaceMapUnit in spaceMapUnits)
+        {
+            SpaceMapUnitAgent su = spaceMapUnit.GetComponent<SpaceMapUnitAgent>();
+            su.Run();
+        }
+
+        __is_running = true;
+    }
+    public void Pause()
+    {
+        foreach(GameObject spaceMapUnit in spaceMapUnits)
+        {
+            SpaceMapUnitAgent su = spaceMapUnit.GetComponent<SpaceMapUnitAgent>();
+            su.Pause();
+        }
+        __is_running = false;
+    }
+    public bool IsRunning()
+    {
+        return __is_running;
+    }    
 
     void Start()
     {
@@ -82,6 +107,7 @@ public class EncounterUnitController : MonoBehaviour
         // Dynamically load SpaceMapUnits and position them using VeeFormation
         for (int i = 0; i < 5; i++) // Support up to 5 units in the formation
         {
+            //     public string spaceMapUnitResourcePath = "AwayTeam/SpaceMapUnit"; // Path to SpaceMapUnit prefab in Resources
             var spaceMapUnitPrefab = Resources.Load<GameObject>(spaceMapUnitResourcePath);
             if (spaceMapUnitPrefab == null)
             {
@@ -111,6 +137,14 @@ public class EncounterUnitController : MonoBehaviour
             else
             {
                 Debug.LogWarning("SpaceMapUnit does not have the expected positionable interface.");
+            }
+            if (__is_running)
+            {
+                positionable.Run();
+            }
+            else
+            {
+                positionable.Pause();
             }
         }
     }

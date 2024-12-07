@@ -29,7 +29,7 @@
                 <ui:Label text="11" class="stat-value" />
             </ui:VisualElement>
         </ui:VisualElement>
-        <ui:Button name="settings-button" class="settings-button">
+        <ui:Button name="ExitButton" class="settings-button">
             <ui:Label text="x" />
         </ui:Button>
     </ui:VisualElement>

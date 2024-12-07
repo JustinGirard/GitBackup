@@ -112,25 +112,42 @@ public class NavigationManager : MonoBehaviour
     // Method to navigate to a specific screen by object name
     public void NavigateTo(string objectName, bool hideAll = true)
     {
+        Debug.LogWarning($"NavigateTo running for: {objectName}");
+        var matchedObject= FindGameObjectByName(objectName);
+
+        var matchedElement = FindUIDocumentByName(objectName);
+        if (matchedElement == null)
+        {
+            Debug.LogError($"NavigateTo fail, could not find element : {objectName}");
+            return;
+        }
+
 
         if (hideAll == true)
         {
             HideAllScreens(); 
         }
-        var matchedObject= FindGameObjectByName(objectName);
 
-        var matchedElement = FindUIDocumentByName(objectName);
-        if (matchedElement != null)
+        IShowHide showHideComponent = matchedObject?.GetComponent<IShowHide>();
+        if (showHideComponent != null)
         {
-            matchedElement.style.display = DisplayStyle.Flex;
-            matchedElement.BringToFront();
-            //RefreshUI(objectName);
+            showHideComponent.Show();
+            Debug.Log($"Show method invoked on component implementing IShowHide: {matchedObject.name}");
         }
         else
         {
-            Debug.LogWarning($"No screen found with an element named: {objectName}");
+            matchedElement.style.display = DisplayStyle.Flex;
         }
+
+        matchedElement.BringToFront();
     }
+
+
+    public void NavigateSetActive(string objectName)
+    {
+        var matchedObject= FindGameObjectByName(objectName);
+        matchedObject.SetActive(false);
+    }    
 
     public void NavigateToWithRecord(string objectName,DictStrObj dataframe, bool hideAll = true)
     {
@@ -146,11 +163,25 @@ public class NavigationManager : MonoBehaviour
         {
             try
             {
-            var rootVisualElement = doc.GetComponent<UIDocument>()?.rootVisualElement;
-            rootVisualElement.style.display = DisplayStyle.None;
+                
+                //var rootVisualElement = doc.GetComponent<UIDocument>()?.rootVisualElement;
+                //rootVisualElement.style.display = DisplayStyle.None;
+                IShowHide showHideComponent = doc.GetComponent<IShowHide>();
+                if (showHideComponent != null)
+                {
+                    showHideComponent.Hide();
+                    Debug.Log($"Hide method invoked on component implementing IShowHide: {doc.name}");
+                }
+                else
+                {
+                    var rootVisualElement = doc.GetComponent<UIDocument>()?.rootVisualElement;
+                    rootVisualElement.style.display = DisplayStyle.None;
+                }            
             }
             catch{}
             finally{}
+
+            
         }
     }
 
