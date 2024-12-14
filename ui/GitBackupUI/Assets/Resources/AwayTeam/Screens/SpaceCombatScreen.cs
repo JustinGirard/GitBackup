@@ -3,8 +3,6 @@ using UnityEngine;
 using UnityEngine.UIElements;
 
 using System;
-using OpenCover.Framework.Model;
-using Unity.VisualScripting;
 
 
 
@@ -24,11 +22,37 @@ public interface IShowHide
     public void Hide();
 
 }
+public class VisualProjectionFrame
+{
+    public Vector2 Size { get; set; }
+    public Vector2 Position { get; set; }
+    public Vector2 Basis { get; set; }
+
+    // Constructor taking Vector2 parameters
+    public VisualProjectionFrame(Vector2 size, Vector2 position, Vector2 basis)
+    {
+        Size = size;
+        Position = position;
+        Basis = basis;
+    }
+
+    // Constructor taking individual float values
+    public VisualProjectionFrame(float width, float height, float posX, float posY, float basisX, float basisY)
+    {
+        Size = new Vector2(width, height);
+        Position = new Vector2(posX, posY);
+        Basis = new Vector2(basisX, basisY);
+    }
+    public override string ToString()
+    {
+        return $"Size: {Size}, Position: {Position}, Basis: {Basis}";
+    }    
+}
 public class SpaceCombatScreen : SpaceEncounterObserver,IShowHide
 {
     [SerializeField]
     public List<DynamicButtonCanvas> dynamicButtonInit;
-    private Dictionary<string,DockedButton> dynamicButton;
+    private Dictionary<string,IDynamicControl> dynamicButton;
     public SpaceEncounterManager encounterManager;
 
     public class DynamicButtonID {
@@ -44,13 +68,102 @@ public class SpaceCombatScreen : SpaceEncounterObserver,IShowHide
     
     // UXML root and mapping of UXML#ID to resource names
     private Dictionary<string, string> uxmlToResourceMapping;
-    private Dictionary<string, string> agent1Mapping;
-    private Dictionary<string, string> agent2Mapping;
+    private Dictionary<string,Dictionary<string, string>> cssIdToResourceId;
 
     GameObject navigatorObject;
     NavigationManager navigationManager;
     IntervalRunner intervalRunner;
     UIDocument uiDocument;
+    public static float? ConvertToNumeric(object inputValue, string resourceName, string valueType)
+    {
+        if (inputValue == null)
+            return null;
+        try
+        {
+            if (inputValue is int || inputValue is float || inputValue is double || inputValue is decimal)
+            {
+                // Already numeric, return as float
+                return Convert.ToSingle(inputValue);
+            }
+
+            if (float.TryParse(inputValue.ToString(), out float convertedFloat))
+            {
+                return convertedFloat;
+            }
+
+            Debug.LogError($"Could not convert {valueType} value for {resourceName}: {inputValue} (Type: {inputValue.GetType()})");
+            return null;
+        }
+        catch (Exception ex)
+        {
+            Debug.LogError($"Error while processing {valueType} value for {resourceName}: {ex.Message} (Type: {(inputValue == null ? "null" : inputValue.GetType().ToString())})");
+            return null;
+        }
+    }
+    void Awake_InitAgentCardDynamicControls()
+    {
+        cssIdToResourceId = new Dictionary<string, Dictionary<string, string>>();
+        cssIdToResourceId["agent_1"] = encounterManager.GetAgentGUIFieldMapping("agent_1"); // GUIField - to - ResourceId
+        cssIdToResourceId["agent_2"] = encounterManager.GetAgentGUIFieldMapping("agent_2");
+
+        // Set up Agent fields
+        foreach (string agent_id in cssIdToResourceId.Keys)
+        {
+            foreach (string cssId  in cssIdToResourceId[agent_id].Keys)
+            {
+                //Debug.Log($"Adding Element {cssId}");
+                string resourceId = cssIdToResourceId[agent_id][cssId];
+                DynamicButtonCanvas canCan = new DynamicButtonCanvas();
+                canCan.key = $"{agent_id}.{resourceId}"; // Resource Key
+                if (agent_id == "agent_1")
+                    canCan.placeholder = $"agent-1-card-status,{cssId}";
+                else
+                    canCan.placeholder = $"agent-2-card-status,{cssId}";
+
+                canCan.value = Resources.Load<Canvas>("AwayTeam/Screens/StatusbarCanvas");
+                dynamicButtonInit.Add(canCan);
+            }
+        }
+
+    }
+
+    private void Awake_CreateAllDynamicControls()
+    {
+
+        foreach (DynamicButtonCanvas dynamicButtonEntry in dynamicButtonInit)
+        {
+            if (dynamicButtonEntry == null)
+                Debug.LogError("Error: dynamicButtonEntry is null.");
+
+            Canvas buttonCanvas = GameObject.Instantiate<Canvas>( dynamicButtonEntry.value);
+            if (buttonCanvas == null)
+                Debug.LogError("Error: dynamicButtonEntry.value is null.");
+
+            GameObject dynamicGameObject = buttonCanvas.gameObject;
+            if (dynamicGameObject == null)
+                Debug.LogError("Error: dynamicButtonEntry.value.gameObject is null.");
+
+            IDynamicControl dockedButton = dynamicGameObject.GetComponentInChildren<IDynamicControl>();
+            if (dockedButton == null)
+                Debug.LogError("Error: No DockedButton found in the descendants of the GameObject.");
+            //else
+            //    Debug.Log("Successfully found DockedButton.");
+            
+            // Event Registration
+            dockedButton.RegisterInteractionHandler (HandleDynamicButtonInteraction); 
+            dynamicButton[dynamicButtonEntry.key] = dockedButton;
+
+            // UI Tracking
+            string placeholderName = dynamicButtonEntry.placeholder;
+            //VisualElement placeholder = uiDocument.rootVisualElement.Q<VisualElement>(placeholderName);
+            VisualElement root = uiDocument.rootVisualElement;            
+            VisualElement placeholder = DynamicControlRenderer.FindPlaceholder(root, placeholderName);                
+            placeholder.RegisterCallback<GeometryChangedEvent>(_ =>
+            {
+                DynamicControlRenderer.UpdateCanvasBounds(buttonCanvas, placeholderName,uiDocument);
+            });
+        }
+    }
 
     void Awake()
     {
@@ -58,8 +171,6 @@ public class SpaceCombatScreen : SpaceEncounterObserver,IShowHide
         navigationManager = navigatorObject.GetComponent<NavigationManager>();
         //navigationManager.NavigateTo("AT_NewGame",false);
         uxmlToResourceMapping = encounterManager.GetAccountFieldMapping();
-        agent1Mapping = encounterManager.GetAgentGUIFieldMapping("agent_1");
-        agent2Mapping = encounterManager.GetAgentGUIFieldMapping("agent_2");
         uiDocument = GetComponent<UIDocument>();
         VisualElement root = uiDocument.rootVisualElement;
         var btnPlay = root.Q<Button>("PlayGame");
@@ -71,89 +182,29 @@ public class SpaceCombatScreen : SpaceEncounterObserver,IShowHide
             encounterManager.End();
             navigationManager.NavigateTo("AT_NewGame");
         });
-        dynamicButton = new Dictionary<string,DockedButton>();
+        dynamicButton = new Dictionary<string,IDynamicControl>();
 
-        foreach (DynamicButtonCanvas dynamicButtonEntry in dynamicButtonInit)
-        {
-           // DockedButton   dockedButton  = dynamicButtonEntry.value.gameObject.GetComponentInChildren<DockedButton>();;
-            if (dynamicButtonEntry == null)
-                Debug.LogError("Error: dynamicButtonEntry is null.");
-
-            Canvas buttonCanvas = dynamicButtonEntry.value;
-            if (buttonCanvas == null)
-                Debug.LogError("Error: dynamicButtonEntry.value is null.");
-
-            GameObject dynamicGameObject = buttonCanvas.gameObject;
-            if (dynamicGameObject == null)
-                Debug.LogError("Error: dynamicButtonEntry.value.gameObject is null.");
-
-            DockedButton dockedButton = dynamicGameObject.GetComponentInChildren<DockedButton>();
-            if (dockedButton == null)
-                Debug.LogError("Error: No DockedButton found in the descendants of the GameObject.");
-            else
-                Debug.Log("Successfully found DockedButton.");
-            
-            // Event Registration
-            dockedButton.OnButtonInteracted += HandleDynamicButtonInteraction;
-            dynamicButton[dynamicButtonEntry.key] = dockedButton;
-
-            // UI Tracking
-            string placeholderName = dynamicButtonEntry.placeholder;
-            VisualElement placeholder = uiDocument.rootVisualElement.Q<VisualElement>(placeholderName);
-            placeholder.RegisterCallback<GeometryChangedEvent>(_ =>
-            {
-                UpdateCanvasBounds(buttonCanvas, placeholderName);
-                Debug.Log($"Updating '{placeholderName}' -> '{buttonCanvas.name}'.");
-            });
-            Debug.Log($"Registered GeometryChangedEvent for placeholder '{placeholderName}' and canvas '{buttonCanvas.name}'.");
-
-        }
+        Awake_InitAgentCardDynamicControls();
+        Awake_CreateAllDynamicControls();
+        return;
 
     }
-    private void UpdateCanvasBounds(Canvas buttonCanvas, string placeholderName)
+
+
+
+    private string DebugCompareFrames(string frameName, VisualProjectionFrame currentFrame, VisualProjectionFrame initialFrame)
     {
-        if (buttonCanvas == null)
-        {
-            Debug.LogError("Button Canvas is null. Cannot update bounds.");
-            return;
-        }
+        float initialAspect = initialFrame.Size.x / initialFrame.Size.y;
+        float currentAspect = currentFrame.Size.x / currentFrame.Size.y;
 
-        RectTransform canvasTransform = buttonCanvas.GetComponent<RectTransform>();
-        VisualElement root = uiDocument.rootVisualElement;
+        string comparison = 
+            $"{frameName}:\n" +
+            $"- Size: [{initialFrame.Size.x} -> {currentFrame.Size.x}, {initialFrame.Size.y} -> {currentFrame.Size.y}]\n" +
+            $"- Position: [{initialFrame.Position.x} -> {currentFrame.Position.x}, {initialFrame.Position.y} -> {currentFrame.Position.y}]\n" +
+            $"- Aspect: [{initialAspect:F2} -> {currentAspect:F2}]";
 
-        VisualElement placeholder = root.Q<VisualElement>(placeholderName);
-        if (placeholder == null)
-        {
-            Debug.LogError($"Placeholder '{placeholderName}' is missing in the UI Document.");
-            return;
-        }
-
-        // Check if the placeholder's layout is valid
-        if (placeholder.worldBound.width <= 0 || placeholder.worldBound.height <= 0)
-        {
-            Debug.LogWarning($"Placeholder '{placeholderName}' has invalid bounds (layout may not be finalized). Skipping.");
-            return;
-        }
-
-        // Calculate world position of the placeholder
-        Vector3 screenPos = placeholder.worldBound.center;
-        if (float.IsNaN(screenPos.x) || float.IsNaN(screenPos.y))
-        {
-            Debug.LogError($"Placeholder '{placeholderName}' has invalid screen position: {screenPos}. Skipping.");
-            return;
-        }
-
-        Vector3 worldPos = Camera.main.ScreenToWorldPoint(new Vector3(screenPos.x, screenPos.y, Camera.main.nearClipPlane));
-
-        // Update Canvas position to align with the placeholder
-        canvasTransform.position = worldPos;
-
-        // Optionally set size if needed
-        canvasTransform.sizeDelta = new Vector2(placeholder.worldBound.width, placeholder.worldBound.height);
+        return comparison;
     }
-
-
-
 
 
     private void SetButtonPosition(RectTransform button, VisualElement placeholder)
@@ -171,20 +222,24 @@ public class SpaceCombatScreen : SpaceEncounterObserver,IShowHide
     private void HandleDynamicButtonInteraction(string buttonId, string eventId,bool within)
     {
         //Debug.Log($"HandleDynamicButtonInteraction called: {buttonId}.{eventId} ({SpaceEncounterManager.GUICommands.Attack })");
-        if (buttonId== SpaceEncounterManager.GUICommands.Attack && eventId == "MouseUp" && within == true)
+        string agent_id = "agent_1";
+        if (buttonId== SpaceEncounterManager.AgentActions.Attack && eventId == "MouseUp" && within == true)
         {
             //Debug.Log($"HandleDynamicButtonInteraction {buttonId}");
-            StartCoroutine(encounterManager.ProcessGUIAction(SpaceEncounterManager.GUICommands.Attack));
+            encounterManager.SetTargetAction(agent_id,buttonId);
+            //StartCoroutine(encounterManager.ProcessAgentAction(SpaceEncounterManager.AgentActions.Attack));
         }
-        if (buttonId== SpaceEncounterManager.GUICommands.Missile && eventId == "MouseUp" && within == true)
+        if (buttonId== SpaceEncounterManager.AgentActions.Missile && eventId == "MouseUp" && within == true)
         {
+            encounterManager.SetTargetAction(agent_id,buttonId);
             //Debug.Log($"HandleDynamicButtonInteraction {buttonId}");
-            StartCoroutine(encounterManager.ProcessGUIAction(SpaceEncounterManager.GUICommands.Missile));
+            //StartCoroutine(encounterManager.ProcessAgentAction(SpaceEncounterManager.AgentActions.Missile));
         }
-        if (buttonId== SpaceEncounterManager.GUICommands.Shield && eventId == "MouseUp" && within == true)
+        if (buttonId== SpaceEncounterManager.AgentActions.Shield && eventId == "MouseUp" && within == true)
         {
             //Debug.Log($"HandleDynamicButtonInteraction {buttonId}");
-            StartCoroutine(encounterManager.ProcessGUIAction(SpaceEncounterManager.GUICommands.Shield));
+            encounterManager.SetTargetAction(agent_id,buttonId);
+            //StartCoroutine(encounterManager.ProcessAgentAction(SpaceEncounterManager.AgentActions.Shield));
         }
 
     }
@@ -210,23 +265,17 @@ public class SpaceCombatScreen : SpaceEncounterObserver,IShowHide
             SetButtonState(DynamicButtonID.Shield,"inactive");   
 
         if (effect == SpaceEncounterManager.ObservableEffects.ShowPaused)
-            //SetButtonState(DynamicButtonID.Shield,"inactive");   
             navigationManager.NavigateTo("AT_PauseGame");
-        //if (effect == SpaceEncounterManager.ObservableEffects.ShowUnpaused)
-        //    Debug.Log("GAME RUNNING");
 
-        if (effect == SpaceEncounterManager.ObservableEffects.EncounterOver)
+        if (effect == SpaceEncounterManager.ObservableEffects.EncounterOverLost)
             navigationManager.NavigateTo("AT_GameOver");
+
+        if (effect == SpaceEncounterManager.ObservableEffects.EncounterOverWon)
+            navigationManager.NavigateTo("AT_RoundWon");
 
         return true;
     }
 
-    //ProcessGUIAction
-    //public bool ShowUIEffect()
-    //{
-    //    StartCoroutine(ApplyPulseAndDeactivate(buttonId));     
-    //    return true;
-    //}
 
     private System.Collections.IEnumerator eApplyPulseAndActivate(string buttonId)
     {
@@ -236,12 +285,13 @@ public class SpaceCombatScreen : SpaceEncounterObserver,IShowHide
             yield break;
         }
         SetButtonState(buttonId,"active");
+
         // TryAcquireLock
         //yield return new WaitForSeconds(1f);
         // Find the button's GameObject or target
         try /// UI Related
         {
-            GameObject buttonObject =  dynamicButton[buttonId].gameObject;
+            GameObject buttonObject =  dynamicButton[buttonId].GetGameObject();
             yield return EffectHandler.Pulse(target:buttonObject, 
                                     duration:0.25f, 
                                     velocity:6f,
@@ -259,11 +309,6 @@ public class SpaceCombatScreen : SpaceEncounterObserver,IShowHide
     }
 
 
-    //private System.Collections.IEnumerator DelayAction(Action action, float delay)
-   // {
-   //     yield return new WaitForSeconds(delay);
-   //     action?.Invoke();
-   // }    
 
     public void SetButtonState(string buttonKey, string state)
     {
@@ -279,25 +324,26 @@ public class SpaceCombatScreen : SpaceEncounterObserver,IShowHide
     {
         var root = uiDocument.rootVisualElement;
         root.style.display = DisplayStyle.Flex;
-
-        foreach (DynamicButtonCanvas dynamicButtonEntry in dynamicButtonInit)
+        // dynamicButton[dynamicButtonEntry.key]
+        foreach (var key in dynamicButton.Keys)
         {
-            Canvas buttonCanvas = dynamicButtonEntry.value;
-            if (buttonCanvas != null)
-                buttonCanvas.gameObject.SetActive(true);
+            //Debug.Log($"Showing {key}");
+            dynamicButton[key].GetGameObject().SetActive(true);
         }
-    }
 
+        //UpdateUI(true);
+        __doSetMaxProgressOnFirstRun = true;
+    }
+    private bool __doSetMaxProgressOnFirstRun = false;
     public void Hide()
     {
         var root = uiDocument.rootVisualElement;
         root.style.display = DisplayStyle.None;
 
-        foreach (DynamicButtonCanvas dynamicButtonEntry in dynamicButtonInit)
+        foreach (var key in dynamicButton.Keys)
         {
-            Canvas buttonCanvas = dynamicButtonEntry.value;
-            if (buttonCanvas != null)
-                buttonCanvas.gameObject.SetActive(false);
+            //Debug.Log($"Hiding {key}");
+            dynamicButton[key].GetGameObject().SetActive(true);
         }
     }
 
@@ -326,39 +372,37 @@ public class SpaceCombatScreen : SpaceEncounterObserver,IShowHide
             PopulateAccountFields(agentId,resourceData, card);
         }     
     }
-
-    void Update()
+    void UpdateUI(bool setMaxProgress=false)
     {
-
         var uiDocument = GetComponent<UIDocument>();
         if (uiDocument == null)
         {
             Debug.LogError("No UIDocument component found on SpaceCombatScreen GameObject.");
             return;
-        }
-
+        }        
         foreach (var agentId in new[] { "account", "agent_1", "agent_2" })
         {
             string cardId = encounterManager.GetAgentGUICardId(agentId);
             VisualElement card = uiDocument.rootVisualElement.Q<VisualElement>(cardId);
             ATResourceData resourceData = encounterManager.GetResourceObject(agentId);
-            UpdateFields(agentId,resourceData, card);
+            UpdateAgentFields(agentId,resourceData, card,setMaxProgress);
         }
-        /*
-        List<Canvas> canvasassess = new List<Canvas>();
-        foreach (DynamicButtonCanvas dynamicButtonEntry in dynamicButtonInit)
+    }
+    void Update()
+    {
+        UpdateUI(__doSetMaxProgressOnFirstRun);
+        if (__doSetMaxProgressOnFirstRun == true)
         {
-            if (dynamicButtonEntry == null)
-                Debug.LogError("Error: dynamicButtonEntry is null.");
-            Canvas canvasss = dynamicButtonEntry.value;
-            canvasassess.Add(canvasss);
-            UpdateCanvasBounds(canvasss, dynamicButtonEntry.placeholder);            
-        }   */
+            __doSetMaxProgressOnFirstRun = false;
+        }
     }
 
     Dictionary <string,int>__revisionData = new Dictionary <string,int> {{"account",0},{"agent_1",0},{"agent_2",0}};
     private void PopulateAccountFields(string agent, ATResourceData resourceData, VisualElement cardElement )
     {
+        //Debug.Log($"-------running");
+        if (cardElement == null)
+            return;
         if (resourceData.GetDataRevision() == __revisionData[agent])
             return;
         __revisionData[agent] = resourceData.GetDataRevision();
@@ -366,13 +410,24 @@ public class SpaceCombatScreen : SpaceEncounterObserver,IShowHide
         //uxmlToResourceMapping = EncounterSettings.GetAccountFieldMapping();
         Dictionary<string,string> currentMapping= null; 
         
+        //if (agent =="account" )
+        //    currentMapping= uxmlToResourceMapping;
+        //else
+        //    currentMapping = cssIdToResourceId[agent];
+        string agent_resource_prefix = "";
         if (agent =="account" )
+        {
             currentMapping= uxmlToResourceMapping;
-        if (agent =="agent_1" )
-            currentMapping = agent1Mapping;
-        if (agent =="agent_2" )
-            currentMapping = agent2Mapping;
+            agent_resource_prefix = "";
+        }
+        else
+        {
+            agent_resource_prefix = $"{agent}.";
+            currentMapping = cssIdToResourceId[agent];
+        }
 
+        Dictionary<string,string> resourceIdToIconMapping = encounterManager.ResourceIdToIconMapping(agent);
+        // $"{resourceIdToIconMapping[resourceName]}" 
         foreach (var mapping in currentMapping)
         {
             // Get the resource name and corresponding UXML IDs
@@ -381,13 +436,44 @@ public class SpaceCombatScreen : SpaceEncounterObserver,IShowHide
 
             // Find the Label in the UXML by its ID
             var label = cardElement.Q<Label>(uxmlId);
+            //Debug.Log($"-------Inserting label {agent_resource_prefix}:{uxmlId}");
             if (label != null)
             {
-                // Get the resource amount from ResourceData
-                object resourceAmount = resourceData.GetResourceAmount(resourceName);
+                try
+                {
+                    // ResourceIdToIconMapping
+                    object resourceAmount = resourceData.GetResourceAmount(resourceName);
+                    IShowProgress progressBar;
+                    try
+                    {
+                        progressBar = (IShowProgress)dynamicButton[$"{agent_resource_prefix}{resourceName}"];
+                        //progressBar.SetProgressMax((int)1337);
 
-                // Update the label's text
-                label.text = $"{resourceName}: {resourceAmount}";
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.Log(dynamicButton[$"{agent_resource_prefix}{resourceName}"]);
+                        Debug.LogError($"Could not find progress bar for uxmlId: {agent_resource_prefix}.{uxmlId}. Exception: {ex.Message}\nStack Trace: {ex.StackTrace}");
+
+                    }
+
+                    var debugLabel = new Label // label.text = $"{resourceName}: {resourceAmount}";
+                    {
+                        text = $"{resourceIdToIconMapping[resourceName]}" 
+                    };
+                    //Debug.Log($"Inserting label {agent_resource_prefix}:{uxmlId}");
+                    debugLabel.style.color = Color.white; // Set text color to white
+                    debugLabel.name = $"icon-label-{uxmlId}";
+                    debugLabel.style.fontSize = 10;       // Set smaller font size (adjust the value as needed)
+                    
+                    label.parent.Insert(label.parent.IndexOf(label), debugLabel);
+                    label.text = $"-";
+
+                }
+                catch (Exception ex)
+                {
+                    Debug.LogError($"Error with uxmlId: {uxmlId}. Exception: {ex.Message}\nStack Trace: {ex.StackTrace}");
+                }
             }
             else
             {
@@ -395,8 +481,8 @@ public class SpaceCombatScreen : SpaceEncounterObserver,IShowHide
             }
 
             // Find the associated image element and add a name label as a placeholder
-            string imageId = uxmlId.Replace("status-value", "status-icon"); // Assuming a consistent naming pattern
-            var imageElement = cardElement.Q<VisualElement>(imageId);
+            // string imageId = uxmlId.Replace("status-value", "status-icon"); // Assuming a consistent naming pattern
+            // var imageElement = cardElement.Q<VisualElement>(imageId);
         }
 
     }
@@ -404,27 +490,41 @@ public class SpaceCombatScreen : SpaceEncounterObserver,IShowHide
     /// <summary>
     /// Updates the fields dynamically during the encounter.
     /// </summary>
-    private void UpdateFields(string agent,ATResourceData resourceData, VisualElement cardElement)
+    private void UpdateAgentFields(string agent,ATResourceData resourceData, VisualElement cardElement, bool setMaxProgress= false)
     {
-        if (resourceData.GetDataRevision() == __revisionData[agent])
+        if(setMaxProgress == true)
+            Debug.Log("Setting Max Progress!");
+        //if (resourceData.GetDataRevision() == __revisionData[agent] || setMaxProgress==false)
+        //{
+        //    return;
+        //}
+        if (resourceData.GetDataRevision() == __revisionData[agent] && setMaxProgress==false)
         {
             return;
-        }
+        }        
         __revisionData[agent] = resourceData.GetDataRevision();
 
         if (cardElement == null)
         {
-            Debug.LogError("No Card Element Linked Element");
+            //Debug.LogError("No Card Element Linked Element");
+            if (setMaxProgress == true)
+                Debug.LogError($"setting: FAILED TO SET PROGRESS");            
             return;
         }
         Dictionary<string,string> currentMapping= null; 
-        
+        string agent_resource_prefix = "";
         if (agent =="account" )
+        {
             currentMapping= uxmlToResourceMapping;
-        if (agent =="agent_1" )
-            currentMapping = agent1Mapping;
-        if (agent =="agent_2" )
-            currentMapping = agent2Mapping;
+            agent_resource_prefix = "";
+        }
+        else
+        {
+            agent_resource_prefix = $"{agent}.";
+            currentMapping = cssIdToResourceId[agent];
+        }
+        Dictionary<string,string> resourceIdToIconMapping = encounterManager.ResourceIdToIconMapping(agent);
+        
             
         foreach (var mapping in currentMapping)
         {
@@ -434,13 +534,41 @@ public class SpaceCombatScreen : SpaceEncounterObserver,IShowHide
 
             // Update the label for the resource value
             var label = cardElement.Q<Label>(uxmlId);
+            /*
+            var debug_label = cardElement.Q<Label>($"icon-label-{uxmlId}");
+            */
+
+
             if (label != null)
             {
                 // Get the resource amount from ResourceData
-                object resourceAmount = resourceData.GetResourceAmount(resourceName);
+                float resourceAmount = ConvertToNumeric(resourceData.GetResourceAmount(resourceName), resourceName, "progress") ?? 2f; // Use a default value if null
+                float resourceMax = ConvertToNumeric(resourceData.GetResourceMax(resourceName), resourceName, "MAX") ?? 10f; // Use a default value if null
 
                 // Update the label's text
-                label.text = $"{resourceName}:{resourceAmount}";
+                if (agent_resource_prefix != "")
+                {
+                    //Debug.Log("P");
+                    IShowProgress progressBar = (IShowProgress)dynamicButton[$"{agent_resource_prefix}{resourceName}"];
+                    //progressBar = (IShowProgress)dynamicButton[$"{agent_resource_prefix}{resourceName}"];
+                    // progressBar.SetProgressMax((int)1337);
+                    if (setMaxProgress == true)
+                    {
+                        Debug.Log($"setting: {agent_resource_prefix}{resourceName} = {resourceAmount.ToString()}");
+                        progressBar.SetProgressMax((int)resourceAmount);   
+                    }
+                    //if(progressBar.GetProgressMax() == (int)1337)
+                    //    progressBar.SetProgressMax((int)resourceAmount);
+                    if ("agent_1.Hull " == $"{agent_resource_prefix}{resourceName}" )
+                        Debug.Log($"Updatting Data: {agent_resource_prefix}{resourceName} = {resourceAmount.ToString()}");                    
+                    progressBar.SetProgress((int)resourceAmount);
+                    var debug_label = cardElement.Q<Label>($"icon-label-{uxmlId}");
+                    if (debug_label != null)
+                    {
+                        debug_label.text = $"{resourceIdToIconMapping[resourceName]} ({resourceAmount.ToString()}):";
+                    }
+                }
+                label.text = $"";
             }
 
             // Update the placeholder label on the image (if needed)

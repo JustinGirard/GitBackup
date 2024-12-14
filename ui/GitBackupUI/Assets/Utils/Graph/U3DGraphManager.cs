@@ -97,10 +97,14 @@ public class U3DGraphManager : MonoBehaviour
     public void SaveChanges()
     {
         // Mark the ScriptableObject as dirty to persist changes
+        #if UNITY_EDITOR        
         UnityEditor.EditorUtility.SetDirty(graphData);
+        #endif
     }
     public void GenerateGraphData()
     {
+        #if UNITY_EDITOR        
+
         // Delete the existing ScriptableObject
         if (graphData != null)
         {
@@ -129,6 +133,8 @@ public class U3DGraphManager : MonoBehaviour
 
         // Render the graph
         RenderGraph();
+        #endif
+
     }
 
     private void InitializeGraph()

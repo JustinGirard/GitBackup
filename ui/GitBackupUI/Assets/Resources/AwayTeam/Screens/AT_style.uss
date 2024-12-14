@@ -81,8 +81,11 @@
 .card-status {
     flex-grow: 1;
     flex-direction: column;
-    justify-content: center;
+    justify-content: flex-start;
     gap: 5px;
+    align-items: stretch;
+    max-height: none;
+    height: auto;
 }
 
 .status-row {
@@ -106,6 +109,10 @@
 .status-value {
     color: white;
     font-size: 20px;
+    min-width: 80px;
+    max-width: 80px;
+    max-height: 10px;
+    min-height: 10px;
 }
 
 .card-details {

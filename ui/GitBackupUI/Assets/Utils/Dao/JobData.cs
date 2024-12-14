@@ -818,8 +818,9 @@ public class JobData : StandardData
                 //exception = exception.InnerException;
                 return "ProcError:"+stringBuilder;
             }
-
-           return  ((System.Exception)resp).ToSummaryString();
+            System.Exception ex = (System.Exception)resp;
+           //return  ((System.Exception)resp).ToSummaryString();
+           return $"{ex.Message}\n{ex.StackTrace}";
         }
         return resp.ToString();
     } 

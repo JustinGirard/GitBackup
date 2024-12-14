@@ -1,15 +1,13 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" xsi="http://www.w3.org/2001/XMLSchema-instance" engine="UnityEngine.UIElements" editor="UnityEditor.UIElements" noNamespaceSchemaLocation="../../../UIElementsSchema/UIElements.xsd" editor-extension-mode="False">
     <ui:Template name="AT_StatusBar" src="project://database/Assets/Resources/AwayTeam/Screens/AT_StatusBar.uxml?fileID=9197481963319205126&amp;guid=1c83af10f53ca47269d15d55a75e00a9&amp;type=3#AT_StatusBar" />
-    <ui:Template name="AT_EncounterCard" src="project://database/Assets/Resources/AwayTeam/Screens/AT_EncounterCard.uxml?fileID=9197481963319205126&amp;guid=50265937849cb406eba24df85aa6aba8&amp;type=3#AT_EncounterCard" />
     <ui:Template name="card-status" src="project://database/Assets/card-status.uxml?fileID=9197481963319205126&amp;guid=db7c1119551684f97b26ca81995b719f&amp;type=3#card-status" />
     <Style src="project://database/Assets/Resources/AwayTeam/Screens/AT_style.uss?fileID=7433441132597879392&amp;guid=fc0760072fa88400fa6de4c0b3140d22&amp;type=3#AT_style" />
     <ui:VisualElement style="flex-grow: 1; height: 158px;">
         <ui:Instance template="AT_StatusBar" name="AT_StatusBar" style="max-height: 49px; min-height: 49px;" />
-        <ui:Instance template="AT_EncounterCard" name="AT_EncounterCard" />
-        <ui:VisualElement style="flex-grow: 1; top: 0; flex-direction: row; max-height: none;">
-            <ui:Instance template="card-status" name="agent-1-card-status" style="background-color: rgba(255, 255, 255, 0.51); min-width: auto;" />
+        <ui:VisualElement name="VisualElement" style="flex-grow: 1; top: 0; flex-direction: row; max-height: none; -unity-background-image-tint-color: rgba(255, 255, 255, 0); background-color: rgba(0, 0, 0, 0);">
+            <ui:Instance template="card-status" name="agent-1-card-status" style="background-color: rgba(255, 255, 255, 0); min-width: auto; -unity-background-image-tint-color: rgba(255, 255, 255, 0);" />
             <ui:VisualElement style="flex-grow: 1;" />
-            <ui:Instance template="card-status" name="agent-2-card-status" style="right: 0; align-self: auto; background-color: rgba(255, 255, 255, 0.53); min-width: auto;" />
+            <ui:Instance template="card-status" name="agent-2-card-status" style="right: 0; align-self: auto; background-color: rgba(255, 255, 255, 0); min-width: auto;" />
         </ui:VisualElement>
         <ui:VisualElement style="flex-grow: 1; justify-content: flex-end;">
             <ui:VisualElement name="AdminContainer" style="flex-grow: 1; width: 40px; max-width: 60px;">
@@ -19,7 +17,7 @@
             <ui:VisualElement style="flex-grow: 1; justify-content: flex-end; flex-direction: row; height: 60px;">
                 <ui:VisualElement name="button-placeholder-attack" style="flex-grow: 1; height: 50px; align-self: flex-end; justify-content: center;" />
                 <ui:VisualElement name="button-placeholder-missile" style="flex-grow: 1; height: 50px; align-self: flex-end; justify-content: center;" />
-                <ui:VisualElement name="button-placeholder-shield" style="flex-grow: 1; height: 50px; align-self: flex-end; justify-content: center;" />
+                <ui:VisualElement name="button-placeholder-shield" style="flex-grow: 1; height: 50px; align-self: flex-end; justify-content: center; -unity-background-image-tint-color: rgb(255, 114, 114); background-color: rgba(255, 186, 186, 0.49);" />
             </ui:VisualElement>
         </ui:VisualElement>
     </ui:VisualElement>

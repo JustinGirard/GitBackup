@@ -112,7 +112,7 @@ public class NavigationManager : MonoBehaviour
     // Method to navigate to a specific screen by object name
     public void NavigateTo(string objectName, bool hideAll = true)
     {
-        Debug.LogWarning($"NavigateTo running for: {objectName}");
+        //Debug.LogWarning($"NavigateTo running for: {objectName}");
         var matchedObject= FindGameObjectByName(objectName);
 
         var matchedElement = FindUIDocumentByName(objectName);
@@ -132,7 +132,7 @@ public class NavigationManager : MonoBehaviour
         if (showHideComponent != null)
         {
             showHideComponent.Show();
-            Debug.Log($"Show method invoked on component implementing IShowHide: {matchedObject.name}");
+            //Debug.Log($"Show method invoked on component implementing IShowHide: {matchedObject.name}");
         }
         else
         {
@@ -170,7 +170,7 @@ public class NavigationManager : MonoBehaviour
                 if (showHideComponent != null)
                 {
                     showHideComponent.Hide();
-                    Debug.Log($"Hide method invoked on component implementing IShowHide: {doc.name}");
+                    //Debug.Log($"Hide method invoked on component implementing IShowHide: {doc.name}");
                 }
                 else
                 {

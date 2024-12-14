@@ -13,8 +13,17 @@ public class ATResourceData : StandardData
 
     public bool Deposit(string resourceName, float amount)
     {
-        //Debug.Log($"Setting Resource {name}:{resourceName}:{amount.ToString()}");
         return AddToRecordField("Encounter",resourceName,amount,create:true);
+    }
+
+   public bool Deposit(Dictionary<string,float> deltaDict)
+    {
+        bool success = true;
+        foreach (var delta in deltaDict)
+        {
+          success = success && Deposit(delta.Key, (float)delta.Value);
+        }       
+        return success;
     }
 
     public bool Withdraw(string resourceName, float amount)
@@ -28,6 +37,11 @@ public class ATResourceData : StandardData
         return val;
         
     }
+    public object GetResourceMax(string resourceName)
+    {
+        return 20;
+        
+    }    
     // Standard Hooks:
 
     public override List<string> ListRecords()

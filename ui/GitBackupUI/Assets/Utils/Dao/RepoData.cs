@@ -2,12 +2,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using DictStrObj = System.Collections.Generic.Dictionary<string, object>;
 using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
-using Unity.VisualScripting;
-using System.Threading.Tasks;
 using Task = System.Threading.Tasks.Task;
-using UnityEditor.PackageManager;
-using System.Xml.Serialization;
 using System;
 // TODO kill these stupid data classes. They dont really help.
 class RecordRepoReference

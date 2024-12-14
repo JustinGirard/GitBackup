@@ -60,11 +60,13 @@ private void AlignLabelWithCamera()
     else
     {
         // In edit mode, find the Scene View camera
+        #if UNITY_EDITOR
         var sceneViewCamera = UnityEditor.SceneView.lastActiveSceneView?.camera;
         if (sceneViewCamera != null)
         {
             cameraToFace = sceneViewCamera;
         }
+        #endif
     }
 
     if (cameraToFace == null) return;

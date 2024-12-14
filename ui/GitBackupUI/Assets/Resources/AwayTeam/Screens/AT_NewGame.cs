@@ -1,171 +1,14 @@
-/*
 using UnityEngine;
 using UnityEngine.UIElements;
 
-public class GameScreenController : MonoBehaviour
-{
-    public SpaceEncounterManager __encounterManager;
-    private UIDocument uiDocument;
-    private VisualElement root;
-    private Button actionButton;
-    private Label subjectLabel;
-
-    void OnEnable()
-    {
-        // Get the UIDocument and root VisualElement
-        uiDocument = GetComponent<UIDocument>();
-        root = uiDocument.rootVisualElement;
-
-        // Find elements in the UXML
-        actionButton = root.Q<Button>("actionButton");
-        subjectLabel = root.Q<Label>("subject");
-
-        // Add event listener to the button
-        actionButton.clicked += OnActionButtonClicked;
-
-        // Set default text for the screen
-        SetScreenState(true); // 'true' means it's the Welcome screen
-    }
-
-    void OnDisable()
-    {
-        // Remove event listener when disabled
-        if (actionButton != null)
-        {
-            actionButton.clicked -= OnActionButtonClicked;
-        }
-    }
-
-    private void OnActionButtonClicked()
-    {
-        // Handle the button click (e.g., start or restart the game)
-        GameObject navigatorObject = GameObject.Find("AwayTeam");
-        NavigationManager navigationManager = navigatorObject.GetComponent<NavigationManager>();
-
-        __encounterManager.Initalize();
-        __encounterManager.Begin();
-        navigationManager.NavigateTo("AT_SpaceCombatEncounterScreen",true);        
-    }
-
-    /// <summary>
-    /// Sets the screen state to Welcome or Game Over.
-    /// </summary>
-    /// <param name="isWelcomeScreen">If true, sets to Welcome screen. Otherwise, sets to Game Over screen.</param>
-    public void SetScreenState(bool isWelcomeScreen)
-    {
-        subjectLabel.text = isWelcomeScreen ? "Welcome" : "Game Over";
-        actionButton.text = isWelcomeScreen ? "Start" : "Restart";
-    }
-}
-//////////////
-/////////////
-////////////
-////////////
-///////////
-/////////////////
-////////////
-///////////
-
-using UnityEngine;
-using UnityEngine.UIElements;
-
-public class GameScreenController : MonoBehaviour
+public class GameScreenController : MonoBehaviour,IShowHide
 {
     public enum MenuScreenType
     {
         MainMenu,
         PausedScreen,
-        GameOverScreen
-    }
-
-    [Header("Menu Screen Settings")]
-    public MenuScreenType menuScreenType;
-
-    public SpaceEncounterManager __encounterManager;
-    private UIDocument uiDocument;
-    private VisualElement root;
-    private Button actionButton;
-    private Label subjectLabel;
-
-    void OnEnable()
-    {
-        // Get the UIDocument and root VisualElement
-        uiDocument = GetComponent<UIDocument>();
-        root = uiDocument.rootVisualElement;
-
-        // Find elements in the UXML
-        actionButton = root.Q<Button>("actionButton");
-        subjectLabel = root.Q<Label>("subject");
-
-        // Add event listener to the button
-        actionButton.clicked += OnActionButtonClicked;
-
-        // Set initial text based on the menu screen type
-        SetScreenState(menuScreenType);
-    }
-
-    void OnDisable()
-    {
-        // Remove event listener when disabled
-        if (actionButton != null)
-        {
-            actionButton.clicked -= OnActionButtonClicked;
-        }
-    }
-
-    private void OnActionButtonClicked()
-    {
-        // Handle the button click (e.g., start or restart the game)
-        GameObject navigatorObject = GameObject.Find("AwayTeam");
-        NavigationManager navigationManager = navigatorObject.GetComponent<NavigationManager>();
-
-        __encounterManager.Initalize();
-        __encounterManager.Begin();
-        navigationManager.NavigateTo("AT_SpaceCombatEncounterScreen", true);
-    }
-
-    /// <summary>
-    /// Sets the screen state based on the menu screen type.
-    /// </summary>
-    /// <param name="type">The menu screen type.</param>
-    public void SetScreenState(MenuScreenType type)
-    {
-        switch (type)
-        {
-            case MenuScreenType.MainMenu:
-                subjectLabel.text = "Placeholder Main Menu";
-                actionButton.text = "Play";
-                break;
-
-            case MenuScreenType.PausedScreen:
-                subjectLabel.text = "Placeholder Paused Screen";
-                actionButton.text = "Resume";
-                break;
-
-            case MenuScreenType.GameOverScreen:
-                subjectLabel.text = "Placeholder Game Over Screen";
-                actionButton.text = "Restart";
-                break;
-
-            default:
-                subjectLabel.text = "Unknown Menu Screen";
-                actionButton.text = "Action";
-                break;
-        }
-    }
-}
-
-*/
-using UnityEngine;
-using UnityEngine.UIElements;
-
-public class GameScreenController : MonoBehaviour
-{
-    public enum MenuScreenType
-    {
-        MainMenu,
-        PausedScreen,
-        GameOverScreen
+        GameOverScreen,
+        YouWinScreen,
     }
 
     [Header("Menu Screen Settings")]
@@ -176,7 +19,7 @@ public class GameScreenController : MonoBehaviour
     private VisualElement root;
     private VisualElement buttonsContainer;
     private Label subjectLabel;
-
+    private int count=0;
     void Awake()
     {
         // Get the UIDocument and root VisualElement
@@ -188,20 +31,32 @@ public class GameScreenController : MonoBehaviour
         subjectLabel = root.Q<Label>("subject");
 
         // Clear existing buttons
-        buttonsContainer.Clear();
 
-        // Dynamically create buttons based on the screen type
-        CreateButtonsForScreen(menuScreenType);
     }
 
     void OnEnable()
     {
+        // Dynamically create buttons based on the screen type
+        CreateButtonsForScreen(menuScreenType);
         // Set initial text for the subject label
         SetScreenState(menuScreenType);
+    }
+    public void Show()
+    {
+        uiDocument.rootVisualElement.style.display = DisplayStyle.Flex;
+        CreateButtonsForScreen(menuScreenType);
+        SetScreenState(menuScreenType);
+ 
+    }
+    public void Hide()
+    {
+        uiDocument.rootVisualElement.style.display = DisplayStyle.None;
     }
 
     private void CreateButtonsForScreen(MenuScreenType type)
     {
+        count++;
+        buttonsContainer.Clear();
         switch (type)
         {
             case MenuScreenType.MainMenu:
@@ -212,7 +67,22 @@ public class GameScreenController : MonoBehaviour
                     NavigateTo("AT_SpaceCombatEncounterScreen");
                 });
                 break;
-
+            case MenuScreenType.YouWinScreen:
+                int level = __encounterManager.GetLevel();
+                level = level + 1;
+                AddButton($"{count.ToString()}: Start Level Round {level}", () =>
+                {
+                    __encounterManager.Initalize();
+                    __encounterManager.SetLevel(level);
+                    __encounterManager.Begin();
+                    NavigateTo("AT_SpaceCombatEncounterScreen");
+                });
+                AddButton("Quit to Menu", () =>
+                {
+                     __encounterManager.End();
+                    NavigateTo("AT_NewGame");
+                });
+                break;
             case MenuScreenType.PausedScreen:
                 AddButton("Resume", () =>
                 {
@@ -234,6 +104,7 @@ public class GameScreenController : MonoBehaviour
                 AddButton("Restart", () =>
                 {
                     __encounterManager.Initalize();
+                    __encounterManager.SetLevel(1);                    
                     __encounterManager.Begin();
                     NavigateTo("AT_SpaceCombatEncounterScreen");
                 });
@@ -278,6 +149,7 @@ public class GameScreenController : MonoBehaviour
             MenuScreenType.MainMenu => "Main Menu",
             MenuScreenType.PausedScreen => "Game Paused",
             MenuScreenType.GameOverScreen => "Game Over Screen",
+            MenuScreenType.YouWinScreen => "Round Won",
             _ => "Unknown Menu Screen"
         };
     }
