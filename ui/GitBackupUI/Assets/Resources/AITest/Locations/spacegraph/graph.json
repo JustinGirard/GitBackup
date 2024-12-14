@@ -1,0 +1,8 @@
+{
+    "id": "test_graph",
+    "name": "Test Graph",
+    "node_directory": "/Users/computercomputer/justinops/git_backup/ui/GitBackupUI/Assets/Resources/AITest/Locations/spacegraph/nodes",
+    "group_directory": "/Users/computercomputer/justinops/git_backup/ui/GitBackupUI/Assets/Resources/AITest/Locations/spacegraph/groups",
+    "node_types": {},
+    "group_types": {}
+}

@@ -1,0 +1,83 @@
+{
+    "location": {
+        "LocationID": "Relay",
+        "AreaTitle": "Charleston Relay",
+        "Description": "A lone communications relay, framed in a gaseous nebula.",
+        "AreaImage": "DefaultAreaImage",
+        "Actions": ">Open the panel."
+    },
+    "navigation": {
+        "Pass through the nebula": "ZalarSystem",
+        "Return to open space": "OmegaStation"
+    },
+    "location_image_file": "/Users/computercomputer/justinops/git_backup/ui/GitBackupUI/Assets/Resources/AITest/Locations/system00.webp",
+    "navigation_links": {},
+    "location_prompt_generator": {
+        "world": {
+            "tone": "The tone is solemn and introspective, highlighting the isolation of space in general, and hinting at the lost, ethereal, and the unknown.",
+            "style": "Rendered in a cinematic style with high contrast and dramatic shadows, realistic, real, reality like graphics, like a space simulation, evoking both mystery and awe at the vastness of space.",
+            "desired_resolution": " Target high resolution for intricate details, cinematic, like a bare reality movie of even space documentary. Should be mistaken for a photograph.",
+            "world_notes": "In a vast expanse of deep indigo space, shimmering clusters of violet nebulae swirl like ghostly whispers, illuminated by distant, pulsing cerulean stars that cast an otherworldly glow on the scattered remnants of ancient celestial bodies.",
+            "global_visible_setting": "neutral space lighting",
+            "lighting_and_day": "netural lighting",
+            "immediate_setting": "empty.only background.",
+            "main_subject": "only background. No main decernable subject.",
+            "camera": "wide, expansive, focused on the background"
+        },
+        "layer_prompts": {
+            "tone": "Overall vibe - (Do not describe the observer or close by environment) - Usually emotions, and colours, as well as app level themes. Example: The tone is solemn and introspective, highlighting the isolation of space in general, and hinting at the lost, ethereal, and the unknown. Example2: The tone is hopeful, optimistic, and bright, like the feeling of golden hour, or a fresh clear skyline and utopian star system.",
+            "style": "Rendered in a cinematic style with high contrast and dramatic shadows, realistic, real, reality like graphics, like a space simulation, evoking both mystery and awe at the vastness of space.",
+            "desired_resolution": "Optical Characteristics - (Do not describe the observer or close by environment) is the picture quality. Example: Target high resolution for intricate details, cinematic, like a bare reality movie of even space documentary. Example: Lots of bloom, deapth of field, and more of a style as if the scene is in movement.",
+            "world_notes": "Universe design and thematic notes - (Do not describe the observer or close by environment) A description of the visible region, mostly colours, and solar system sized phemomonon. Please be focused on only this 'layer'. Examples include coloring (red space, green space), and significant concepts (in a nebula region, with gaseous background, or in an area with a clear view of the stars, or in a region of dark black space, so dark it mutes colors of lights, or in a system of tiny asteroids and planetoids",
+            "global_visible_setting": "Far away and background features - (Do not describe the observer or close by environment.) The furthest visible objects, layered onto 'world_notes' as decoration, and their significant characteristics. Examples: three planets, all with varying colours are visible; a massive planet is in view below, with enough detail to make out polar peaks, forests, oceans; this is dead space, there is nothing to see; you see far off the scattered remains of space battles and other phenomona ",
+            "lighting_and_day": "Lighting around the camera, and subject, creating nearby effect(Do not describe the observer or close by environment.) Any local lighting ans style choices. These may be mute, or vibrant, and add local variablitiy that will carry across a group of settings. Examples can be 'under the constant barrage of small asteroids, with collisions and explostions in the distance', or 'bathed in the red light of a nebula, with streaks of light reflecting particles streaking into the distance', 'a clear region of space, extending into the distance, rending all visible', 'within a ship graveyard, with no clear view of the surroundings'",
+            "immediate_setting": "(Do not describe the observer) Description of immediate area, surrounding the area, likely something like a relay station, vehicle, space station, particular asteroid, asteroid cave entrance, planet with an observation station for trade in orbit, a particular planet orbit",
+            "main_subject": "(The Observer is in an unmentioned spacecraft, like a small pod. Keep that in mind when choosing a subject - it is accessible from space. No not describe observer). Description of a specific noun we find in focused emphasized attention in frame. Could be a box, table, chair, safe, glasses, book, shelf, door handle, lock, person, panel, computer, sword, gun, and many others",
+            "camera": "What is the camera looking at, and how it frames the main_subject from a first person perspective always. Never describe the observer."
+        },
+        "layer_definition": {
+            "galaxy": {
+                "layer_prompts": [
+                    "tone",
+                    "style",
+                    "desired_resolution"
+                ],
+                "prompt": "This is a galaxy-sized image, showing a large zoomed out view of this galaxy, intended for a game display. It should have a grand scale, and reflect the tone. The observer (disembodied camera only) is at such a distance that the entire galaxy fills the screen with beauty"
+            },
+            "star_cluster": {
+                "layer_prompts": [
+                    "world_notes"
+                ],
+                "prompt": "This is a start cluster, with a far away view of some suns, and other large star cluster sized phenomona. It should reflect the previously established tone. At this layer of creativity we should not see any specific planets or structures, as they are too small, but could see star cluster sized phenomona, like beautiful nebula, or large black voids, and we should se 2-5 solar systems very far off, photo realistic, as if we are now at a point to choose which solar system we may wish to visit."
+            },
+            "solar_system": {
+                "layer_prompts": [
+                    "global_visible_setting",
+                    "lighting_and_day"
+                ],
+                "prompt": "a view of a solar system specifically, from the point of view where we can see the sun, and all planets (like a beautiful render of sol). Of course, in real life the planets would be dots, however in this image the planets should be small, however they should be large enough to visually identify features like planets, asteroid belts, and other interesting features that invite and explorer to approach."
+            },
+            "spaceobject_or_planet": {
+                "layer_prompts": [
+                    "immediate_setting"
+                ],
+                "prompt": "A view of a specific planetary body, like a gargauntian space ship, asteroid cluster, flotilla of freighters,  a planet (nearby, as if the disembodied camera is in orbit), a sun (in orbit), a gas cloud, or other extremely large phenomonoa. "
+            },
+            "item_sized_subject": {
+                "layer_prompts": [
+                    "main_subject",
+                    "camera"
+                ],
+                "prompt": "A view of a small item attach to, or near by, the spaceobject_or_planet in orbit. For technical objects (like a space station) this could be a control panel, docking port, dead space man, weapon, fuel container. For less technical items like a planet, it could be space rocks, a derelect space probe, a small one person spacecraft, a space cloud. Feel free to create new but logically consistent idea."
+            }
+        }
+    },
+    "text_to_img_request": {
+        "model_identifier": "justingirard/draft-ui-designer:825141d77e4a5392cf0ff92d047115ba3236bb0083ae1af59bb92ef7101c727b",
+        "prompt": "In a vast expanse of deep indigo space, shimmering clusters of violet nebulae swirl like ghostly whispers, illuminated by distant, pulsing cerulean stars that cast an otherworldly glow on the scattered remnants of ancient celestial bodies. The tone is solemn and introspective, highlighting the isolation of space, and evoking a sense of loss and the unknown. Rendered in a cinematic style with high contrast and dramatic shadows, the scene resembles a space simulation with realistic graphics that evoke both mystery and awe at the vastness of the cosmos. The neutral space lighting envelops the surroundings, creating an empty backdrop that emphasizes the grandeur of the universe, with nothing but the intricate details of the nebulae and stars filling the wide, expansive frame, resembling a photograph from a documentary on the great unknown.",
+        "width": 1024,
+        "height": 1024,
+        "prompt_upsampling": true,
+        "output_base_filename": "/Users/computercomputer/justinops/git_backup/ui/GitBackupUI/Assets/Resources/AITest/Locations/system00"
+    }
+}

@@ -1,0 +1,37 @@
+{
+    "location": {
+        "LocationID": "Relay",
+        "AreaTitle": "Charleston Relay",
+        "Description": "A lone communications relay, framed in a gaseous nebula.",
+        "AreaImage": "DefaultAreaImage",
+        "Actions": ">Open the panel."
+    },
+    "navigation": {
+        "Pass through the nebula": "ZalarSystem",
+        "Return to open space": "OmegaStation"
+    },
+    "location_image_file": "/Users/computercomputer/justinops/git_backup/ui/GitBackupUI/Assets/Resources/AITest/Locations/relay/base_image_4.webp",
+    "location_image_generator": {
+        "generator": "apps/cyoa/gen_world_text_to_img.py",
+        "world": {
+            "world_notes": "In the vast emptiness of space, a lone communications relay drifts, its metallic structure bearing the marks of countless years. The station, with various antennae and sensors extended outward, serves as a silent sentinel on the edge of known space, surrounded by faint stars and distant planets. Technology here is advanced yet worn, with cables and panels that show signs of age and repairs made over decades.",
+            "global_visible_setting": "The station is set against a swirling gaseous nebula, vibrant with hues of purple, green, and blue. Tendrils of gas and dust twist around the station, giving it an ethereal, almost haunted appearance. Occasional bursts of light from distant stars cast shifting shadows across the station\u2019s surface, creating a dynamic, otherworldly backdrop.",
+            "lighting_and_day": "Bathed in the dim, ambient glow of the nebula, with shifting shadows that emphasize the solitude and mystery of the relay. Small glimmers of light occasionally reflect off the relay\u2019s metallic panels.",
+            "immediate_setting": "The immediate focus is the station itself: a compact, robust structure with several small docking ports and external panels. Exposed cables and conduits run along its surface, many appearing weathered and patched. Small red and green indicator lights flicker sporadically, hinting at the station\u2019s continued operation, albeit at minimal power.",
+            "main_subject": "At the center of attention, a reinforced hatch with a control panel attached. The hatch has a locking mechanism, illuminated by a faint green light, suggesting it might still be operable. The control panel displays a flickering screen, its ancient interface designed for manual input.",
+            "camera": "The camera is focused closely on the hatch and control panel, capturing the worn details of the metal surface, scratches, and patches.",
+            "tone": "The tone is solemn and introspective, highlighting the isolation of this lone outpost and hinting at forgotten missions and unspoken secrets.",
+            "style": "Rendered in a cinematic style with high contrast and dramatic shadows, evoking both mystery and awe at the vastness of space.",
+            "desired_resolution": "Target high resolution for intricate details on the station, especially on the hatch and control panel, to reveal every scratch, reflection, and shadow."
+        },
+        "text_to_img": {
+            "model_name": "justingirard/draft-ui-designer",
+            "model_version": "825141d77e4a5392cf0ff92d047115ba3236bb0083ae1af59bb92ef7101c727b",
+            "width": 1024,
+            "height": 1024,
+            "prompt_upsampling": true,
+            "output_base_filename": "/Users/computercomputer/justinops/git_backup/ui/GitBackupUI/Assets/Resources/AITest/Locations/relay/base_image"
+        }
+    },
+    "final_prompt": "In the vast emptiness of space, a solitary communications relay drifts, its metallic structure weathered by the relentless passage of time. This silent sentinel, adorned with an array of antennae and sensors, hovers at the edge of known space, surrounded by the soft glow of distant stars and the ethereal hues of a swirling nebula. Bathed in ambient light, the station's exterior showcases a tapestry of scratches and patches, where exposed cables weave a story of repairs and resilience. The vibrant nebula, alive with shades of purple, green, and blue, envelops the station in tendrils of gas and dust, giving it an almost haunted appearance. Against this otherworldly backdrop, the camera zeroes in on a reinforced hatch at the heart of the outpost, its locking mechanism faintly illuminated by a green light, suggesting the possibility of forgotten operations. The flickering control panel beside it displays an ancient interface, begging for manual input, while small red and green indicator lights sporadically pulse, hinting at the station's lingering life. The high-contrast, cinematic rendering captures every intricate detail, from the glimmers reflecting off its surface to the shifting shadows that evoke a solemn introspection about the isolation and secrets held within this forsaken outpost."
+}
