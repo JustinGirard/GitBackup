@@ -32,25 +32,34 @@ public class ProgressButton : StandardDynamicControl, IShowProgress
     {
         // Mirror state to both DockedButton and ProgressBar
         dockedButton.SetState(state);
-        progressBar.SetState(state);
+        if (progressBar!= null)
+            progressBar.SetState(state);
     }
 
     // Expose progress-specific functionality
     public bool SetProgress(int progress, string id="")
     {
-        return progressBar.SetProgress(progress,id);
+        if (progressBar!= null)
+            return progressBar.SetProgress(progress,id);
+        return false;
     }
     public int GetProgress(string id="")
     {
-        return progressBar.GetProgress(id);
+        if (progressBar!= null)
+            return progressBar.GetProgress(id);
+        return 1;
     }    
     public int GetProgressMax(string id="")
     {
-        return progressBar.GetProgressMax(id);
+        if (progressBar!= null)
+            return progressBar.GetProgressMax(id);
+        return 2;
     }    
     public void SetProgressMax(int max, string id="")
     {
-        progressBar.SetProgressMax(max,id);
+        if (progressBar!= null)
+            progressBar.SetProgressMax(max,id);
+        
     }        
 
     // Additional functionality for input handling (inherits from StandardDynamicControl)

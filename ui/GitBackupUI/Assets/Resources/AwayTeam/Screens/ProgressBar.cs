@@ -3,22 +3,22 @@ using UnityEngine.InputSystem; // Ensure you have the Input System package insta
 using System;
 
 using System.Collections.Generic;
-
-
+using System.Runtime.InteropServices.WindowsRuntime;
 
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
 
-
-
 public class LinearProgressBar : StandardDynamicControl, IShowProgress
 {
     public Material activeMaterial;
     public Material inactiveMaterial;
+    public Material activeProgressMaterial;
+    public Material inactiveProgressMaterial;
     public GameObject __slice; // Prefab for each progress slice
     private Dictionary<int, GameObject> nodes = new Dictionary<int, GameObject>();
     private Dictionary<int, Vector3> locations = new Dictionary<int, Vector3>();
+    private Dictionary<int, Vector3> orientations = new Dictionary<int, Vector3>();
     public int __dataProgress = 0;
     public int __sliceProgress = 0;
     public int __slicesMax = 20;
@@ -68,7 +68,7 @@ public class LinearProgressBar : StandardDynamicControl, IShowProgress
     public float marginX = 0f;
     public float marginY = 0f;
     public float marginZ = 0f;    
-    public enum ArcType { None, Circular, Parabolic }
+    public enum ArcType { None, Circular, Parabolic,Radial }
     public ArcType arcType = ArcType.None;
     public float radius = 1f; // For circular arcs
     public float parabolicA = 0.1f; // For parabolic arcs (a*x^2 + b*x + c)
@@ -80,9 +80,11 @@ public class LinearProgressBar : StandardDynamicControl, IShowProgress
 
     private void InitializeZDirectionProgressBar()
     {
+        Debug.Log("InitializeZDirectionProgressBar");
         Vector3 size = __slice.transform.localScale;
         Vector3 localBasePosition = transform.InverseTransformPoint(__slice.transform.position);
         locations.Clear(); // Ensure the locations dictionary is reset
+        orientations.Clear();
 
         float xStep = ((float)directionX) * size.x + marginX;
         float yStep = ((float)directionY) * size.y + marginY;
@@ -92,6 +94,7 @@ public class LinearProgressBar : StandardDynamicControl, IShowProgress
         {
             // Base linear position
             Vector3 position = localBasePosition + new Vector3(i * xStep, i * yStep, i * zStep);
+            Vector3 orientation = new Vector3(0,0, 0);
 
             // Apply ArcType adjustments if enabled
             if (arcType != ArcType.None)
@@ -105,18 +108,37 @@ public class LinearProgressBar : StandardDynamicControl, IShowProgress
                     //////
                     float angle = Mathf.Lerp(-Mathf.PI / 2, Mathf.PI / 2, normalizedStep); // Semi-circle
                     arcOffset = CalculateArcOffsetCircular(angle);
+                    position += arcOffset;
+                    orientation = new Vector3(0,0, 0);
                 }
                 else if (arcType == ArcType.Parabolic)
                 {
                     float xNormalized = normalizedStep - 0.5f; // Map normalized step to [-0.5, 0.5]
                     float parabolicOffset = parabolicA * xNormalized * xNormalized + parabolicB * xNormalized + parabolicC;
                     arcOffset = CalculateArcOffsetParabolic(parabolicOffset);
+                    position += arcOffset;
+                    orientation = new Vector3(0,0, 0);
                 }
+                else if (arcType == ArcType.Radial)
+                {
+                    float angleStep = 360f / numSlices; // Angle step in degrees for each slice
+                    float angle = i * angleStep; // Multiply step size by the slice index
+                    float angleRadians = Mathf.Deg2Rad * angle;
 
-                position += arcOffset;
+                    // Compute the position of the slice along the radial arc
+                    arcOffset = new Vector3(
+                        radius * Mathf.Cos(angleRadians), 
+                        radius * Mathf.Sin(angleRadians), 
+                        0                                
+                    );
+                    position = localBasePosition;
+                    orientation = arcOffset;
+                }                
+
             }
 
             locations[i] = position;
+            orientations[i] = orientation;
         }
     }
 
@@ -168,6 +190,7 @@ public class LinearProgressBar : StandardDynamicControl, IShowProgress
     protected override void Start()
     {
         base.Start();
+
         InitializeZDirectionProgressBar();
         BuildProgressBar();
         SetProgress(10);
@@ -175,6 +198,7 @@ public class LinearProgressBar : StandardDynamicControl, IShowProgress
 
     private void BuildProgressBar()
     {
+        Debug.Log("Re init of progress bar");
         List<Transform> childrenToDestroy = new List<Transform>();
 
         // Collect children to destroy
@@ -201,11 +225,23 @@ public class LinearProgressBar : StandardDynamicControl, IShowProgress
         {
             int index = locationEntry.Key;
             Vector3 position = locationEntry.Value;
-
+            Vector3 orientation = orientations[index];
+            
             if (!nodes.ContainsKey(index))
             {
                 GameObject slice = Instantiate(__slice, transform);
-                slice.transform.localPosition = position;
+                if (arcType == ArcType.Radial)
+                {
+                    // Keep the slice at the origin but rotate it to face the direction vector
+                    //slice.transform.localPosition = new Vector3(10,10,10);
+                    //Debug.Log(position);
+                    slice.transform.localPosition = position;
+                    slice.transform.localRotation = Quaternion.LookRotation(Vector3.forward, orientation);
+                }
+                else
+                {
+                    slice.transform.localPosition = position;
+                }
                 slice.SetActive(true);
                 nodes[index] = slice;
             }
@@ -217,6 +253,7 @@ public class LinearProgressBar : StandardDynamicControl, IShowProgress
 
     public bool SetProgress(int progress,string id = "")
     {
+
         if (progress < 0) 
             progress = 0;
         if (progress > __dataProgressMax) 
@@ -224,7 +261,8 @@ public class LinearProgressBar : StandardDynamicControl, IShowProgress
         __dataProgress = progress;
                 
         __sliceProgress = (int)(((float)__dataProgress/(float)__dataProgressMax)*(float)__slicesMax);
-        
+        //Debug.Log($"Setting progress for {this.name}: {__sliceProgress}/{__slicesMax}");
+
         UpdateSlices();
         return true;
     }
@@ -262,7 +300,7 @@ public class LinearProgressBar : StandardDynamicControl, IShowProgress
         isActive = status;
         UpdateSlices();
     }
-
+    /*
     private void UpdateSlices()
     {
         foreach (var nodeEntry in nodes)
@@ -283,7 +321,61 @@ public class LinearProgressBar : StandardDynamicControl, IShowProgress
                 }
             }
         }
+    }*/
+    private void UpdateSlices()
+    {
+        foreach (var nodeEntry in nodes)
+        {
+            int index = nodeEntry.Key;
+            GameObject slice = nodeEntry.Value;
+            //if (name == "ProgressPie")
+            //    Debug.Log($"Updatting progress for {this.name}: {index} of {__sliceProgress}/{__slicesMax} given {numSlices}");
+
+            // Collect all Renderers: the slice's own and its children
+            List<Renderer> allRenderers = new List<Renderer>();
+
+            Renderer sliceRenderer = slice.GetComponent<Renderer>();
+            if (sliceRenderer != null)
+            {
+                allRenderers.Add(sliceRenderer);
+            }
+
+            Renderer[] childRenderers = slice.GetComponentsInChildren<Renderer>();
+            allRenderers.AddRange(childRenderers);
+            bool renderActive = isActive;
+            //renderActive = true;
+            // Update materials for all collected Renderers
+            foreach (Renderer renderer in allRenderers)
+            {
+                renderer.material = renderActive
+                    ? (index < __sliceProgress ? activeMaterial : inactiveMaterial)
+                    : (index < __sliceProgress ? activeProgressMaterial : inactiveProgressMaterial);
+            }
+            foreach (Renderer renderer in allRenderers)
+            {
+                Material[] mats = renderer.materials; // Get all materials
+                for (int i = 0; i < mats.Length; i++)
+                {
+                    //if (name == "ProgressPie")
+                    //{
+                    //    Debug.Log($"Updatting slice renderer for {this.name}: {index} of {__sliceProgress}/{__slicesMax} given {numSlices}");
+                    //}
+                    mats[i] = renderActive
+                        ? (index < __sliceProgress ? activeMaterial : inactiveMaterial)
+                        : (index < __sliceProgress ? activeProgressMaterial : inactiveProgressMaterial);
+
+                }
+                renderer.materials = mats; // Re-assign updated materials
+            }
+            // Determine whether to use sharedMaterial or material based on mode
+           
+
+
+
+        }
     }
+
+
 
     public override string GetCommandId()
     {

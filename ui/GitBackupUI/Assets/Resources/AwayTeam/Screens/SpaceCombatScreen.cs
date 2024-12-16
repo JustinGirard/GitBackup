@@ -272,10 +272,28 @@ public class SpaceCombatScreen : SpaceEncounterObserver,IShowHide
 
         if (effect == SpaceEncounterManager.ObservableEffects.EncounterOverWon)
             navigationManager.NavigateTo("AT_RoundWon");
-
+        if (effect == SpaceEncounterManager.ObservableEffects.TimerTick)
+            StartCoroutine(eShowTimerUpdates());
         return true;
     }
-
+    private System.Collections.IEnumerator eShowTimerUpdates()
+    {
+        float prog = encounterManager.GetTimerProgress();
+        float progMax = encounterManager.GetTimerProgressMax();
+        //
+        GameObject buttonObject =  dynamicButton[DynamicButtonID.Attack].GetGameObject();
+        IShowProgress dc = buttonObject.GetComponent<IShowProgress>();
+        dc.SetProgressMax((int)progMax);
+        dc.SetProgress((int)prog);
+        
+        //
+        //
+        buttonObject =  dynamicButton[DynamicButtonID.Missile].GetGameObject();
+        dc = buttonObject.GetComponent<IShowProgress>();
+        dc.SetProgressMax((int)progMax);
+        dc.SetProgress((int)prog);
+        yield break;
+    }
 
     private System.Collections.IEnumerator eApplyPulseAndActivate(string buttonId)
     {
@@ -554,7 +572,7 @@ public class SpaceCombatScreen : SpaceEncounterObserver,IShowHide
                     // progressBar.SetProgressMax((int)1337);
                     if (setMaxProgress == true)
                     {
-                        Debug.Log($"setting: {agent_resource_prefix}{resourceName} = {resourceAmount.ToString()}");
+                        //Debug.Log($"setting: {agent_resource_prefix}{resourceName} = {resourceAmount.ToString()}");
                         progressBar.SetProgressMax((int)resourceAmount);   
                     }
                     //if(progressBar.GetProgressMax() == (int)1337)
