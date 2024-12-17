@@ -34,6 +34,8 @@ public class ATResourceData : StandardData
     public object GetResourceAmount(string resourceName)
     {
         object val = GetRecordField("Encounter",resourceName);
+        if (val == null)
+            return 0.0f;
         return val;
         
     }

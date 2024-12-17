@@ -10,6 +10,9 @@ GameObject:
   m_Component:
   - component: {fileID: 637004992299590753}
   - component: {fileID: 8613393684004662976}
+  - component: {fileID: 6637979809538091594}
+  - component: {fileID: 7039866968265386754}
+  - component: {fileID: -258648387861735112}
   m_Layer: 0
   m_Name: EncounterSquad
   m_TagString: Untagged
@@ -49,6 +52,56 @@ MonoBehaviour:
   masterRotation: {x: 0, y: 0, z: 0, w: 1}
   spaceMapUnitResourcePath: AwayTeam/KeyObjects/SpaceMapUnit
   veeFormationResourcePath: AwayTeam/KeyObjects/VeeFormation
+--- !u!114 &6637979809538091594
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2409724044300071283}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ee0f550414b1848368eec8230c3083f5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  activationDuration: 3
+  spaceEncounter: {fileID: 0}
+  ammoCost: 1
+  fuelCost: 1
+  baseDamage: 2
+--- !u!114 &7039866968265386754
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2409724044300071283}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ab321b7298f924e5cbc01d5eb3bdb11b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  activationDuration: 3
+  spaceEncounter: {fileID: 0}
+  missileCost: 1
+  fuelCost: 1
+  baseDamage: 5
+--- !u!114 &-258648387861735112
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2409724044300071283}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c69e811a81e5a44eeb3dd4cbf039e4e6, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  activationDuration: 3
+  spaceEncounter: {fileID: 0}
+  fuelCost: 1
+  baseDamage: 5
 --- !u!1 &5553707538120329147
 GameObject:
   m_ObjectHideFlags: 0

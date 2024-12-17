@@ -140,6 +140,7 @@ public static class EffectHandler
 
     public static IEnumerator CreateShield(GameObject shieldPrefab, Vector3 source)
     {
+        Debug.Log("SHIELD - 1");
         // Step 1: Instantiate shield object
         GameObject shield = InstantiateObject(shieldPrefab, source);
         if (shield == null)
@@ -148,6 +149,7 @@ public static class EffectHandler
             yield break;
         }
 
+        Debug.Log("SHIELD - 2");
         // Step 2: Get the shield's material instance
         Material shieldMaterial = GetMaterialInstance(shield);
         if (shieldMaterial == null)
@@ -156,20 +158,25 @@ public static class EffectHandler
             yield break;
         }
 
+        Debug.Log("SHIELD - 3");
         // Step 3: Perform fade-in effect
         float fadeInDuration = 1.0f;
         yield return FadeMaterialAlpha(shieldMaterial, 0f, 1f, fadeInDuration);
 
+        Debug.Log("SHIELD - 4");
         // Step 4: Wait while shield stays visible
         float shieldDuration = 2.0f;
         yield return new WaitForSeconds(shieldDuration);
 
+        Debug.Log("SHIELD - 5");
         // Step 5: Perform fade-out effect
         float fadeOutDuration = 0.5f;
         yield return FadeMaterialAlpha(shieldMaterial, 1f, 0f, fadeOutDuration);
 
+        Debug.Log("SHIELD - 6");
         // Step 6: Destroy the shield object
         UnityEngine.Object.Destroy(shield);
+        Debug.Log("SHIELD - 7");
     }
 
     // Sub-Effect 1: Instantiate an object at a given position

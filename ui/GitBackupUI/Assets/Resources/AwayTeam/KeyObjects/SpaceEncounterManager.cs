@@ -3,29 +3,6 @@ using System.Collections.Generic;
 using Unity.VisualScripting;
 using UnityEngine;
 
-/*
-
-
-
-
-public class SpaceEncounterManager : MonoBehaviour{
-{
-    [SerializeField]
-    public List<ResourceEntry> defaultResources;
-    public void Awake()
-    {
-        // ContainsKey
-        DictTable resourceTable = new DictTable();
-        SetRecords((DictTable)resourceTable);
-        foreach (ResourceEntry resource in defaultResources)
-        {
-            Debug.Log($"Adding Resource {resource.key}");
-            AddToRecordField("Encounter", resource.key, resource.value, create: true);
-        }      
-    }
-
-*/
-
 
 using System.Linq;
 using UnityEditor;
@@ -154,47 +131,6 @@ public class SpaceEncounterManager : MonoBehaviour,IPausable
         };
     }
 
-    /*
-    public Dictionary<string, float>  GetResourceDeltaForActions(string self_action, string other_action)
-    {
-        Dictionary<string, float> agentDelta = new Dictionary<string, float>();
-
-        // Self Harm
-        if (self_action == AgentActions.Attack)
-        {
-            agentDelta["Ammunition"] = -1f;
-        }
-        if (self_action == AgentActions.Missile)
-        {
-            agentDelta["Missiles"] = -1f;
-        }
-        if (self_action == AgentActions.Shield)
-        {
-            agentDelta["Fuel"] = -1f;
-        }
-
-        // Reactions
-        if (other_action == AgentActions.Attack)
-        {
-            if (self_action !=  AgentActions.Shield)
-            {
-                agentDelta["Hull"] = -1f;
-            }
-        }
-        if (other_action == AgentActions.Missile)
-        {
-            if (self_action !=  AgentActions.Attack)
-            {
-                agentDelta["Hull"] = -2f;
-            }
-        }
-        if (other_action ==  AgentActions.Shield)
-        {
-            //pass
-        }        
-
-        return agentDelta;
-    }*/
     
     public   string GetAgentGUICardId (string agent_id)
     {
@@ -214,7 +150,6 @@ public class SpaceEncounterManager : MonoBehaviour,IPausable
     }
     void Awake()
     {
-        //navigationManager.NavigateTo("AT_NewGame",false);
         intervalRunner = new IntervalRunner();
 
         if (accountResourceData == null)
@@ -329,11 +264,38 @@ public class SpaceEncounterManager : MonoBehaviour,IPausable
         unit1.transform.position = spawnOne.transform.position;
         unit1.transform.rotation  = spawnOne.transform.rotation;
         unit1.transform.parent = spawnOne.transform;
-        
-        unit2 =  Instantiate(Resources.Load<GameObject>(encounterSquadPrefab));
+
+        if (unit1.GetComponent<BlasterSystem>() == null)
+            Debug.LogError("Could not find BlasterSystem attached to unit 1");
+        unit1.GetComponent<BlasterSystem>().SetEncounterManager(this);
+
+        if (unit1.GetComponent<MissileSystem>() == null)
+            Debug.LogError("Could not find MissileSystem attached to unit 1");
+        unit1.GetComponent<MissileSystem>().SetEncounterManager(this);
+
+        if (unit1.GetComponent<ShieldSystem>() == null)
+            Debug.LogError("Could not find ShieldSystem attached to unit 1");
+        unit1.GetComponent<ShieldSystem>().SetEncounterManager(this);
+
+
+        /////
+        unit2 =  Instantiate(Resources.Load<GameObject>(encounterSquadPrefab));        
         unit2.transform.position = spawnTwo.transform.position;
         unit2.transform.rotation  = spawnTwo.transform.rotation;
         unit2.transform.parent = spawnTwo.transform;
+        
+        if (unit2.GetComponent<BlasterSystem>() == null)
+            Debug.LogError("Could not find BlasterSystem attached to unit 2");
+        unit2.GetComponent<BlasterSystem>().SetEncounterManager(this);
+
+        if (unit2.GetComponent<MissileSystem>() == null)
+            Debug.LogError("Could not find MissileSystem attached to unit 2");
+        unit2.GetComponent<MissileSystem>().SetEncounterManager(this);
+
+       if (unit2.GetComponent<ShieldSystem>() == null)
+            Debug.LogError("Could not find ShieldSystem attached to unit 1");
+        unit2.GetComponent<ShieldSystem>().SetEncounterManager(this);        
+
         SetReadyToRun(true);
         //Debug.Log("Should be runnning");
         Run();
@@ -541,6 +503,11 @@ public class SpaceEncounterManager : MonoBehaviour,IPausable
             { agent_1_id, agent1UnitResourceData },
             { agent_2_id, agent2UnitResourceData }
         };
+        var agentUnits = new Dictionary<string, GameObject>
+        {
+            { agent_1_id, unit1.gameObject },
+            { agent_2_id, unit2.gameObject }
+        };        
         var agentCommandIds = new Dictionary<string, string>
         {
             { agent_1_id, agent_1_commandId },
@@ -559,16 +526,58 @@ public class SpaceEncounterManager : MonoBehaviour,IPausable
 
                 if (primaryCommandId == AgentActions.Attack)
                 {
-                   StartCoroutine(HandleAttack(primaryAgentId, targetAgentId,targetCommandId, agentResources));
+                    BlasterSystem bs = unit1.GetComponent<BlasterSystem>();
+                    if (bs == null)
+                        Debug.LogError("Could not find BlasterSystem on unit1");
+                    StartCoroutine(bs.Execute(
+                                sourceAgentId:primaryAgentId, 
+                                sourcePowerId:AgentActions.Attack, 
+                                targetAgentId:targetAgentId, 
+                                targetPowerId:targetCommandId, 
+                                agentResources:agentResources
+                    ));
                 }
                 else if (primaryCommandId == AgentActions.Missile)
                 {
-                    StartCoroutine(HandleMissile(primaryAgentId, targetAgentId,targetCommandId, agentResources));
+                    //Debug.Log("MISSILE ACTION");
+                    //yield break;
+                    MissileSystem bs = unit1.GetComponent<MissileSystem>();
+                    if (bs == null)
+                    {
+                        Debug.LogError("Could not find MissileSystem on unit1!!!");
+                    }
+                    else
+                    {
+                        Debug.Log(bs);
+                        
+                        StartCoroutine(bs.Execute(
+                                    sourceAgentId:primaryAgentId, 
+                                    sourcePowerId:AgentActions.Missile, 
+                                    targetAgentId:targetAgentId, 
+                                    targetPowerId:targetCommandId, 
+                                    agentResources:agentResources
+                        ));
+                    }
+
                 }
                 else if (primaryCommandId == AgentActions.Shield)
                 {
-                    //StartCoroutine(HandleShield(primaryAgentId));
-                    StartCoroutine(HandleShield(primaryAgentId, targetAgentId,targetCommandId, agentResources));
+                    ShieldSystem bs = unit1.GetComponent<ShieldSystem>();
+                    if (bs == null)
+                    {
+                        Debug.LogError("Could not find MissileSystem on unit1!!!");
+                    }
+                    else
+                    {
+                        Debug.Log(bs);
+                        StartCoroutine(bs.Execute(
+                                    sourceAgentId:primaryAgentId, 
+                                    sourcePowerId:AgentActions.Shield, 
+                                    targetAgentId:targetAgentId, 
+                                    targetPowerId:targetCommandId, 
+                                    agentResources:agentResources
+                        ));
+                    }                    
                 }
 
 
@@ -578,169 +587,7 @@ public class SpaceEncounterManager : MonoBehaviour,IPausable
 
         yield break;
     }
-    const float bulletFuelCost = 1f;
-    const float bulletAmmoCost = 1f;
-    const float bulletHullDamage = 2f;
-    const float bulletHullDamage_AttackModifier = 0.5f;
-    const float bulletHullDamage_ShieldModifier = 0f;
-    const float bulletHullDamage_MissileModifier = 3f;
-
-    const float missileFuelCost = 0f;
-    const float missileMissileCost = 1f;
-    const float missileHullDamage = 5f;
-    const float missileHullDamage_AttackModifier = 0f;
-    const float missileHullDamage_ShieldModifier = 1f;
-    const float missileHullDamage_MissileModifier = 1f;    
-
-    const float shieldFuelCost = 2f;
-    private System.Collections.IEnumerator HandleAttack(string primaryAgentId, 
-                                string targetAgentId, 
-                                string targetActionId, 
-                                Dictionary<string, ATResourceData> agentResources)
-    {
-        Dictionary<string, float> primaryDelta = new Dictionary<string, float>();
-        Dictionary<string, float> targetDelta = new Dictionary<string, float>();
-
-        if ((float)agentResources[primaryAgentId].GetResourceAmount("Ammunition") > 0)
-        {
-//            Debug.Log($"{primaryAgentId} attacking {targetAgentId}");
-            primaryDelta["Fuel"] = -1*bulletFuelCost;
-            primaryDelta["Ammunition"] = -1*bulletAmmoCost;
-            NotifyAllScreens(ObservableEffects.AttackOff);
-            yield return StartCoroutine(EffectHandler.ShootBlasterAt(
-                boltPrefab: Resources.Load<GameObject>(PrefabPath.BoltPath),
-                explosionPrefab: Resources.Load<GameObject>(PrefabPath.Explosion),
-                number: 20,
-                delay: 1f,
-                duration: 1f,
-                maxDistance: 3f,
-                source: GetAgentPosition(primaryAgentId),
-                target: GetAgentPosition(targetAgentId)
-            ));
-            if (AgentActions.Attack == targetActionId)
-            {
-                targetDelta["Hull"] = -1f*bulletHullDamage*bulletHullDamage_AttackModifier;
-            }
-            if (AgentActions.Shield == targetActionId)
-            {
-                targetDelta["Hull"] = -1f*bulletHullDamage*bulletHullDamage_ShieldModifier;
-                /*yield return StartCoroutine(EffectHandler.ShootBlasterAt(
-                    boltPrefab: Resources.Load<GameObject>(PrefabPath.BoltPath),
-                    explosionPrefab: Resources.Load<GameObject>(PrefabPath.Explosion),
-                    number: 20,
-                    delay: 1f,
-                    duration: 1f,
-                    maxDistance: 3f,
-                    source: GetAgentPosition(targetAgentId ),
-                    target: GetAgentPosition(primaryAgentId)
-                ));       */         
-            }
-            if (AgentActions.Missile == targetActionId)
-            {
-                targetDelta["Hull"] = -1f*bulletHullDamage*bulletHullDamage_MissileModifier;
-            }
-        }
-
-        // Apply delta
-        if (primaryDelta.Count > 0)
-        {
-            agentResources[primaryAgentId].Deposit(primaryDelta);
-        }
-        if (targetDelta.Count > 0)
-        {
-            agentResources[targetAgentId].Deposit(targetDelta);
-        }
-        yield break;
-    }
-
-    private System.Collections.IEnumerator HandleMissile(string primaryAgentId, 
-                                                string targetAgentId, 
-                                                string targetActionId, 
-                                                Dictionary<string, ATResourceData> agentResources)
-    {
-        Dictionary<string, float> primaryDelta = new Dictionary<string, float>();
-        Dictionary<string, float> targetDelta = new Dictionary<string, float>();
-
-        NotifyAllScreens(ObservableEffects.MissileOff);
-
-
-        if ((float)agentResources[primaryAgentId].GetResourceAmount("Ammunition") > 0)
-        {
-//            Debug.Log($"{primaryAgentId} attacking {targetAgentId}");
-            primaryDelta["Fuel"] = -1*missileFuelCost;
-            primaryDelta["Missile"] = -1*missileMissileCost;
-            NotifyAllScreens(ObservableEffects.AttackOff);
-            yield return StartCoroutine(EffectHandler.ShootMissileAt(
-                missilePrefab: Resources.Load<GameObject>(PrefabPath.Missile),
-                explosionPrefab: Resources.Load<GameObject>(PrefabPath.Explosion),
-                number: 20,
-                delay: 1f,
-                duration: 1f,
-                arcHeight: 2f,
-                source: GetAgentPosition(primaryAgentId),
-                target: GetAgentPosition(targetAgentId)
-            ));
-            if (AgentActions.Attack == targetActionId)
-            {
-                targetDelta["Hull"] = -1f*missileHullDamage*missileHullDamage_AttackModifier;
-            }
-            if (AgentActions.Shield == targetActionId)
-            {
-                targetDelta["Hull"] = -1f*missileHullDamage*missileHullDamage_ShieldModifier;
-   
-            }
-            if (AgentActions.Missile == targetActionId)
-            {
-                targetDelta["Hull"] = -1f*missileHullDamage*missileHullDamage_MissileModifier;
-            }
-        }
-
-        // Apply delta
-        if (primaryDelta.Count > 0)
-        {
-            agentResources[primaryAgentId].Deposit(primaryDelta);
-        }
-        if (targetDelta.Count > 0)
-        {
-            agentResources[targetAgentId].Deposit(targetDelta);
-        }
-        yield break;
-
-    }
-    private System.Collections.IEnumerator HandleShield(string primaryAgentId, 
-                                    
-                                string targetAgentId,string targetActionId,  Dictionary<string, ATResourceData> agentResources)
-    {
-        Dictionary<string, float> primaryDelta = new Dictionary<string, float>();
-        Dictionary<string, float> targetDelta = new Dictionary<string, float>();
-
-        NotifyAllScreens(ObservableEffects.ShieldOff);
-        yield return StartCoroutine(EffectHandler.CreateShield(
-            shieldPrefab: Resources.Load<GameObject>(PrefabPath.UnitShield),
-            source:GetAgentPosition(primaryAgentId)
-
-        ));
-
-
-        primaryDelta["Fuel"] = -1f*shieldFuelCost;
-
-
-        if (primaryDelta.Count > 0)
-        {
-            //Debug.Log($"DOING DEPOSIT ON {primaryAgentId}");
-            agentResources[primaryAgentId].Deposit(primaryDelta);
-        }
-        if (targetDelta.Count > 0)
-        {
-            //Debug.Log($"DOING DEPOSIT ON {targetAgentId}");
-            agentResources[targetAgentId].Deposit(targetDelta);
-        }
-        yield break;
-
-    }
-
-
-    private Vector3 GetAgentPosition(string agent_id)
+    public Vector3 GetAgentPosition(string agent_id)
     {
         // Replace with actual logic to retrieve the agent's GameObject
         if (agent_id == "agent_1")
