@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class ShieldSystem : AgentSystemBase
+public class ShieldSystem : StandardSystem
 {
     // Additional stats specific to Attack system could be added here
     // For example: damage modifiers, ammo cost, etc.
@@ -14,42 +14,25 @@ public class ShieldSystem : AgentSystemBase
     
     private string system_id = SpaceEncounterManager.AgentActions.Attack;
 
-    protected override void OnActivate(string [] sourceAgentIds,string [] targetAgentIds)
-    {
-        base.OnActivate( sourceAgentIds,targetAgentIds);
-    }
-
-    protected override void OnUpdate(float deltaTime)
-    {
-        base.OnUpdate(deltaTime);
-
-    }
-
-    protected override void OnDeactivate()
-    {
-        base.OnDeactivate();
-    }
 
     public override System.Collections.IEnumerator Execute(
                                 string sourceAgentId, 
                                 string sourcePowerId, 
                                 string targetAgentId, 
-                                string targetPowerId, 
-                                Dictionary<string, ATResourceData> agentResources)
+                                List<string> targetPowerIds, 
+                                ATResourceData sourceResources,
+                                ATResourceData targetResources)
+
     {
         //
         //
         Dictionary<string, float> primaryDelta = new Dictionary<string, float>();
         Dictionary<string, float> targetDelta = new Dictionary<string, float>();
 
-        if (agentResources.ContainsKey(sourceAgentId) == false)
-        {
-            Debug.LogError($"Could not find source agent in power Missile.Execute - {sourceAgentId}");
-            yield break;
-        }
 
-        if ((float)agentResources[sourceAgentId].GetResourceAmount("Fuel") > 0)
+        if ((float)sourceResources.GetResourceAmount("Fuel") > 0)
         {
+            SpaceEncounterManager spaceEncounter = this.GetEncounterManager();
             primaryDelta["Fuel"] = -1*fuelCost;
             spaceEncounter.NotifyAllScreens(SpaceEncounterManager.ObservableEffects.AttackOff);
             yield return CoroutineRunner.Instance.StartCoroutine(EffectHandler.CreateShield(
@@ -65,11 +48,11 @@ public class ShieldSystem : AgentSystemBase
 
         if (primaryDelta.Count > 0)
         {
-            agentResources[sourceAgentId].Deposit(primaryDelta);
+            sourceResources.Deposit(primaryDelta);
         }
         if (targetDelta.Count > 0)
         {
-            agentResources[targetAgentId].Deposit(targetDelta);
+            targetResources.Deposit(targetDelta);
         }
         yield break;
     }

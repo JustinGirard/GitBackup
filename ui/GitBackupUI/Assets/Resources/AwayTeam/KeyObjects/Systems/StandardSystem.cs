@@ -1,76 +1,62 @@
 using System.Collections.Generic;
 using UnityEngine;
+using System;
 
-public abstract class AgentSystemBase : MonoBehaviour
+[Serializable]
+public struct FloatRange
+{
+    public float min;
+    public float index;
+    public float max;
+    public FloatRange(float min, float index, float max)
+    {
+        this.min = min;
+        this.index = index;
+        this.max = max;
+    }
+
+    // Static factory for clean initialization
+    public static FloatRange Create(float min, float index, float max)
+    {
+        return new FloatRange(min, index, max);
+    }    
+}
+
+public abstract class StandardSystem : MonoBehaviour
 {
     // Indicates whether this system is currently active and can perform actions.
     public bool IsActive { get; private set; }
 
     // A duration for how long the system remains active once triggered.
     [SerializeField]
-    protected float activationDuration = 3f;
-
-    // Tracks how much time has elapsed since the system was activated.
-    protected float elapsedTime = 0f;
-
-    // Each system might have internal stats or modifiers. For simplicity, 
-    // we store them in a dictionary. They can be expanded or replaced as needed.
-    protected Dictionary<string, float> stats = new Dictionary<string, float>();
-
-    // Called to activate the system’s behavior. Resets timer and sets IsActive.
-    public virtual void Activate(string [] sourceAgentIds,string [] targetAgentIds)
-    {
-        IsActive = true;
-        elapsedTime = 0f;
-        OnActivate(sourceAgentIds,targetAgentIds);
-    }
-
-    // Called every frame or time step to handle system logic while active.
-    public virtual void UpdateSystem(float deltaTime)
-    {
-        if (!IsActive) return;
-
-        elapsedTime += deltaTime;
-        OnUpdate(deltaTime);
-
-        // If the activation time is over, deactivate the system.
-        if (elapsedTime >= activationDuration)
-        {
-            Deactivate();
-        }
-    }
-
-    // Deactivate the system, stopping it from invoking further actions.
-    public virtual void Deactivate()
-    {
-        IsActive = false;
-        OnDeactivate();
-    }
-
-    // Hook for system-specific logic when activated
-    protected virtual void OnActivate(string [] sourceAgentIds,string [] targetAgentIds) { }
-
-    // Hook for system-specific logic updated every frame while active
-    protected virtual void OnUpdate(float deltaTime) { }
-
-    // Hook for system-specific logic when deactivated
-    protected virtual void OnDeactivate() { }
+    protected FloatRange powerupTime = new FloatRange(min:0f,index:0f,max:3f);
+    [SerializeField]
+    protected FloatRange runTime = new FloatRange(min:0f,index:0f,max:3f);
+    [SerializeField]
+    protected FloatRange cooldownTimeMax  = new FloatRange(min:0f,index:0f,max:0f);
 
 
     public virtual System.Collections.IEnumerator Execute(string sourceAgentId, 
                                 string sourcePowerId, 
                                 string targetAgentId, 
-                                string targetPowerId, 
-                                Dictionary<string, ATResourceData> agentResources)  
+                                List<string> targetPowerIds, 
+                                ATResourceData sourceResources,
+                                ATResourceData targetResources)
+
     {
         yield break;
     }    
-    public SpaceEncounterManager spaceEncounter;
+    private SpaceEncounterManager spaceEncounter;
 
-    //private U Should bind to target agent
     public void SetEncounterManager(SpaceEncounterManager eman){
 
         spaceEncounter = eman;
     }    
+
+    public SpaceEncounterManager GetEncounterManager(){
+
+        return spaceEncounter;
+    }        
+    
 }
 

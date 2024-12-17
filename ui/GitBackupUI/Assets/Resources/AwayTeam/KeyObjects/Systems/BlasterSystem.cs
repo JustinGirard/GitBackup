@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class BlasterSystem : AgentSystemBase
+public class BlasterSystem : StandardSystem
 {
     // Additional stats specific to Attack system could be added here
     // For example: damage modifiers, ammo cost, etc.
@@ -12,24 +12,9 @@ public class BlasterSystem : AgentSystemBase
     private float fuelCost = 1f;
     [SerializeField]
     private float baseDamage = 2f;
-    
+
     private string system_id = SpaceEncounterManager.AgentActions.Attack;
 
-    protected override void OnActivate(string [] sourceAgentIds,string [] targetAgentIds)
-    {
-        base.OnActivate( sourceAgentIds,targetAgentIds);
-    }
-
-    protected override void OnUpdate(float deltaTime)
-    {
-        base.OnUpdate(deltaTime);
-
-    }
-
-    protected override void OnDeactivate()
-    {
-        base.OnDeactivate();
-    }
     private float GetDamageMultiplierFor(string sourceAgentId, string sourcePowerId,string targetAgentId, string targetPowerId)
     {
         if (SpaceEncounterManager.AgentActions.Attack == targetPowerId)
@@ -49,21 +34,19 @@ public class BlasterSystem : AgentSystemBase
     public override System.Collections.IEnumerator Execute(string sourceAgentId, 
                                 string sourcePowerId, 
                                 string targetAgentId, 
-                                string targetPowerId, 
-                                Dictionary<string, ATResourceData> agentResources)
+                                List<string> targetPowerIds, 
+                                ATResourceData sourceResources,
+                                ATResourceData targetResources)
+
     {
         Dictionary<string, float> primaryDelta = new Dictionary<string, float>();
         Dictionary<string, float> targetDelta = new Dictionary<string, float>();
 
-        if (agentResources.ContainsKey(sourceAgentId) == false)
-        {
-            Debug.LogError($"Could not find source agent in power Blaster.Execute - {sourceAgentId}");
-            yield break;
-        }
 
-        if ((float)agentResources[sourceAgentId].GetResourceAmount("Ammunition") > 0)
+
+        if ((float)sourceResources.GetResourceAmount("Ammunition") > 0)
         {
-//            Debug.Log($"{primaryAgentId} attacking {targetAgentId}");
+            SpaceEncounterManager spaceEncounter = this.GetEncounterManager();
             primaryDelta["Fuel"] = -1*fuelCost;
             primaryDelta["Ammunition"] = -1*ammoCost;
             spaceEncounter.NotifyAllScreens(SpaceEncounterManager.ObservableEffects.AttackOff);
@@ -78,17 +61,26 @@ public class BlasterSystem : AgentSystemBase
                 target: spaceEncounter.GetAgentPosition(targetAgentId)
             ));
             //targetDelta = SpaceEncounterManager.AddDeltas(targetDelta) TODO Generalize, maybe?
-            targetDelta["Hull"] = -1f*baseDamage*GetDamageMultiplierFor( sourceAgentId,  sourcePowerId, targetAgentId,  targetPowerId);
+            float baseMultiplier = 1.0f;
+            foreach(string targetPowerId in targetPowerIds)
+            {
+                baseMultiplier *= GetDamageMultiplierFor( sourceAgentId,  
+                                                                         sourcePowerId, 
+                                                                         targetAgentId,  
+                                                                         targetPowerId);
+
+            }
+            targetDelta["Hull"] = -1f*baseDamage*baseMultiplier;
+
         }
 
-        // Apply delta
         if (primaryDelta.Count > 0)
         {
-            agentResources[sourceAgentId].Deposit(primaryDelta);
+            sourceResources.Deposit(primaryDelta);
         }
         if (targetDelta.Count > 0)
         {
-            agentResources[targetAgentId].Deposit(targetDelta);
+            targetResources.Deposit(targetDelta);
         }
         yield break;
     }

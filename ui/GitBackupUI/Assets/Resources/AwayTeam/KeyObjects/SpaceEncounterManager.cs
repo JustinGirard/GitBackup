@@ -193,10 +193,6 @@ public class SpaceEncounterManager : MonoBehaviour,IPausable
             {
                 accountResourceData.AddToRecordField("Encounter", resource.key, resource.value, create: true);
             }
-            //else
-            //{
-            //    Debug.LogError($"-----------Could not find - {resource.key} in {DJson.Stringify(resourceTypes)}----------------------");
-            //}
         }     
         agent1UnitResourceData.ClearRecords();
         agent2UnitResourceData.ClearRecords();
@@ -261,6 +257,7 @@ public class SpaceEncounterManager : MonoBehaviour,IPausable
         agent2UnitResourceData.Deposit("Fuel",5*__currentLevel); 
         
         unit1 = Instantiate( Resources.Load<GameObject>(encounterSquadPrefab));
+        spawnOne.GetComponent<Agent>().SetUnit(unit1);        
         unit1.transform.position = spawnOne.transform.position;
         unit1.transform.rotation  = spawnOne.transform.rotation;
         unit1.transform.parent = spawnOne.transform;
@@ -279,7 +276,8 @@ public class SpaceEncounterManager : MonoBehaviour,IPausable
 
 
         /////
-        unit2 =  Instantiate(Resources.Load<GameObject>(encounterSquadPrefab));        
+        unit2 =  Instantiate(Resources.Load<GameObject>(encounterSquadPrefab));
+        spawnTwo.GetComponent<Agent>().SetUnit(unit2);        
         unit2.transform.position = spawnTwo.transform.position;
         unit2.transform.rotation  = spawnTwo.transform.rotation;
         unit2.transform.parent = spawnTwo.transform;
@@ -297,11 +295,9 @@ public class SpaceEncounterManager : MonoBehaviour,IPausable
         unit2.GetComponent<ShieldSystem>().SetEncounterManager(this);        
 
         SetReadyToRun(true);
-        //Debug.Log("Should be runnning");
         Run();
-        //Debug.Log("Should be runnning 2");
-
     }
+
     public void End()
     {
         Pause();
@@ -398,7 +394,7 @@ public class SpaceEncounterManager : MonoBehaviour,IPausable
         intervalRunner.RunIfTime("doActions", 3f, Time.deltaTime, () =>
         {
 
-            SetTargetAction("agent_2",AgentActions.Attack);
+            // AI Action Choice
             int randomIndex = Random.Range(0, 3);
             if (randomIndex == 0)
             {
@@ -411,15 +407,61 @@ public class SpaceEncounterManager : MonoBehaviour,IPausable
             else if (randomIndex == 2)
             {
                 SetTargetAction("agent_2", AgentActions.Shield);
+            }
+            Debug.Log("NEW EPOCH");
+            Debug.Log("NEW EPOCH-==================================");
+            Debug.Log("NEW EPOCH");
+
+            // Assign Actions to Agent
+            var agents = new List<GameObject> { spawnOne, spawnTwo };            
+            foreach (GameObject primaryGO in agents)
+            {
+                Agent primaryAgent = primaryGO.GetComponent<Agent>();
+                if (primaryAgent == null)
+                    Debug.LogError($"Could not find Agent object attached to {primaryAgent.name}");
+                foreach (GameObject targetGO in agents)
+                {                
+                    if(primaryGO.name == targetGO.name)
+                        continue;         
+                    Agent targetAgent = targetGO.GetComponent<Agent>();
+                    if (targetAgent == null)
+                        Debug.LogError($"Could not find Agent object attached to {targetAgent.name}");
+                    
+                    string primaryAction = GetTargetAction(primaryAgent.GetAgentId());
+                    if (primaryAction.Length > 0)
+                        primaryAgent.AddAgentAction(primaryAction,targetAgent);
+                }
+            }
+            // Trigger Actions
+            foreach (GameObject primaryGO in agents)
+            {
+                Agent primaryAgent = primaryGO.GetComponent<Agent>();
+                //primaryAgent.GetAgentId()
+                if (primaryAgent == null)
+                    Debug.LogError($"Could not find Agent object attached to GameObject {primaryAgent.name}");
+                StartCoroutine(primaryAgent.RunActions());
+                SetTargetAction(primaryAgent.GetAgentId(),"");
+
+            }
+            // Wait for finish
+            Debug.Log("Waiting for actions to finish");
+            float timer = 0f;
+            while (agents.Exists(go => go.GetComponent<Agent>().IsRunning()) && timer < 10f)
+            {
+                timer += Time.deltaTime;
+              
+            }
+            // Clear Actions 
+            foreach (GameObject primaryGO in agents)
+            {
+                Debug.Log($"Clearing Actions for {primaryGO.name}");
+                Agent primaryAgent = primaryGO.GetComponent<Agent>();
+                primaryAgent.ClearActions();
+                ResetTargetAction(primaryAgent.GetAgentId());
             }            
-            StartCoroutine(ProcessAgentActions(
-                agent_1_id:"agent_1", 
-                agent_1_commandId:GetTargetAction("agent_1"),                
-                agent_2_id:"agent_2", 
-                agent_2_commandId:GetTargetAction("agent_2")
-                ));
-            __targetAgent1Action = "";
+
             __timerProgress = 0;
+
         });        
         
 
@@ -437,8 +479,22 @@ public class SpaceEncounterManager : MonoBehaviour,IPausable
 
     string __targetAgent1Action = "";
     string __targetAgent2Action = "";
-    public void SetTargetAction(string agent_id,string commandId){
-
+    public void ResetTargetAction(string agent_id)
+    {
+        if(agent_id == "agent_1")
+        {
+            NotifyAllScreens( ObservableEffects.AttackOff);            
+            NotifyAllScreens( ObservableEffects.ShieldOff);            
+            NotifyAllScreens( ObservableEffects.MissileOff);            
+            __targetAgent1Action = "";
+        }
+        if(agent_id == "agent_2")
+        {
+            __targetAgent2Action = "";
+        }
+    }
+    public void SetTargetAction(string agent_id,string commandId)
+    {
         
         string targEffect = "";
         if (commandId== AgentActions.Attack)
@@ -494,7 +550,7 @@ public class SpaceEncounterManager : MonoBehaviour,IPausable
         return dict1.Keys.Union(dict2.Keys)
                     .ToDictionary(key => key, key => dict1.GetValueOrDefault(key) / dict2.GetValueOrDefault(key));
     }
-
+    /*
     private System.Collections.IEnumerator ProcessAgentActions(string agent_1_id, string agent_1_commandId, string agent_2_id, string agent_2_commandId)
     {
         var agentIds = new List<string> { agent_1_id, agent_2_id };
@@ -587,6 +643,7 @@ public class SpaceEncounterManager : MonoBehaviour,IPausable
 
         yield break;
     }
+    */
     public Vector3 GetAgentPosition(string agent_id)
     {
         // Replace with actual logic to retrieve the agent's GameObject

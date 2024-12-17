@@ -403,6 +403,8 @@ public class SpaceCombatScreen : SpaceEncounterObserver,IShowHide
             string cardId = encounterManager.GetAgentGUICardId(agentId);
             VisualElement card = uiDocument.rootVisualElement.Q<VisualElement>(cardId);
             ATResourceData resourceData = encounterManager.GetResourceObject(agentId);
+            if (resourceData == null)
+                Debug.LogError($"Have a null resource data for agentId:{agentId}");
             UpdateAgentFields(agentId,resourceData, card,setMaxProgress);
         }
     }
