@@ -3,14 +3,31 @@ using System.Collections.Generic;
 using System.Linq;
 using Unity.VisualScripting;
 using System.Runtime.InteropServices.WindowsRuntime;
-class AgentActionPair
+using System.Runtime.CompilerServices;
+public class AgentActionPair
 {
     public string destinationAgentId;
     public string sourceActionId;
 }
-class Agent:MonoBehaviour
+public class AgentActions {
+
+    public static bool IsValid(string action)
+    {
+        return all.Contains(action);
+    }               
+    public static readonly List<string> all = new List<string> { Attack, Missile, Shield };
+    public const string Attack = "Attack";
+    public const string Missile = "Missile";
+    public const string Shield = "Shield";
+}
+
+
+
+
+public class Agent:MonoBehaviour, IPausable
 {
-    
+    private List<SpaceEncounterObserver> __observers = new List<SpaceEncounterObserver>();
+
    [SerializeField]
     private ATResourceData resources;
     private GameObject __unitGameObject = null;
@@ -21,6 +38,12 @@ class Agent:MonoBehaviour
 
     private Dictionary<string,Agent > __pendingAgents;
     private List<AgentActionPair > __pendingActions;
+
+    public void ClearResourceRecords()
+    {
+        resources.ClearRecords();
+    }
+
     void Awake(){
         __pendingActions = new List<AgentActionPair >();
         __pendingAgents = new Dictionary<string, Agent >();
@@ -33,11 +56,51 @@ class Agent:MonoBehaviour
     public void SetUnit(GameObject go)
     {
         __unitGameObject = go;
+        
     }
+    public GameObject GetUnit()
+    {
+       return  __unitGameObject;
+        
+    }    
+    public void DestroyUnit(string reasonCode)
+    {
+        if(__unitGameObject != null)
+           GameObject.Destroy( __unitGameObject);        
+    }    
+    public void Run(){
+        __unitGameObject.GetComponent<EncounterUnitController>().Run();
+    }
+    public void Pause(){
+        __unitGameObject.GetComponent<EncounterUnitController>().Pause();
+        
+    }
+
     public ATResourceData GetResourceObject()
     {
         return resources;
     }
+
+    public virtual void ChooseTargetAction()
+    {
+        throw new System.Exception("No Implemented choice");
+    }
+    public virtual string GetTargetAction()
+    {
+        throw new System.Exception("No Implemented choice");
+        return "";
+    }    
+
+    public virtual void ResetTargetAction()
+    {
+        throw new System.Exception("No Implemented reset");
+    }    
+    public virtual bool SetTargetAction(string actionId)
+    {
+        throw new System.Exception("No Implemented reset");
+        return false;
+    }
+
     public void AddAgentAction(string targetActionId,Agent targetAgent)
     {
         if (targetActionId =="")
@@ -56,6 +119,8 @@ class Agent:MonoBehaviour
     }
     public List<AgentActionPair> GetActionsAffectingTarget(string destinationAgentId)
     {
+        //if (this.GetAgentId() == "agent_1")
+        //    Debug.Log($"agent_1 GetActionsAffectingTarget: Actions affecting {destinationAgentId}");
         List<AgentActionPair> actionsAtAgent = new List<AgentActionPair>();
         foreach (AgentActionPair pr in __pendingActions)
         {
@@ -66,15 +131,11 @@ class Agent:MonoBehaviour
     }    
     public System.Collections.IEnumerator RunActions()
     {
-        Debug.Log($"ACTIONS LENGTH FOR {this.GetAgentId()}: {__pendingAgents.Count.ToString()}");
         foreach (AgentActionPair agentAction in __pendingActions)
         {
-            Debug.Log($"Action {this.GetAgentId()}-> {agentAction.sourceActionId} -> {agentAction.destinationAgentId},");
             Agent agent = __pendingAgents[agentAction.destinationAgentId];
             CoroutineRunner.Instance.StartCoroutine(RunAction(agent, agentAction.sourceActionId));
         } 
-        //__pendingAgents.Clear();
-        //__pendingActions.Clear();
         yield break;
     }
     bool __is_running = false;
@@ -86,6 +147,7 @@ class Agent:MonoBehaviour
     {
         __pendingActions.Clear();
         __pendingAgents.Clear();
+        ResetTargetAction();
     }
     public System.Collections.IEnumerator RunAction(Agent destinationAgent,string sourceActionId)
     {
@@ -98,13 +160,7 @@ class Agent:MonoBehaviour
         try
         {
             // Validate Call
-            bool validAction = false;
-            if (sourceActionId == SpaceEncounterManager.AgentActions.Missile)
-                validAction = true;
-            if (sourceActionId == SpaceEncounterManager.AgentActions.Shield)
-                validAction = true;
-            if (sourceActionId == SpaceEncounterManager.AgentActions.Attack)
-                validAction = true;        
+            bool validAction = SpaceEncounterManager.IsValidAgentAction(sourceActionId);
             if (validAction == false)
             {
                 Debug.Log($"Selected an invalid acton for agent {destinationAgent.GetAgentId()}: ({sourceActionId})");
@@ -123,8 +179,7 @@ class Agent:MonoBehaviour
             //Debug.Log($"--I am targeting {destinationAgent.GetAgentId()} with {sourceActionId}");
             foreach (AgentActionPair aap in actionsAffectingSelf)
             {
-                //Debug.Log($"INVESTIGATING action towards me: {aap.destinationAgentId} {aap.sourceActionId}");
-                actionsTowardMe.Add(sourceActionId);                    
+                actionsTowardMe.Add(aap.sourceActionId);                    
             }
 
             //yield break;
@@ -132,11 +187,11 @@ class Agent:MonoBehaviour
             ATResourceData sourceResources = sourceAgent.GetResourceObject();
             ATResourceData destinationResources = destinationAgent.GetResourceObject();
             StandardSystem subsystem = null;
-            if (sourceActionId == SpaceEncounterManager.AgentActions.Attack)
+            if (sourceActionId == AgentActions.Attack)
                 subsystem = (StandardSystem)__unitGameObject.GetComponent<BlasterSystem>();
-            if (sourceActionId == SpaceEncounterManager.AgentActions.Missile)
+            if (sourceActionId == AgentActions.Missile)
                 subsystem = (StandardSystem)__unitGameObject.GetComponent<MissileSystem>();
-            if (sourceActionId == SpaceEncounterManager.AgentActions.Shield)
+            if (sourceActionId == AgentActions.Shield)
                 subsystem = (StandardSystem)__unitGameObject.GetComponent<ShieldSystem>();
             ////
             if (subsystem == null)
@@ -144,6 +199,7 @@ class Agent:MonoBehaviour
                 Debug.LogError($"Could not find System on {sourceAgent.GetAgentId()} for {sourceActionId}");
                 yield break;
             }
+
             CoroutineRunner.Instance.StartCoroutine(
                 subsystem.Execute(
                         sourceAgentId:sourceAgent.GetAgentId(), 
@@ -161,96 +217,44 @@ class Agent:MonoBehaviour
             __is_running = false;
         }
         
-
-        /*
-        var agentIds = new List<string> { agent_1_id, agent_2_id };
-        var agentResources = new Dictionary<string, ATResourceData>
-        {
-            { agent_1_id, agent1UnitResourceData },
-            { agent_2_id, agent2UnitResourceData }
-        };
-        var agentUnits = new Dictionary<string, GameObject>
-        {
-            { agent_1_id, unit1.gameObject },
-            { agent_2_id, unit2.gameObject }
-        };        
-        var agentCommandIds = new Dictionary<string, string>
-        {
-            { agent_1_id, agent_1_commandId },
-            { agent_2_id, agent_2_commandId }
-        };
- 
-        foreach (var primaryAgentId in agentIds)
-        {
-            string primaryCommandId = agentCommandIds[primaryAgentId];
-            //Dictionary<string, float> primaryDelta = new Dictionary<string, float>();
-            //primaryDelta["Fuel"] = -1f;
-
-            foreach (var targetAgentId in agentIds.Where(id => id != primaryAgentId)) // Secondary loop
-            {
-                string targetCommandId = agentCommandIds[targetAgentId];
-
-                if (primaryCommandId == AgentActions.Attack)
-                {
-                    BlasterSystem bs = unit1.GetComponent<BlasterSystem>();
-                    if (bs == null)
-                        Debug.LogError("Could not find BlasterSystem on unit1");
-                    StartCoroutine(bs.Execute(
-                                sourceAgentId:primaryAgentId, 
-                                sourcePowerId:AgentActions.Attack, 
-                                targetAgentId:targetAgentId, 
-                                targetPowerId:targetCommandId, 
-                                agentResources:agentResources
-                    ));
-                }
-                else if (primaryCommandId == AgentActions.Missile)
-                {
-                    //Debug.Log("MISSILE ACTION");
-                    //yield break;
-                    MissileSystem bs = unit1.GetComponent<MissileSystem>();
-                    if (bs == null)
-                    {
-                        Debug.LogError("Could not find MissileSystem on unit1!!!");
-                    }
-                    else
-                    {
-                        Debug.Log(bs);
-                        
-                        StartCoroutine(bs.Execute(
-                                    sourceAgentId:primaryAgentId, 
-                                    sourcePowerId:AgentActions.Missile, 
-                                    targetAgentId:targetAgentId, 
-                                    targetPowerId:targetCommandId, 
-                                    agentResources:agentResources
-                        ));
-                    }
-
-                }
-                else if (primaryCommandId == AgentActions.Shield)
-                {
-                    ShieldSystem bs = unit1.GetComponent<ShieldSystem>();
-                    if (bs == null)
-                    {
-                        Debug.LogError("Could not find MissileSystem on unit1!!!");
-                    }
-                    else
-                    {
-                        Debug.Log(bs);
-                        StartCoroutine(bs.Execute(
-                                    sourceAgentId:primaryAgentId, 
-                                    sourcePowerId:AgentActions.Shield, 
-                                    targetAgentId:targetAgentId, 
-                                    targetPowerId:targetCommandId, 
-                                    agentResources:agentResources
-                        ));
-                    }                    
-                }
-
-
-            }
-
-        }
-        */
         yield break;
+    }
+    public void ClearObservers()
+    {
+        __observers.Clear();
+    }
+
+    public void AddObserver(SpaceEncounterObserver observer)
+    {
+        if (observer == null || __observers.Contains(observer))
+            return;
+        __observers.Add(observer);
+    }
+
+    public void RemoveObserver(SpaceEncounterObserver observer)
+    {
+        if (observer == null || !__observers.Contains(observer))
+            return;
+        __observers.Remove(observer);
+    }
+
+    public bool ContainsObserver(SpaceEncounterObserver observer)
+    {
+        return __observers.Contains(observer);
+    }       
+
+    public void NotifyObservers(string effect)
+    {
+//        Debug.Log($"Agent.NotifyObservers {this.name}is observing effect {effect} ");
+        if(!SpaceEncounterManager.ObservableEffects.IsValid(effect))
+        {
+            Debug.LogError($"Agent {this.name} asked to process NotifyObservers with incorrect effect {effect}");
+            return;
+        }
+        foreach( SpaceEncounterObserver observer in __observers)
+        {
+            observer.VisualizeEffect(effect,this.gameObject);
+        }
+
     }
 }

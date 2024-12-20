@@ -219,32 +219,15 @@ public class SpaceCombatScreen : SpaceEncounterObserver,IShowHide
 
 
 
-    private void HandleDynamicButtonInteraction(string buttonId, string eventId,bool within)
+    private void HandleDynamicButtonInteraction(string actionId, string eventId,bool within)
     {
-        //Debug.Log($"HandleDynamicButtonInteraction called: {buttonId}.{eventId} ({SpaceEncounterManager.GUICommands.Attack })");
-        string agent_id = "agent_1";
-        if (buttonId== SpaceEncounterManager.AgentActions.Attack && eventId == "MouseUp" && within == true)
-        {
-            //Debug.Log($"HandleDynamicButtonInteraction {buttonId}");
-            encounterManager.SetTargetAction(agent_id,buttonId);
-            //StartCoroutine(encounterManager.ProcessAgentAction(SpaceEncounterManager.AgentActions.Attack));
-        }
-        if (buttonId== SpaceEncounterManager.AgentActions.Missile && eventId == "MouseUp" && within == true)
-        {
-            encounterManager.SetTargetAction(agent_id,buttonId);
-            //Debug.Log($"HandleDynamicButtonInteraction {buttonId}");
-            //StartCoroutine(encounterManager.ProcessAgentAction(SpaceEncounterManager.AgentActions.Missile));
-        }
-        if (buttonId== SpaceEncounterManager.AgentActions.Shield && eventId == "MouseUp" && within == true)
-        {
-            //Debug.Log($"HandleDynamicButtonInteraction {buttonId}");
-            encounterManager.SetTargetAction(agent_id,buttonId);
-            //StartCoroutine(encounterManager.ProcessAgentAction(SpaceEncounterManager.AgentActions.Shield));
-        }
-
+        Agent playerAgent = encounterManager.GetPlayerAgent();
+        if(eventId != "MouseUp" || within == false )
+            return;
+        playerAgent.SetTargetAction(actionId);
     }
 
-    public override bool VisualizeEffect(string effect)
+    public override bool VisualizeEffect(string effect,GameObject onBehalfOf)
     {
         if (effect == SpaceEncounterManager.ObservableEffects.AttackOn)
             StartCoroutine(eApplyPulseAndActivate(DynamicButtonID.Attack));          
@@ -289,6 +272,13 @@ public class SpaceCombatScreen : SpaceEncounterObserver,IShowHide
         //
         //
         buttonObject =  dynamicButton[DynamicButtonID.Missile].GetGameObject();
+        dc = buttonObject.GetComponent<IShowProgress>();
+        dc.SetProgressMax((int)progMax);
+        dc.SetProgress((int)prog);
+
+        //
+        //
+        buttonObject =  dynamicButton[DynamicButtonID.Shield].GetGameObject();
         dc = buttonObject.GetComponent<IShowProgress>();
         dc.SetProgressMax((int)progMax);
         dc.SetProgress((int)prog);
@@ -337,12 +327,12 @@ public class SpaceCombatScreen : SpaceEncounterObserver,IShowHide
     {
        
     }
+    private bool __doSetMaxProgressOnFirstRun = false;
 
     public void Show()
     {
         var root = uiDocument.rootVisualElement;
         root.style.display = DisplayStyle.Flex;
-        // dynamicButton[dynamicButtonEntry.key]
         foreach (var key in dynamicButton.Keys)
         {
             //Debug.Log($"Showing {key}");
@@ -352,7 +342,6 @@ public class SpaceCombatScreen : SpaceEncounterObserver,IShowHide
         //UpdateUI(true);
         __doSetMaxProgressOnFirstRun = true;
     }
-    private bool __doSetMaxProgressOnFirstRun = false;
     public void Hide()
     {
         var root = uiDocument.rootVisualElement;
@@ -360,8 +349,7 @@ public class SpaceCombatScreen : SpaceEncounterObserver,IShowHide
 
         foreach (var key in dynamicButton.Keys)
         {
-            //Debug.Log($"Hiding {key}");
-            dynamicButton[key].GetGameObject().SetActive(true);
+            dynamicButton[key].GetGameObject().SetActive(false);
         }
     }
 
@@ -512,12 +500,7 @@ public class SpaceCombatScreen : SpaceEncounterObserver,IShowHide
     /// </summary>
     private void UpdateAgentFields(string agent,ATResourceData resourceData, VisualElement cardElement, bool setMaxProgress= false)
     {
-        if(setMaxProgress == true)
-            Debug.Log("Setting Max Progress!");
-        //if (resourceData.GetDataRevision() == __revisionData[agent] || setMaxProgress==false)
-        //{
-        //    return;
-        //}
+
         if (resourceData.GetDataRevision() == __revisionData[agent] && setMaxProgress==false)
         {
             return;

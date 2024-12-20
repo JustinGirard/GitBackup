@@ -80,7 +80,7 @@ public class LinearProgressBar : StandardDynamicControl, IShowProgress
 
     private void InitializeZDirectionProgressBar()
     {
-        Debug.Log("InitializeZDirectionProgressBar");
+        //Debug.Log("InitializeZDirectionProgressBar");
         Vector3 size = __slice.transform.localScale;
         Vector3 localBasePosition = transform.InverseTransformPoint(__slice.transform.position);
         locations.Clear(); // Ensure the locations dictionary is reset
@@ -198,7 +198,7 @@ public class LinearProgressBar : StandardDynamicControl, IShowProgress
 
     private void BuildProgressBar()
     {
-        Debug.Log("Re init of progress bar");
+        // Debug.Log("Re init of progress bar");
         List<Transform> childrenToDestroy = new List<Transform>();
 
         // Collect children to destroy

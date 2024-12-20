@@ -1527,11 +1527,12 @@ MonoBehaviour:
   - key: encounterScreen
     value: {fileID: 99779426}
   accountResourceData: {fileID: 585896527}
-  agent1UnitResourceData: {fileID: 10167116}
-  agent2UnitResourceData: {fileID: 885772998}
   encounterSquadPrefab: AwayTeam/KeyObjects/EncounterSquad
-  spawnOne: {fileID: 10167114}
-  spawnTwo: {fileID: 885772996}
+  __initOnlyAgents:
+  - agent_id: agent_1
+    agentPrefab: {fileID: 10167117}
+  - agent_id: agent_2
+    agentPrefab: {fileID: 885772999}
 --- !u!1 &1268188064
 GameObject:
   m_ObjectHideFlags: 0

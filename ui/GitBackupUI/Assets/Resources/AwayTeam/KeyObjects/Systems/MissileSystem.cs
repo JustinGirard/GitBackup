@@ -12,19 +12,19 @@ public class MissileSystem : StandardSystem
     [SerializeField]
     private float baseDamage = 5f;
     
-    private string system_id = SpaceEncounterManager.AgentActions.Shield;
+    private string system_id = AgentActions.Shield;
 
     private float GetDamageMultiplierFor(string sourceAgentId, string sourcePowerId,string targetAgentId, string targetPowerId)
     {
-        if (SpaceEncounterManager.AgentActions.Attack == targetPowerId)
+        if (AgentActions.Attack == targetPowerId)
         {
             return 1f;
         }
-        if (SpaceEncounterManager.AgentActions.Shield == targetPowerId)
+        if (AgentActions.Shield == targetPowerId)
         {
             return 2f;
         }
-        if (SpaceEncounterManager.AgentActions.Missile == targetPowerId)
+        if (AgentActions.Missile == targetPowerId)
         {
             return 1f;
         }
@@ -44,15 +44,15 @@ public class MissileSystem : StandardSystem
         Dictionary<string, float> targetDelta = new Dictionary<string, float>();
 
 
+        SpaceEncounterManager spaceEncounter = this.GetEncounterManager();
+        spaceEncounter.NotifyAllScreens(SpaceEncounterManager.ObservableEffects.MissileOff);
 
-        if ((float)sourceResources.GetResourceAmount("Fuel") > 0)
+        if ((float)sourceResources.GetResourceAmount(ResourceTypes.Fuel) > 0)
         {
-            Debug.Log("Execute Missile SUCCESS");
-            SpaceEncounterManager spaceEncounter = this.GetEncounterManager();
+         //   Debug.Log("Execute Missile SUCCESS");
 
-            Debug.Log($"{sourceAgentId} attacking {targetAgentId}");
-            primaryDelta["Fuel"] = -1*fuelCost;
-            spaceEncounter.NotifyAllScreens(SpaceEncounterManager.ObservableEffects.ShieldOff);
+         //   Debug.Log($"{sourceAgentId} attacking {targetAgentId}");
+            primaryDelta[ResourceTypes.Fuel] = -1*fuelCost;
             yield return CoroutineRunner.Instance.StartCoroutine(EffectHandler.ShootMissileAt(
                 missilePrefab: Resources.Load<GameObject>(SpaceEncounterManager.PrefabPath.Missile),
                 explosionPrefab: Resources.Load<GameObject>(SpaceEncounterManager.PrefabPath.Explosion),
@@ -72,7 +72,7 @@ public class MissileSystem : StandardSystem
                                                                          targetPowerId);
 
             }
-            targetDelta["Hull"] = -1f*baseDamage*baseMultiplier;
+            targetDelta[ResourceTypes.Hull] = -1f*baseDamage*baseMultiplier;
         }
         else
         {

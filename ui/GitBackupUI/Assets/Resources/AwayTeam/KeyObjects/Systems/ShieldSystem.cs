@@ -12,7 +12,7 @@ public class ShieldSystem : StandardSystem
     [SerializeField]
     private float baseDamage = 5f;
     
-    private string system_id = SpaceEncounterManager.AgentActions.Attack;
+    private string system_id = AgentActions.Attack;
 
 
     public override System.Collections.IEnumerator Execute(
@@ -30,11 +30,12 @@ public class ShieldSystem : StandardSystem
         Dictionary<string, float> targetDelta = new Dictionary<string, float>();
 
 
-        if ((float)sourceResources.GetResourceAmount("Fuel") > 0)
+        SpaceEncounterManager spaceEncounter = this.GetEncounterManager();
+        spaceEncounter.NotifyAllScreens(SpaceEncounterManager.ObservableEffects.ShieldOff);
+
+        if ((float)sourceResources.GetResourceAmount(ResourceTypes.Fuel) > 0)
         {
-            SpaceEncounterManager spaceEncounter = this.GetEncounterManager();
             primaryDelta["Fuel"] = -1*fuelCost;
-            spaceEncounter.NotifyAllScreens(SpaceEncounterManager.ObservableEffects.AttackOff);
             yield return CoroutineRunner.Instance.StartCoroutine(EffectHandler.CreateShield(
                             shieldPrefab: Resources.Load<GameObject>(SpaceEncounterManager.PrefabPath.UnitShield),
                             source:spaceEncounter.GetAgentPosition(sourceAgentId)

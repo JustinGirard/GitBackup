@@ -13,19 +13,19 @@ public class BlasterSystem : StandardSystem
     [SerializeField]
     private float baseDamage = 2f;
 
-    private string system_id = SpaceEncounterManager.AgentActions.Attack;
+    private string system_id = AgentActions.Attack;
 
     private float GetDamageMultiplierFor(string sourceAgentId, string sourcePowerId,string targetAgentId, string targetPowerId)
     {
-        if (SpaceEncounterManager.AgentActions.Attack == targetPowerId)
+        if (AgentActions.Attack == targetPowerId)
         {
             return 0.5f;
         }
-        if (SpaceEncounterManager.AgentActions.Shield == targetPowerId)
+        if (AgentActions.Shield == targetPowerId)
         {
             return 0.0f;
         }
-        if (SpaceEncounterManager.AgentActions.Missile == targetPowerId)
+        if (AgentActions.Missile == targetPowerId)
         {
             return 2f;
         }
@@ -39,38 +39,42 @@ public class BlasterSystem : StandardSystem
                                 ATResourceData targetResources)
 
     {
+
         Dictionary<string, float> primaryDelta = new Dictionary<string, float>();
         Dictionary<string, float> targetDelta = new Dictionary<string, float>();
 
-
-
-        if ((float)sourceResources.GetResourceAmount("Ammunition") > 0)
+        SpaceEncounterManager spaceEncounter = this.GetEncounterManager();
+        spaceEncounter.NotifyAllScreens(SpaceEncounterManager.ObservableEffects.AttackOff);
+        
+        if ((float)sourceResources.GetResourceAmount(ResourceTypes.Ammunition) > 0)
         {
-            SpaceEncounterManager spaceEncounter = this.GetEncounterManager();
-            primaryDelta["Fuel"] = -1*fuelCost;
-            primaryDelta["Ammunition"] = -1*ammoCost;
-            spaceEncounter.NotifyAllScreens(SpaceEncounterManager.ObservableEffects.AttackOff);
-            yield return CoroutineRunner.Instance.StartCoroutine(EffectHandler.ShootBlasterAt(
-                boltPrefab: Resources.Load<GameObject>(SpaceEncounterManager.PrefabPath.BoltPath),
-                explosionPrefab: Resources.Load<GameObject>(SpaceEncounterManager.PrefabPath.Explosion),
-                number: 20,
-                delay: 1f,
-                duration: 1f,
-                maxDistance: 3f,
-                source: spaceEncounter.GetAgentPosition(sourceAgentId),
-                target: spaceEncounter.GetAgentPosition(targetAgentId)
-            ));
-            //targetDelta = SpaceEncounterManager.AddDeltas(targetDelta) TODO Generalize, maybe?
+            
+            primaryDelta[ResourceTypes.Fuel] = -1*fuelCost;
+            primaryDelta[ResourceTypes.Ammunition] = -1*ammoCost;
+            
+
+            yield return CoroutineRunner.Instance.StartCoroutine(
+                EffectHandler.ShootBlasterAt(
+                    boltPrefab: Resources.Load<GameObject>(SpaceEncounterManager.PrefabPath.BoltPath),
+                    explosionPrefab: Resources.Load<GameObject>(SpaceEncounterManager.PrefabPath.Explosion),
+                    number: 20,
+                    delay: 1f,
+                    duration: 1f,
+                    maxDistance: 3f,
+                    source: spaceEncounter.GetAgentPosition(sourceAgentId),
+                    target: spaceEncounter.GetAgentPosition(targetAgentId)
+                )
+            );
             float baseMultiplier = 1.0f;
             foreach(string targetPowerId in targetPowerIds)
             {
                 baseMultiplier *= GetDamageMultiplierFor( sourceAgentId,  
-                                                                         sourcePowerId, 
-                                                                         targetAgentId,  
-                                                                         targetPowerId);
+                                                          sourcePowerId, 
+                                                          targetAgentId,  
+                                                          targetPowerId);
 
             }
-            targetDelta["Hull"] = -1f*baseDamage*baseMultiplier;
+            targetDelta[ResourceTypes.Hull] = -1f*baseDamage*baseMultiplier;
 
         }
 
@@ -82,6 +86,7 @@ public class BlasterSystem : StandardSystem
         {
             targetResources.Deposit(targetDelta);
         }
+
         yield break;
     }
 }

@@ -6,6 +6,7 @@ using UnityEngine;
 
 using System.Linq;
 using UnityEditor;
+using System.Runtime.InteropServices.WindowsRuntime;
 
 
 [System.Serializable]
@@ -22,16 +23,11 @@ public class SpaceEncounterObserverMapping
     public SpaceEncounterObserver value;
 }
 
-public abstract class SpaceEncounterObserver : MonoBehaviour {
-    public abstract bool VisualizeEffect(string effect);
+[System.Serializable]
+public  class AgentPrefab {
+    public string agent_id;
+    public Agent agentPrefab; 
 }
-interface IPausable
-{
-    public void Run();
-    public void Pause();
-    public bool IsRunning();
-}
-
 public class SpaceEncounterManager : MonoBehaviour,IPausable
 {
     public class PrefabPath
@@ -41,15 +37,12 @@ public class SpaceEncounterManager : MonoBehaviour,IPausable
         public const string Missile = "AwayTeam/KeyObjects/Effects/Missile";
         public const string UnitShield = "AwayTeam/KeyObjects/Effects/UnitShield";
     }
-    public class AgentActions {
-        public static readonly List<string> all = new List<string> { Attack, Missile, Shield };
-        public const string Attack = "Attack";
-        public const string Missile = "Missile";
-        public const string Shield = "Shield";
-    }
+
 
     public class ObservableEffects {
-        public static readonly List<string> all = new List<string> { AttackOn, MissileOn, ShieldOn, AttackOff, MissileOff, ShieldOff,TimerTick };
+        public static readonly List<string> all = new List<string> {EncounterOverLost, EncounterOverWon,ShowPaused, 
+                                                                    ShowUnpaused, AttackOn, MissileOn, ShieldOn, AttackOff, 
+                                                                    MissileOff, ShieldOff,TimerTick };
         public const string EncounterOverLost = "EncounterOverLost";
         public const string EncounterOverWon = "EncounterOverWon";
         public const string ShowPaused = "PauseEnable";
@@ -61,6 +54,10 @@ public class SpaceEncounterManager : MonoBehaviour,IPausable
         public const string AttackOff = "AttackOff";
         public const string MissileOff = "MissileOff";
         public const string ShieldOff = "ShieldOff";
+        public static bool IsValid(string action)
+        {
+            return all.Contains(action);
+        }        
     }
 
 
@@ -69,65 +66,77 @@ public class SpaceEncounterManager : MonoBehaviour,IPausable
     [SerializeField]
     public List<SpaceEncounterObserverMapping> gui_observers;
     public ATResourceData accountResourceData;
-    public ATResourceData agent1UnitResourceData;
-    public ATResourceData agent2UnitResourceData;
+    //public ATResourceData agent1UnitResourceData;
+    //public ATResourceData agent2UnitResourceData;
     public string encounterSquadPrefab = "AwayTeam/KeyObjects/EncounterSquad"; // Path to SpaceMapUnit prefab in Resources
     // Assets/Resources/AwayTeam/KeyObjects/EncounterSquad.prefab
     private IntervalRunner intervalRunner;
+    /*
     private int __dataRevisionAccount = 653948;
     private int __dataRevisionAgent1 = 653947;
     private int __dataRevisionAgent2 = 653946;
-    public GameObject spawnOne;
-    public GameObject spawnTwo;
+    */
 
+    public List<AgentPrefab> __initOnlyAgents = new List<AgentPrefab>();
 
+    public Dictionary<string,Agent> __agents = new Dictionary<string, Agent>();
+
+    /*
     private IDynamicControl attackButton;
     private IDynamicControl missileButton;
     private IDynamicControl shieldButton;
 
-/// <summary>
-///  Actions are blaster, missile, shiled, none
-/// </summary>
     private Dictionary<string,Dictionary<string,float>> agent1Transitions;
     private Dictionary<string,Dictionary<string,float>> agent2Transitions;
+    */
 
-    public  List<string> GetResourceTypes ()
+    public Agent GetPlayerAgent()
     {
-        return new List<string> { "Food","Power","Clones","Parts","Currency","Pods","Soldiers","Missles","Hull","Fuel","Ammunition","AttackPower","MissilePower","ShieldPower"};
-
-
+        return __agents["agent_1"]; 
     }
+
     public   Dictionary<string, string> GetAccountFieldMapping ()
     {
         return new Dictionary<string, string>
         {
-            { "status-value-1-1", "Hull" },
-            { "status-value-1-2", "Currency" },
-            { "status-value-2-1", "Ammunition" },
-            { "status-value-2-2", "Fuel" }
+            { "status-value-1-1", ResourceTypes.Hull },
+            { "status-value-1-2", ResourceTypes.Currency},
+            { "status-value-2-1", ResourceTypes.Ammunition},
+            { "status-value-2-2", ResourceTypes.Fuel}
         };
     }
     public   Dictionary<string, string> GetAgentGUIFieldMapping (string agent_id)
     {
         return new Dictionary<string, string>
         {
-            { "status-value-1-1", "Ammunition" },
-            { "status-value-1-2", "Fuel" },
-            { "status-value-2-1", "Hull" },
-            { "status-value-2-2", "Missiles" },
+            { "status-value-1-1",ResourceTypes.Ammunition },
+            { "status-value-1-2", ResourceTypes.Fuel},
+            { "status-value-2-1", ResourceTypes.Hull },
+            { "status-value-2-2", ResourceTypes.Missiles },
             // { "status-value-3-1", "AttackPower" },
             // { "status-value-3-2", "MissilePower" },
             // { "status-value-4-1", "ShieldPower" },
         };
     }
+    public static bool IsValidAgentAction(string actionId)
+    {
+        bool validAction = false;
+        if (actionId == AgentActions.Missile)
+            validAction = true;
+        if (actionId == AgentActions.Shield)
+            validAction = true;
+        if (actionId == AgentActions.Attack)
+            validAction = true;        
+        return validAction;
+    }
     public   Dictionary<string, string> ResourceIdToIconMapping (string agent_id)
     {
         return new Dictionary<string, string>
         {
-            { "Ammunition","A" },
-            { "Fuel","F" },
-            { "Hull","H" },
-            { "Missiles","M" },
+            { ResourceTypes.Ammunition,"A" },
+            { ResourceTypes.Fuel,"F" },
+            { ResourceTypes.Hull,"H" },
+            { ResourceTypes.Missiles,"M" },
         };
     }
 
@@ -151,41 +160,40 @@ public class SpaceEncounterManager : MonoBehaviour,IPausable
     void Awake()
     {
         intervalRunner = new IntervalRunner();
+        if (__initOnlyAgents.Count <= 0)
+        {
+            Debug.LogError("Encounter MUST have agents attached. For now an agent_1 and agent_2");
+            return;
+        }        
+        foreach (AgentPrefab apre in __initOnlyAgents)
+        {
+            Debug.Log($"adding agent {apre.agent_id}");
+            __agents[apre.agent_id] = apre.agentPrefab;
+        }
 
         if (accountResourceData == null)
         {
             Debug.LogError("accountResourceData is not assigned to SpaceEncounterManager.");
             return;
-        }        
-        if (agent1UnitResourceData == null)
+        }             
+        if (!__agents.ContainsKey("agent_1") || __agents["agent_1"] == null)
         {
-            Debug.LogError("agent1UnitResourceData is not assigned to SpaceEncounterManager.");
-            return;
-        }        
-        if (agent2UnitResourceData == null)
-        {
-            Debug.LogError("agent2UnitResourceData is not assigned to SpaceEncounterManager.");
-            return;
-        }        
-        if (spawnOne == null)
-        {
-            Debug.LogError("spawnOne is not assigned to SpaceEncounterManager.");
+            Debug.LogError("agent_1 is not assigned to SpaceEncounterManager.");
             return;
         }               
-        if (spawnTwo == null)
+        if (!__agents.ContainsKey("agent_2") || __agents["agent_2"] == null)
         {
-            Debug.LogError("spawnOne is not assigned to SpaceEncounterManager.");
+            Debug.LogError("agent_2 is not assigned to SpaceEncounterManager.");
             return;
         } 
 
      
 
     }
-    private GameObject unit1 = null;
-    private GameObject unit2 = null;
+
     void InitEncounterData(){
         accountResourceData.ClearRecords();
-        List<string> resourceTypes = GetResourceTypes();
+        List<string> resourceTypes = ResourceTypes.all;
         //Debug.Log("InitEncounterData is running");
         foreach (ResourceEntry resource in defaultResources)
         {
@@ -194,8 +202,12 @@ public class SpaceEncounterManager : MonoBehaviour,IPausable
                 accountResourceData.AddToRecordField("Encounter", resource.key, resource.value, create: true);
             }
         }     
-        agent1UnitResourceData.ClearRecords();
-        agent2UnitResourceData.ClearRecords();
+        __agents.Values.ToList().ForEach(agent =>
+        {
+           agent.ClearResourceRecords();
+        });        
+        //agent1UnitResourceData.ClearRecords();
+        //agent2UnitResourceData.ClearRecords();
 
     }    
     int __currentLevel = 1;
@@ -240,27 +252,34 @@ public class SpaceEncounterManager : MonoBehaviour,IPausable
     }
     public void Begin()
     {
+        
         if (IsRunning())
             throw new System.Exception("Cant begin a new match, one is already initalized");
         if (AmReady() || IsRunning())
             throw new System.Exception("Cant begin a new match, one is already initalized");
+        RegisterNotificationWithAgents();
+
 
         float ammoAmount = 20f;
-        //accountResourceData.Withdraw("Ammunition",ammoAmount);
-        agent1UnitResourceData.Deposit("Ammunition",10); // Player Investment
-        agent1UnitResourceData.Deposit("Missle",5); // Player Investment
-        agent1UnitResourceData.Deposit("Hull",30); 
-        agent1UnitResourceData.Deposit("Fuel",30); 
+        Agent agent1 = __agents["agent_1"];
+        Agent agent2 = __agents["agent_2"];
 
-        agent2UnitResourceData.Deposit("Ammunition",ammoAmount);
-        agent2UnitResourceData.Deposit("Hull",5*__currentLevel); 
-        agent2UnitResourceData.Deposit("Fuel",5*__currentLevel); 
+        agent1.GetResourceObject().Deposit(ResourceTypes.Ammunition,10); // Player Investment
+        agent1.GetResourceObject().Deposit(ResourceTypes.Missiles,5); // Player Investment
+        agent1.GetResourceObject().Deposit(ResourceTypes.Hull,30); 
+        agent1.GetResourceObject().Deposit(ResourceTypes.Fuel,30); 
+
+        agent2.GetResourceObject().Deposit(ResourceTypes.Ammunition,ammoAmount);
+        agent2.GetResourceObject().Deposit(ResourceTypes.Hull,5*__currentLevel); 
+        agent2.GetResourceObject().Deposit(ResourceTypes.Fuel,5*__currentLevel); 
         
+        GameObject unit1 = null;
+        GameObject unit2 = null;        
         unit1 = Instantiate( Resources.Load<GameObject>(encounterSquadPrefab));
-        spawnOne.GetComponent<Agent>().SetUnit(unit1);        
-        unit1.transform.position = spawnOne.transform.position;
-        unit1.transform.rotation  = spawnOne.transform.rotation;
-        unit1.transform.parent = spawnOne.transform;
+        agent1.SetUnit(unit1);        
+        unit1.transform.position = agent1.transform.position;
+        unit1.transform.rotation  = agent1.transform.rotation;
+        unit1.transform.parent = agent1.transform;
 
         if (unit1.GetComponent<BlasterSystem>() == null)
             Debug.LogError("Could not find BlasterSystem attached to unit 1");
@@ -277,10 +296,10 @@ public class SpaceEncounterManager : MonoBehaviour,IPausable
 
         /////
         unit2 =  Instantiate(Resources.Load<GameObject>(encounterSquadPrefab));
-        spawnTwo.GetComponent<Agent>().SetUnit(unit2);        
-        unit2.transform.position = spawnTwo.transform.position;
-        unit2.transform.rotation  = spawnTwo.transform.rotation;
-        unit2.transform.parent = spawnTwo.transform;
+        agent2.GetComponent<Agent>().SetUnit(unit2);        
+        unit2.transform.position = agent2.transform.position;
+        unit2.transform.rotation  = agent2.transform.rotation;
+        unit2.transform.parent = agent2.transform;
         
         if (unit2.GetComponent<BlasterSystem>() == null)
             Debug.LogError("Could not find BlasterSystem attached to unit 2");
@@ -295,56 +314,60 @@ public class SpaceEncounterManager : MonoBehaviour,IPausable
         unit2.GetComponent<ShieldSystem>().SetEncounterManager(this);        
 
         SetReadyToRun(true);
+        NotifyAllScreens(SpaceEncounterManager.ObservableEffects.ShieldOff);        
+        NotifyAllScreens(SpaceEncounterManager.ObservableEffects.AttackOff);        
+        NotifyAllScreens(SpaceEncounterManager.ObservableEffects.MissileOff);        
         Run();
     }
 
     public void End()
     {
         Pause();
-        if (unit1 != null)
-            GameObject.Destroy(unit1);
-        if (unit2 != null)
-            GameObject.Destroy(unit2);
-        agent1UnitResourceData.ClearRecords();
-        agent2UnitResourceData.ClearRecords();
+        string reasonConstant = "";
+        foreach (string agent_id in new string [] {"agent_1","agent_2"})
+        {
+            __agents[agent_id].DestroyUnit(reasonConstant);
+            __agents[agent_id].GetResourceObject().ClearRecords();
+        } 
         SetReadyToRun(false);
 
     }
     bool __isRunning = false;
+    private void ForEachAgent(System.Action<Agent> action)
+    {
+        foreach (var agent in __agents.Values)
+        {
+            action(agent);
+        }
+    }
+
+    private void ForEachAgentId(System.Action<string> action)
+    {
+        foreach (var agentId in __agents.Keys)
+        {
+            action(agentId);
+        }
+    }    
     public void Run()
     {
         if (IsRunning())
             throw new System.Exception("Cant Run Twice");
 
-        if (agent1UnitResourceData == null)
-        {
-            Debug.LogError("No Agents to run");
-        }
-        float hull = (float)agent1UnitResourceData.GetRecordField("Encounter","Hull");
-        float fuel = (float)agent1UnitResourceData.GetRecordField("Encounter","Fuel");
+        float hull = (float)__agents["agent_1"].GetResourceObject().GetRecordField("Encounter",ResourceTypes.Hull);
+        float fuel = (float)__agents["agent_1"].GetResourceObject().GetRecordField("Encounter",ResourceTypes.Fuel);
         if (hull <= 0 || fuel <=0 )
         {
             Debug.LogError($"Cant run. Agent One is out of hull {hull.ToString()} or fuel {fuel.ToString()}");
             return;
-        }        
-        if (unit1 != null)
-        {
-            unit1.GetComponent<EncounterUnitController>().Run();
-        }
-        if (unit2 != null)
-        {
-            unit2.GetComponent<EncounterUnitController>().Run();
-        }        
+        }       
+
+        ForEachAgent(agent => { agent.Run(); });    
         NotifyAllScreens(ObservableEffects.ShowUnpaused);
         __isRunning = true;
     }
     public void Pause()
     {
-        if (unit1 != null)
-            unit1.GetComponent<EncounterUnitController>().Pause();
-        if (unit2 != null)
-            unit2.GetComponent<EncounterUnitController>().Pause();
-
+        ForEachAgent(agent => { agent.Pause(); });    
         NotifyAllScreens(ObservableEffects.ShowPaused);        
         __isRunning = false;
         
@@ -353,12 +376,9 @@ public class SpaceEncounterManager : MonoBehaviour,IPausable
     {
         return __isRunning;
     }
-
+    bool __actionsRunning = false;
     void Update()
     {
-         // PrefabPath
-        // Instantiate( Resources.Load<GameObject>(PrefabPath.BoltPath));
-
 
         if (__isRunning == false)
         {
@@ -366,24 +386,23 @@ public class SpaceEncounterManager : MonoBehaviour,IPausable
         }
         intervalRunner.RunIfTime("endEncounterCheck", 1f, Time.deltaTime, () =>
         {
-            float hull = (float)agent1UnitResourceData.GetRecordField("Encounter","Hull");
-            float fuel = (float)agent1UnitResourceData.GetRecordField("Encounter","Fuel");
-            if (hull <= 0 || fuel <=0 )
+            ForEachAgentId(agentId =>
             {
-                End();
-                NotifyAllScreens(ObservableEffects.EncounterOverLost);
-                return;
-            }
-            hull = (float)agent2UnitResourceData.GetRecordField("Encounter","Hull");
-            fuel = (float)agent2UnitResourceData.GetRecordField("Encounter","Fuel");
-            if (hull <= 0 || fuel <=0 )
-            {
-                End();
-                NotifyAllScreens(ObservableEffects.EncounterOverWon);
-                return;
-            }
+                float hull = (float)__agents[agentId].GetResourceObject().GetRecordField("Encounter", ResourceTypes.Hull);
+                float fuel = (float)__agents[agentId].GetResourceObject().GetRecordField("Encounter", ResourceTypes.Fuel);
 
+                if (hull <= 0 || fuel <= 0)
+                {
+                    End();
+                    if (agentId == "agent_1")
+                        NotifyAllScreens(ObservableEffects.EncounterOverLost);
+                    if (agentId == "agent_2")
+                        NotifyAllScreens(ObservableEffects.EncounterOverWon);
+                    return;
+                }
+            });
         });
+
         intervalRunner.RunIfTime("showActionProgress", 0.25f, Time.deltaTime, () =>
         {
             __timerProgress = __timerProgress + (0.25f/3f)*__timerProgressMax;
@@ -393,77 +412,56 @@ public class SpaceEncounterManager : MonoBehaviour,IPausable
 
         intervalRunner.RunIfTime("doActions", 3f, Time.deltaTime, () =>
         {
+            if (__actionsRunning==false)
+            {
+                __actionsRunning = true;
+                StartActionInterval();
+            }
+        });   
 
-            // AI Action Choice
-            int randomIndex = Random.Range(0, 3);
-            if (randomIndex == 0)
+        if (__actionsRunning==true) intervalRunner.RunIfTime("doActionsClear", 0.5f, Time.deltaTime, () =>
+        {
+            bool is_agent_running = false;
+            ForEachAgent(agent =>{
+                is_agent_running = is_agent_running || agent.IsRunning();
+            });
+            if (is_agent_running == false)
             {
-                SetTargetAction("agent_2", AgentActions.Attack);
-            }
-            else if (randomIndex == 1)
-            {
-                SetTargetAction("agent_2",AgentActions.Missile);
-            }
-            else if (randomIndex == 2)
-            {
-                SetTargetAction("agent_2", AgentActions.Shield);
-            }
-            Debug.Log("NEW EPOCH");
-            Debug.Log("NEW EPOCH-==================================");
-            Debug.Log("NEW EPOCH");
+                ForEachAgent(agent =>{ agent.ClearActions(); });
+                is_agent_running = false;
+                __actionsRunning = false;
+                __timerProgress = 0.0f;                
+            }                    
+        });      
+    }
 
-            // Assign Actions to Agent
-            var agents = new List<GameObject> { spawnOne, spawnTwo };            
-            foreach (GameObject primaryGO in agents)
+    public void StartActionInterval(){
+           // CHOOSE your actions
+            //List<Agent> agents = new List<Agent> { __agents["agent_1"], __agents["agent_2"] };            
+         
+            // CHOOSE -
+            ForEachAgent(agent => { 
+                agent.ChooseTargetAction();
+            });
+
+            // TARGET -
+            ForEachAgent(primaryAgent => 
             {
-                Agent primaryAgent = primaryGO.GetComponent<Agent>();
-                if (primaryAgent == null)
-                    Debug.LogError($"Could not find Agent object attached to {primaryAgent.name}");
-                foreach (GameObject targetGO in agents)
-                {                
-                    if(primaryGO.name == targetGO.name)
-                        continue;         
-                    Agent targetAgent = targetGO.GetComponent<Agent>();
-                    if (targetAgent == null)
-                        Debug.LogError($"Could not find Agent object attached to {targetAgent.name}");
-                    
+                ForEachAgent(targetAgent => 
+                {           
+                    if(primaryAgent.name == targetAgent.name) return;
+
                     string primaryAction = GetTargetAction(primaryAgent.GetAgentId());
                     if (primaryAction.Length > 0)
                         primaryAgent.AddAgentAction(primaryAction,targetAgent);
-                }
-            }
-            // Trigger Actions
-            foreach (GameObject primaryGO in agents)
+                });
+            });
+
+            // TRIGGER Actions
+            ForEachAgent(primaryAgent => 
             {
-                Agent primaryAgent = primaryGO.GetComponent<Agent>();
-                //primaryAgent.GetAgentId()
-                if (primaryAgent == null)
-                    Debug.LogError($"Could not find Agent object attached to GameObject {primaryAgent.name}");
                 StartCoroutine(primaryAgent.RunActions());
-                SetTargetAction(primaryAgent.GetAgentId(),"");
-
-            }
-            // Wait for finish
-            Debug.Log("Waiting for actions to finish");
-            float timer = 0f;
-            while (agents.Exists(go => go.GetComponent<Agent>().IsRunning()) && timer < 10f)
-            {
-                timer += Time.deltaTime;
-              
-            }
-            // Clear Actions 
-            foreach (GameObject primaryGO in agents)
-            {
-                Debug.Log($"Clearing Actions for {primaryGO.name}");
-                Agent primaryAgent = primaryGO.GetComponent<Agent>();
-                primaryAgent.ClearActions();
-                ResetTargetAction(primaryAgent.GetAgentId());
-            }            
-
-            __timerProgress = 0;
-
-        });        
-        
+            });
 
     }
     public float GetTimerProgress()
@@ -477,205 +475,81 @@ public class SpaceEncounterManager : MonoBehaviour,IPausable
     float __timerProgress = 0f;
     float __timerProgressMax = 100f;
 
-    string __targetAgent1Action = "";
-    string __targetAgent2Action = "";
-    public void ResetTargetAction(string agent_id)
-    {
-        if(agent_id == "agent_1")
-        {
-            NotifyAllScreens( ObservableEffects.AttackOff);            
-            NotifyAllScreens( ObservableEffects.ShieldOff);            
-            NotifyAllScreens( ObservableEffects.MissileOff);            
-            __targetAgent1Action = "";
-        }
-        if(agent_id == "agent_2")
-        {
-            __targetAgent2Action = "";
-        }
-    }
-    public void SetTargetAction(string agent_id,string commandId)
-    {
-        
-        string targEffect = "";
-        if (commandId== AgentActions.Attack)
-            targEffect= ObservableEffects.AttackOn;
-        if (commandId== AgentActions.Missile)
-            targEffect= ObservableEffects.MissileOn;
-        if (commandId== AgentActions.Shield)
-            targEffect= ObservableEffects.ShieldOn;
-
-        if(agent_id == "agent_1")
-        {
-            if(targEffect.Length > 0)
-                NotifyAllScreens(targEffect);
-            __targetAgent1Action = commandId;
-        }
-        if(agent_id == "agent_2")
-        {
-            __targetAgent2Action = commandId;
-        }
-    }
+    
     public string GetTargetAction(string agent_id){
-        if(agent_id == "agent_1")
-        {
-            return __targetAgent1Action;
-        }
-        if(agent_id == "agent_2")
-        {
-            return __targetAgent2Action;
-        }
+
+        if (__agents.ContainsKey(agent_id))
+            return __agents[agent_id].GetTargetAction();
         return null;
     }
 
-    public static Dictionary<string, float> AddDeltas(Dictionary<string, float> dict1, Dictionary<string, float> dict2)
-    {
-        return dict1.Keys.Union(dict2.Keys)
-                    .ToDictionary(key => key, key => dict1.GetValueOrDefault(key) + dict2.GetValueOrDefault(key));
-    }
 
-    public static Dictionary<string, float> SubtractDeltas(Dictionary<string, float> dict1, Dictionary<string, float> dict2)
-    {
-        return dict1.Keys.Union(dict2.Keys)
-                    .ToDictionary(key => key, key => dict1.GetValueOrDefault(key) - dict2.GetValueOrDefault(key));
-    }
-
-    public static Dictionary<string, float> MultiplyDeltas(Dictionary<string, float> dict1, Dictionary<string, float> dict2)
-    {
-        return dict1.Keys.Union(dict2.Keys)
-                    .ToDictionary(key => key, key => dict1.GetValueOrDefault(key) * dict2.GetValueOrDefault(key));
-    }
-
-    public static Dictionary<string, float> DivideDeltas(Dictionary<string, float> dict1, Dictionary<string, float> dict2)
-    {
-        return dict1.Keys.Union(dict2.Keys)
-                    .ToDictionary(key => key, key => dict1.GetValueOrDefault(key) / dict2.GetValueOrDefault(key));
-    }
-    /*
-    private System.Collections.IEnumerator ProcessAgentActions(string agent_1_id, string agent_1_commandId, string agent_2_id, string agent_2_commandId)
-    {
-        var agentIds = new List<string> { agent_1_id, agent_2_id };
-        var agentResources = new Dictionary<string, ATResourceData>
-        {
-            { agent_1_id, agent1UnitResourceData },
-            { agent_2_id, agent2UnitResourceData }
-        };
-        var agentUnits = new Dictionary<string, GameObject>
-        {
-            { agent_1_id, unit1.gameObject },
-            { agent_2_id, unit2.gameObject }
-        };        
-        var agentCommandIds = new Dictionary<string, string>
-        {
-            { agent_1_id, agent_1_commandId },
-            { agent_2_id, agent_2_commandId }
-        };
- 
-        foreach (var primaryAgentId in agentIds)
-        {
-            string primaryCommandId = agentCommandIds[primaryAgentId];
-            //Dictionary<string, float> primaryDelta = new Dictionary<string, float>();
-            //primaryDelta["Fuel"] = -1f;
-
-            foreach (var targetAgentId in agentIds.Where(id => id != primaryAgentId)) // Secondary loop
-            {
-                string targetCommandId = agentCommandIds[targetAgentId];
-
-                if (primaryCommandId == AgentActions.Attack)
-                {
-                    BlasterSystem bs = unit1.GetComponent<BlasterSystem>();
-                    if (bs == null)
-                        Debug.LogError("Could not find BlasterSystem on unit1");
-                    StartCoroutine(bs.Execute(
-                                sourceAgentId:primaryAgentId, 
-                                sourcePowerId:AgentActions.Attack, 
-                                targetAgentId:targetAgentId, 
-                                targetPowerId:targetCommandId, 
-                                agentResources:agentResources
-                    ));
-                }
-                else if (primaryCommandId == AgentActions.Missile)
-                {
-                    //Debug.Log("MISSILE ACTION");
-                    //yield break;
-                    MissileSystem bs = unit1.GetComponent<MissileSystem>();
-                    if (bs == null)
-                    {
-                        Debug.LogError("Could not find MissileSystem on unit1!!!");
-                    }
-                    else
-                    {
-                        Debug.Log(bs);
-                        
-                        StartCoroutine(bs.Execute(
-                                    sourceAgentId:primaryAgentId, 
-                                    sourcePowerId:AgentActions.Missile, 
-                                    targetAgentId:targetAgentId, 
-                                    targetPowerId:targetCommandId, 
-                                    agentResources:agentResources
-                        ));
-                    }
-
-                }
-                else if (primaryCommandId == AgentActions.Shield)
-                {
-                    ShieldSystem bs = unit1.GetComponent<ShieldSystem>();
-                    if (bs == null)
-                    {
-                        Debug.LogError("Could not find MissileSystem on unit1!!!");
-                    }
-                    else
-                    {
-                        Debug.Log(bs);
-                        StartCoroutine(bs.Execute(
-                                    sourceAgentId:primaryAgentId, 
-                                    sourcePowerId:AgentActions.Shield, 
-                                    targetAgentId:targetAgentId, 
-                                    targetPowerId:targetCommandId, 
-                                    agentResources:agentResources
-                        ));
-                    }                    
-                }
-
-
-            }
-
-        }
-
-        yield break;
-    }
-    */
     public Vector3 GetAgentPosition(string agent_id)
     {
-        // Replace with actual logic to retrieve the agent's GameObject
-        if (agent_id == "agent_1")
-            return unit1.transform.position;
-        if (agent_id == "agent_2")
-            return unit2.transform.position;
-        return new Vector3();
+        if (!__agents.ContainsKey(agent_id))
+        {
+            Debug.LogError($"Agent ID '{agent_id}' does not exist in the agent dictionary.");
+            return Vector3.zero;
+        }
+
+        var agent = __agents[agent_id];
+        if (agent == null)
+        {
+            Debug.LogError($"Agent with ID '{agent_id}' is null.");
+            return Vector3.zero;
+        }
+
+        var unit = agent.GetUnit();
+        if (unit == null)
+        {
+            Debug.LogError($"Unit for agent '{agent_id}' is null.");
+            return Vector3.zero;
+        }
+
+        var transform = unit.transform;
+        if (transform == null)
+        {
+            Debug.LogError($"Transform for unit of agent '{agent_id}' is null.");
+            return Vector3.zero;
+        }
+
+        return transform.position;
     }
 
-    
+
+    public void RegisterNotificationWithAgents() 
+    {
+
+        foreach (Agent agent in __agents.Values)
+        {
+            agent.ClearObservers();
+            Debug.Log("Registering Observers");
+            foreach (SpaceEncounterObserverMapping mapping in gui_observers) 
+            {
+                SpaceEncounterObserver observer = mapping.value;
+                agent.AddObserver(observer);
+            }
+        }
+
+    }
     public void NotifyAllScreens(string effect) 
     {
         foreach (SpaceEncounterObserverMapping mapping in gui_observers) {
             SpaceEncounterObserver observer = mapping.value;
             if (observer != null) {
-                observer.VisualizeEffect(effect);
+                observer.VisualizeEffect(effect,this.gameObject);
             }
         }
     }
-
-    
-
 
     public ATResourceData GetResourceObject(string agentId)
     {
         if (agentId == "account")
             return accountResourceData;
         if (agentId == "agent_1")
-            return agent1UnitResourceData;
+            return __agents["agent_1"].GetResourceObject();
         if (agentId == "agent_2")
-            return agent2UnitResourceData;
+            return __agents["agent_2"].GetResourceObject();
         Debug.LogError("Could not find requested agent data");
         return null;
     }
