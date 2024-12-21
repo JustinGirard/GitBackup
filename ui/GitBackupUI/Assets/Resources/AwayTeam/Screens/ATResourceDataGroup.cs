@@ -8,13 +8,14 @@ using DictObjTable = System.Collections.Generic.Dictionary<string, System.Collec
 public class ATResourceDataGroup : ATResourceData
 {
     private Dictionary<string, ATResourceData> subResources = new Dictionary<string, ATResourceData>();
+    public Dictionary<string, ATResourceData> GetSubResources()
+    {
+        return subResources;
+    }
 
     public void AddSubResource(string key, ATResourceData resource)
     {
-        if (!subResources.ContainsKey(key))
-        {
-            subResources[key] = resource;
-        }
+        subResources[key] = resource;
     }
 
     public void RemoveSubResource(string key)
@@ -24,7 +25,14 @@ public class ATResourceDataGroup : ATResourceData
             subResources.Remove(key);
         }
     }
-
+    public void ClearSubResources()
+    {
+        subResources.Clear();
+    }    
+    public void Refresh(bool doDebug = false)
+    {
+        UpdateSummaryTable(doDebug);
+    }
     public override bool Deposit(string resourceName, float amount)
     {
 
@@ -111,14 +119,14 @@ public class ATResourceDataGroup : ATResourceData
     //////
     ///
     private float summaryUpdateTimer = 0f;
-    private const float SummaryUpdateInterval = 3f;
+    private const float summaryUpdateInterval = 0.5f;
 
     private void Update()
     {
         // Accumulate time and check if the interval has elapsed
         summaryUpdateTimer += Time.deltaTime;
 
-        if (summaryUpdateTimer >= SummaryUpdateInterval)
+        if (summaryUpdateTimer >= summaryUpdateInterval)
         {
             summaryUpdateTimer = 0f; // Reset the timer
             UpdateSummaryTable();
@@ -126,16 +134,24 @@ public class ATResourceDataGroup : ATResourceData
     }
     private Dictionary<string, int> previousRevisions = new Dictionary<string, int>();
     
-    private void UpdateSummaryTable()
+    private void UpdateSummaryTable(bool doDebug = false)
     {
-        if (subResources.Count == 0 || base.GetRecords().Count == 0 )
+        if (subResources.Count == 0 )
+        {
+            if (doDebug == true)
+                Debug.Log("Resource Group Empty");
             return; // No work to do if we are empty
-            
+        }
+        if (doDebug == true)
+            Debug.Log("RUNNING");
+
         bool isDirty = false;
 
         foreach (var kvp in subResources)
         {
             string key = kvp.Key;
+            if (doDebug == true)
+                Debug.Log($"checking {key}");
             ATResourceData resource = kvp.Value;
 
             int currentRevision = resource.GetDataRevision();
@@ -147,54 +163,46 @@ public class ATResourceDataGroup : ATResourceData
         }
 
         if (!isDirty) return;
+        if (doDebug == true)
+            Debug.Log($"Now loading data ...");
 
         // Build the new summary table
         var newSummaryTable = new DictObjTable();
-
-        foreach (var resource in subResources.Values)
+        base.ClearRecords();
+        foreach (var resourceTable in subResources.Values)
         {
-            var records = resource.GetRecords();
-            foreach (var recordKey in records.Keys)
+            var recordsAll = resourceTable.GetRecords();
+            var recordsForEncounter = recordsAll["Encounter"];
+            //Debug.Log($"Loading from {resourceTable.name}...");
+            //Debug.Log(DJson.Stringify(recordsForEncounter));
+            foreach (var recordKey in recordsForEncounter.Keys)
             {
-                if (!newSummaryTable.ContainsKey(recordKey))
+                if (doDebug == true)
+                    Debug.Log($"1. Now loading key {recordKey} from {resourceTable.name}...");
+                if (recordsForEncounter[recordKey] is float)
                 {
-                    newSummaryTable[recordKey] = new Dictionary<string, object>();
-                }
-
-                var recordFields = records[recordKey];
-                foreach (var fieldKey in recordFields.Keys)
-                {
-                    if (!newSummaryTable[recordKey].ContainsKey(fieldKey))
-                    {
-                        newSummaryTable[recordKey][fieldKey] = 0f;
-                    }
-
-                    newSummaryTable[recordKey][fieldKey] = (float)newSummaryTable[recordKey][fieldKey] + 
-                                                            (float)recordFields[fieldKey];
+                    base.Deposit(recordKey,(float)recordsForEncounter[recordKey]);
                 }
             }
         }
-
-        // Update records in one operation
-        SetRecords(newSummaryTable);
     }
 
-    public override bool SetRecordField(string name, string field, object value, bool create = true, string keyfield = "name") 
+    protected new bool SetRecordField(string name, string field, object value, bool create = true, string keyfield = "name") 
     {
         throw new System.NotSupportedException("Direct modification of records is not allowed. Use Deposit or Withdraw instead.");
     }
 
-    public override bool SetRecord(DictStrObj rec, string keyfield = "name") 
+    protected new bool SetRecord(DictStrObj rec, string keyfield = "name") 
     {
         throw new System.NotSupportedException("Direct modification of records is not allowed. Use Deposit or Withdraw instead.");
     }
 
-    public override void SetRecords(DictObjTable records)
+    protected new void SetRecords(DictObjTable records)
     {
         throw new System.NotSupportedException("Direct modification of records is not allowed. Use Deposit or Withdraw instead.");
     }
 
-    public override bool DeleteRecord(string name)
+    protected new bool DeleteRecord(string name)
     {
         throw new System.NotSupportedException("Direct modification of records is not allowed. Use Deposit or Withdraw instead.");
     }

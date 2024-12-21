@@ -4,6 +4,7 @@ using System.Linq;
 using Unity.VisualScripting;
 using System.Runtime.InteropServices.WindowsRuntime;
 using System.Runtime.CompilerServices;
+using System;
 public class AgentActionPair
 {
     public string destinationAgentId;
@@ -22,14 +23,12 @@ public class AgentActions {
 }
 
 
-
-
 public class Agent:MonoBehaviour, IPausable
 {
     private List<SpaceEncounterObserver> __observers = new List<SpaceEncounterObserver>();
 
    [SerializeField]
-    private ATResourceData resources;
+    private ATResourceDataGroup resources;
     private GameObject __unitGameObject = null;
     [SerializeField]
     private GameObject unit;
@@ -56,6 +55,29 @@ public class Agent:MonoBehaviour, IPausable
     public void SetUnit(GameObject go)
     {
         __unitGameObject = go;
+        EncounterSquad ec = go.GetComponent<EncounterSquad>();
+        if(ec == null)
+            Debug.LogError("");
+        //resources.ClearSubResources();
+        List<SpaceMapUnitAgent> allUnits = ec.GetUnitList();
+        if (allUnits.Count == 0)
+            Debug.LogError("Could not find any units");
+
+        //Debug.Log($"Adding Unit in Set Unit {unit.name}");
+        foreach(SpaceMapUnitAgent unit in allUnits)
+        {
+            //Debug.Log($"Adding Unit in Set Unit {unit.name}");
+            ATResourceData unitResourceData = unit.GetComponent<ATResourceData>();
+            if (unitResourceData == null)
+            {
+                Debug.LogError($"Could not find resource attached to {unit.name}");
+            }
+            else
+            {
+                //Debug.Log($"Adding Sub Resource in Set Unit {unitResourceData.name}");
+                resources.AddSubResource(unit.name,unitResourceData);
+            }
+        }
         
     }
     public GameObject GetUnit()
@@ -69,14 +91,14 @@ public class Agent:MonoBehaviour, IPausable
            GameObject.Destroy( __unitGameObject);        
     }    
     public void Run(){
-        __unitGameObject.GetComponent<EncounterUnitController>().Run();
+        __unitGameObject.GetComponent<EncounterSquad>().Run();
     }
     public void Pause(){
-        __unitGameObject.GetComponent<EncounterUnitController>().Pause();
+        __unitGameObject.GetComponent<EncounterSquad>().Pause();
         
     }
 
-    public ATResourceData GetResourceObject()
+    public ATResourceDataGroup GetResourceObject()
     {
         return resources;
     }

@@ -56,6 +56,8 @@ MonoBehaviour:
   acceleration: 1
   decelerationDistance: 1
   stopDistance: 0.1
+  targetTransform: {fileID: 8107746873245039196}
+  mapMarker: {fileID: 1000572769243925448}
 --- !u!114 &3881585159364227106
 MonoBehaviour:
   m_ObjectHideFlags: 0

@@ -1,7 +1,8 @@
 using System.Collections.Generic;
+using Unity.VisualScripting;
 using UnityEngine;
 
-public class EncounterUnitController : MonoBehaviour, IPausable
+public class EncounterSquad : MonoBehaviour, IPausable
 {
     [Header("Settings")]
     // public Vector3 masterPosition = Vector3.zero; // The central "master position"
@@ -19,7 +20,7 @@ public class EncounterUnitController : MonoBehaviour, IPausable
     {
         foreach(GameObject spaceMapUnit in spaceMapUnits)
         {
-            SpaceMapUnitAgent su = spaceMapUnit.GetComponent<SpaceMapUnitAgent>();
+            SpaceMapUnitAgent su = spaceMapUnit.GetComponent<SpaceMapUnitAgent>(); 
             su.Run();
         }
 
@@ -34,6 +35,17 @@ public class EncounterUnitController : MonoBehaviour, IPausable
         }
         __is_running = false;
     }
+    public List<SpaceMapUnitAgent> GetUnitList()
+    {
+    
+        List<SpaceMapUnitAgent> suses = new List<SpaceMapUnitAgent>();
+        foreach(GameObject spaceMapUnit in spaceMapUnits)
+        {
+            SpaceMapUnitAgent su = spaceMapUnit.GetComponent<SpaceMapUnitAgent>();
+            suses.Add(su);
+        }
+        return suses;
+    }
     public bool IsRunning()
     {
         return __is_running;
@@ -41,7 +53,7 @@ public class EncounterUnitController : MonoBehaviour, IPausable
 
     void Start()
     {
-        Rebuild(); // Automatically rebuild on Start
+        //Rebuild(); // Automatically rebuild on Start
     }
 
     /// <summary>
@@ -76,10 +88,35 @@ public class EncounterUnitController : MonoBehaviour, IPausable
     /// <summary>
     /// Respawns all SpaceMapUnits and the VeeFormation from Resources.
     /// </summary>
+    /// 
+    public void UpdatePosition()
+    {
+        VeeFormation formation =  veeFormation.GetComponent<VeeFormation>();
+        
+        for (int i = 0; i < spaceMapUnits.Count; i++) // Support up to 5 units in the formation
+        {
+            Vector3 goalPosition = formation.GetPosition(i) + transform.position;
+            SpaceMapUnitAgent positionable = spaceMapUnits[i].GetComponent<SpaceMapUnitAgent>(); // Assuming SpaceMapUnit handles its position
+            if (positionable != null && goalPosition != null)
+            {
+                positionable.SetGoalPosition(goalPosition,immediate:true);            
+            }
+            else
+            {
+                Debug.LogError("SpaceMapUnit does not have the expected positionable interface.");
+            }
+        }
+
+
+    }
     private void Respawn()
     {
         // Load and instantiate VeeFormation
+        Debug.Log($"Loading my position {this.name}");
+
+        
         Transform units = transform.Find("Units");
+        units.name = $"UnitsFor{name}";
         if (units == null)
         {
             Debug.LogError("Failed to load VeeFormation prefab from Resources.");
@@ -121,22 +158,24 @@ public class EncounterUnitController : MonoBehaviour, IPausable
 
             // Parent to EncounterUnit for better hierarchy organization
             spaceMapUnit.transform.parent = units;
-
+            spaceMapUnit.name = name+".unit."+i.ToString();
             // Set position and rotation based on VeeFormation
             Vector3 goalPosition = veeFormation.GetComponent<VeeFormation>().GetPosition(i) + transform.position;
+            //Vector3 goalPosition = veeFormation.transform.position;
             //Quaternion goalRotation = masterRotation; // Add rotation logic if needed
             if (goalPosition == null)
             {
-                Debug.LogWarning("Could not extract goal position");
+                Debug.LogError("Could not extract goal position");
             }
             SpaceMapUnitAgent positionable = spaceMapUnit.GetComponent<SpaceMapUnitAgent>(); // Assuming SpaceMapUnit handles its position
             if (positionable != null && goalPosition != null)
             {
                 positionable.SetGoalPosition(goalPosition,immediate:true);
+            
             }
             else
             {
-                Debug.LogWarning("SpaceMapUnit does not have the expected positionable interface.");
+                Debug.LogError("SpaceMapUnit does not have the expected positionable interface.");
             }
             if (__is_running)
             {
@@ -146,6 +185,7 @@ public class EncounterUnitController : MonoBehaviour, IPausable
             {
                 positionable.Pause();
             }
+            //Debug.Break();
         }
     }
 }

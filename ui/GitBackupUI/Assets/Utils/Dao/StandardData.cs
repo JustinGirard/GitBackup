@@ -30,6 +30,7 @@ public class StandardData : MonoBehaviour
 
     public virtual void  Refresh()
     {
+       
     }
     public virtual DictObjTable  GetRecords()
     {
@@ -49,7 +50,7 @@ public class StandardData : MonoBehaviour
             object oldVal = GetRecordField( name,field);
             if (oldVal == null)
                 oldVal = 0f;
-            Debug.Log($"Doing subtract {((float)oldVal).ToString()} - {((float)value).ToString()}");
+            //Debug.Log($"Doing subtract {((float)oldVal).ToString()} - {((float)value).ToString()}");
             return SetRecordField(name,field,(float)oldVal-(float)value,create,keyfield);
     }
 

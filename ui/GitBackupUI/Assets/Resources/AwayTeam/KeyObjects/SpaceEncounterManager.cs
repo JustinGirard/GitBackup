@@ -7,6 +7,7 @@ using UnityEngine;
 using System.Linq;
 using UnityEditor;
 using System.Runtime.InteropServices.WindowsRuntime;
+using UnityEditor.MPE;
 
 
 [System.Serializable]
@@ -167,7 +168,7 @@ public class SpaceEncounterManager : MonoBehaviour,IPausable
         }        
         foreach (AgentPrefab apre in __initOnlyAgents)
         {
-            Debug.Log($"adding agent {apre.agent_id}");
+            //Debug.Log($"adding agent {apre.agent_id}");
             __agents[apre.agent_id] = apre.agentPrefab;
         }
 
@@ -252,6 +253,8 @@ public class SpaceEncounterManager : MonoBehaviour,IPausable
     }
     public void Begin()
     {
+        Debug.Log("RUNNING BEGIN");
+         Dictionary<string,ATResourceData> redat ;
         
         if (IsRunning())
             throw new System.Exception("Cant begin a new match, one is already initalized");
@@ -264,42 +267,70 @@ public class SpaceEncounterManager : MonoBehaviour,IPausable
         Agent agent1 = __agents["agent_1"];
         Agent agent2 = __agents["agent_2"];
 
-        agent1.GetResourceObject().Deposit(ResourceTypes.Ammunition,10); // Player Investment
-        agent1.GetResourceObject().Deposit(ResourceTypes.Missiles,5); // Player Investment
-        agent1.GetResourceObject().Deposit(ResourceTypes.Hull,30); 
-        agent1.GetResourceObject().Deposit(ResourceTypes.Fuel,30); 
-
-        agent2.GetResourceObject().Deposit(ResourceTypes.Ammunition,ammoAmount);
-        agent2.GetResourceObject().Deposit(ResourceTypes.Hull,5*__currentLevel); 
-        agent2.GetResourceObject().Deposit(ResourceTypes.Fuel,5*__currentLevel); 
         
         GameObject unit1 = null;
         GameObject unit2 = null;        
         unit1 = Instantiate( Resources.Load<GameObject>(encounterSquadPrefab));
-        agent1.SetUnit(unit1);        
+        if ( unit1.GetComponent<EncounterSquad>() == null)
+            Debug.LogError("Unit1 could not create EncounterSquad");
+        unit1.name = "Squad1";
+        unit1.GetComponent<EncounterSquad>().Rebuild();
+        agent1.SetUnit(unit1);    
+        redat = agent1.GetResourceObject().GetSubResources();
+        if (redat.Keys.Count == 0)
+        {
+            Debug.LogError($"No Agents in Unit 2 Agent");
+            return;
+        }
+        else
+        {
+            Debug.Log($"Have resoruces for agent 1 {agent1.GetResourceObject().GetSubResources().Keys.Count }");
+        }
+
         unit1.transform.position = agent1.transform.position;
         unit1.transform.rotation  = agent1.transform.rotation;
+        Debug.Log($"Have resoruces for agent 1 {agent1.GetResourceObject().GetSubResources().Keys.Count }");
         unit1.transform.parent = agent1.transform;
+        unit1.GetComponent<EncounterSquad>().UpdatePosition(); 
+        Debug.Log($"Have resoruces for agent 1 {agent1.GetResourceObject().GetSubResources().Keys.Count }");
+        // GetSubResources
+
 
         if (unit1.GetComponent<BlasterSystem>() == null)
             Debug.LogError("Could not find BlasterSystem attached to unit 1");
         unit1.GetComponent<BlasterSystem>().SetEncounterManager(this);
+        Debug.Log($"Have resoruces for agent 1 {agent1.GetResourceObject().GetSubResources().Keys.Count }");
 
         if (unit1.GetComponent<MissileSystem>() == null)
             Debug.LogError("Could not find MissileSystem attached to unit 1");
         unit1.GetComponent<MissileSystem>().SetEncounterManager(this);
+        Debug.Log($"Have resoruces for agent 1 {agent1.GetResourceObject().GetSubResources().Keys.Count }");
 
         if (unit1.GetComponent<ShieldSystem>() == null)
             Debug.LogError("Could not find ShieldSystem attached to unit 1");
         unit1.GetComponent<ShieldSystem>().SetEncounterManager(this);
+        Debug.Log($"Have resoruces for agent 1 {agent1.GetResourceObject().GetSubResources().Keys.Count }");
 
 
         /////
         unit2 =  Instantiate(Resources.Load<GameObject>(encounterSquadPrefab));
+        if ( unit2.GetComponent<EncounterSquad>() == null)
+            Debug.LogError("Unit2 could not create EncounterSquad");
+
+        unit2.name = "Squad2";
+        unit2.GetComponent<EncounterSquad>().Rebuild();
         agent2.GetComponent<Agent>().SetUnit(unit2);        
-        unit2.transform.position = agent2.transform.position;
+        redat = agent2.GetResourceObject().GetSubResources();
+        if (redat.Keys.Count == 0)
+        {
+            Debug.LogError($"No Agents in Unit 2 Agent");
+            return;
+        }
+
+        unit2.transform.position = agent2.transform.position  + new Vector3(0,2,0);
         unit2.transform.rotation  = agent2.transform.rotation;
         unit2.transform.parent = agent2.transform;
+        unit2.GetComponent<EncounterSquad>().UpdatePosition(); 
         
         if (unit2.GetComponent<BlasterSystem>() == null)
             Debug.LogError("Could not find BlasterSystem attached to unit 2");
@@ -313,10 +344,77 @@ public class SpaceEncounterManager : MonoBehaviour,IPausable
             Debug.LogError("Could not find ShieldSystem attached to unit 1");
         unit2.GetComponent<ShieldSystem>().SetEncounterManager(this);        
 
+        // Resource Add
+        //Debug.Log("Adding Resources");
+        Debug.Log($"Have resoruces for agent 1 {agent1.GetResourceObject().GetSubResources().Keys.Count }");
+        agent1.GetResourceObject().Deposit(ResourceTypes.Ammunition,10); // Player Investment
+        Debug.Log($"Have resoruces for agent 1 {agent1.GetResourceObject().GetSubResources().Keys.Count }");
+        agent1.GetResourceObject().Deposit(ResourceTypes.Missiles,5); // Player Investment
+        Debug.Log($"Have resoruces for agent 1 {agent1.GetResourceObject().GetSubResources().Keys.Count }");
+        agent1.GetResourceObject().Deposit(ResourceTypes.Hull,30); 
+        Debug.Log($"Have resoruces for agent 1 {agent1.GetResourceObject().GetSubResources().Keys.Count }");
+        agent1.GetResourceObject().Deposit(ResourceTypes.Fuel,30); 
+        Debug.Log($"Have resoruces for agent 1 {agent1.GetResourceObject().GetSubResources().Keys.Count }");
+
+        agent2.GetResourceObject().Deposit(ResourceTypes.Ammunition,ammoAmount);
+        agent2.GetResourceObject().Deposit(ResourceTypes.Hull,5*__currentLevel); 
+        agent2.GetResourceObject().Deposit(ResourceTypes.Fuel,5*__currentLevel); 
+
+        Debug.Log($"------------------");
+        Debug.Log($"SET UP RESOURCES------------------");
+        Debug.Log($"------------------");
+        redat = agent1.GetResourceObject().GetSubResources();
+        if (redat.Keys.Count == 0)
+        {
+            Debug.LogError($"No Resources in Unit 1 Agent");
+            return;
+        }
+
+        Debug.Log($"Have Sub resources: {redat.Keys.Count.ToString()}");
+        bool doDebug = true;
+        agent1.GetResourceObject().Refresh(doDebug);
+        agent2.GetResourceObject().Refresh();
+        redat = agent1.GetResourceObject().GetSubResources();
+        //////
+        var resourceObject = agent1.GetResourceObject();
+        if (resourceObject == null)
+        {
+            Debug.LogError("GetResourceObject() returned null for agent1.");
+            return;
+        }
+
+        var recordField = resourceObject.GetRecordField("Encounter", ResourceTypes.Ammunition);
+        if (recordField == null)
+        {
+            Debug.LogError("GetRecordField() returned null for 'Encounter' and 'Ammunition'.Records:");
+            Debug.LogError(DJson.Stringify(resourceObject.GetRecords()));
+            return;
+        }
+
+        object val = recordField;
+        if((float)val > 9 && (float)val > 11)
+            Debug.Log("");
+        else
+        {
+            Debug.LogError("Could not verify the ammunition -- something is wrong with resources");
+        }
+        Debug.Log($"Inspecting Resources for Agent 1");
+        //foreach(string key in redat.Keys)
+        //{   
+        //    //Debug.Log($"Have Agent 1 resource {key}");
+        //    ATResourceData unitData = redat[key];
+        //    var obj = unitData.GetRecords();  
+        //    Debug.Log($"Values {DJson.Stringify(obj)}");
+        //}
+        //Debug.Log($"==================");
+        //Debug.Log($"==================");
+
+
         SetReadyToRun(true);
         NotifyAllScreens(SpaceEncounterManager.ObservableEffects.ShieldOff);        
         NotifyAllScreens(SpaceEncounterManager.ObservableEffects.AttackOff);        
-        NotifyAllScreens(SpaceEncounterManager.ObservableEffects.MissileOff);        
+        NotifyAllScreens(SpaceEncounterManager.ObservableEffects.MissileOff);
+        Debug.Log("ENDING BEGIN");
         Run();
     }
 
@@ -353,7 +451,62 @@ public class SpaceEncounterManager : MonoBehaviour,IPausable
         if (IsRunning())
             throw new System.Exception("Cant Run Twice");
 
-        float hull = (float)__agents["agent_1"].GetResourceObject().GetRecordField("Encounter",ResourceTypes.Hull);
+        //float hull = (float)__agents["agent_1"].GetResourceObject().GetRecordField("Encounter",ResourceTypes.Hull);
+        ///////////////
+        if (!__agents.ContainsKey("agent_1"))
+        {
+            Debug.LogError("Agent 'agent_1' not found in __agents dictionary.");
+            return;
+        }
+
+        var agent = __agents["agent_1"];
+        if (agent == null)
+        {
+            Debug.LogError("Agent 'agent_1' is null.");
+            return;
+        }
+
+        var resourceObject = agent.GetResourceObject();
+        resourceObject.Refresh();
+        Debug.Log("RUN DEBUG");
+        bool doDebug = true;
+        __agents["agent_1"].GetResourceObject().Refresh(doDebug);
+        __agents["agent_2"].GetResourceObject().Refresh();
+        Dictionary<string,ATResourceData> redat = __agents["agent_1"].GetResourceObject().GetSubResources();
+
+        Debug.Log($"Inspecting Resources for Agent 1");
+        foreach(string key in redat.Keys)
+        {   
+            //Debug.Log($"Have Agent 1 resource {key}");
+            ATResourceData unitData = redat[key];
+            var obj = unitData.GetRecords();  
+            Debug.Log($"Values {DJson.Stringify(obj)}");
+        }        
+
+        if (resourceObject == null)
+        {
+            Debug.LogError("Resource object for 'agent_1' is null.");
+            return;
+        }
+
+        var hullObj = resourceObject.GetRecordField("Encounter", ResourceTypes.Hull);
+        if (hullObj == null)
+        {
+            Debug.LogError("'Hull' record not found for 'agent_1' in Encounter.");
+            return;
+        }
+
+        float hull;
+        try
+        {
+            hull = (float)hullObj;
+        }
+        catch
+        {
+            Debug.LogError("Failed to cast Hull record to float for 'agent_1'.");
+            return;
+        }        
+        ///////////////
         float fuel = (float)__agents["agent_1"].GetResourceObject().GetRecordField("Encounter",ResourceTypes.Fuel);
         if (hull <= 0 || fuel <=0 )
         {
@@ -436,9 +589,6 @@ public class SpaceEncounterManager : MonoBehaviour,IPausable
     }
 
     public void StartActionInterval(){
-           // CHOOSE your actions
-            //List<Agent> agents = new List<Agent> { __agents["agent_1"], __agents["agent_2"] };            
-         
             // CHOOSE -
             ForEachAgent(agent => { 
                 agent.ChooseTargetAction();
@@ -462,7 +612,6 @@ public class SpaceEncounterManager : MonoBehaviour,IPausable
             {
                 StartCoroutine(primaryAgent.RunActions());
             });
-
     }
     public float GetTimerProgress()
     {
@@ -523,7 +672,7 @@ public class SpaceEncounterManager : MonoBehaviour,IPausable
         foreach (Agent agent in __agents.Values)
         {
             agent.ClearObservers();
-            Debug.Log("Registering Observers");
+            //Debug.Log("Registering Observers");
             foreach (SpaceEncounterObserverMapping mapping in gui_observers) 
             {
                 SpaceEncounterObserver observer = mapping.value;
