@@ -19,7 +19,7 @@ public class StandardData : MonoBehaviour
     private System.Random random = new System.Random(); // Create a Random instance
     protected string __statusLabel = "";
 
-    protected void SetStatusLabel(string newStatus)
+    protected virtual void SetStatusLabel(string newStatus)
     {
         __statusLabel = newStatus;
     }
@@ -30,13 +30,14 @@ public class StandardData : MonoBehaviour
 
     public virtual void  Refresh()
     {
+       
     }
-    public DictObjTable  GetRecords()
+    public virtual DictObjTable  GetRecords()
     {
         BeforeLoadData();     
         return __records;
     }
-    public bool AddToRecordField(string name,string field,object value,bool create=true,string keyfield="name")
+    public virtual bool AddToRecordField(string name,string field,object value,bool create=true,string keyfield="name")
     {
         object oldVal = GetRecordField( name,field);
         if (oldVal == null)
@@ -44,27 +45,27 @@ public class StandardData : MonoBehaviour
         return SetRecordField(name:name,field:field,value:(float)oldVal+(float)value,create:create,keyfield: keyfield);
     }
 
-    public bool SubtractFromRecordField(string name,string field,object value,bool create=true,string keyfield="name")
+    public virtual bool SubtractFromRecordField(string name,string field,object value,bool create=true,string keyfield="name")
     {
             object oldVal = GetRecordField( name,field);
             if (oldVal == null)
                 oldVal = 0f;
-            Debug.Log($"Doing subtract {((float)oldVal).ToString()} - {((float)value).ToString()}");
+            //Debug.Log($"Doing subtract {((float)oldVal).ToString()} - {((float)value).ToString()}");
             return SetRecordField(name,field,(float)oldVal-(float)value,create,keyfield);
     }
 
-    public int GetDataRevision()
+    public virtual  int GetDataRevision()
     {
         return __dataRevision;
     }
 
-    public bool ContainsRecord(string name)
+    public virtual  bool ContainsRecord(string name)
     {
         BeforeLoadData();     
         return __records.ContainsKey(name);
     }
 
-    public void UpdateDataRevision(int code)
+    public virtual void UpdateDataRevision(int code)
     {
         __dataRevision = random.Next(1, int.MaxValue); // Assign a new random number, avoiding zero
     }
@@ -83,7 +84,7 @@ public class StandardData : MonoBehaviour
         }
     }
 
-    public List<DictStrObj> ListFullRecords()
+    public virtual List<DictStrObj> ListFullRecords()
     {
         List<string> repoNameList = ListRecords(); // Simulated call for listing repos
         List<DictStrObj> repoList = new List<DictStrObj>();
@@ -130,7 +131,7 @@ public class StandardData : MonoBehaviour
         return null; // Repo not found
     }
 
-    public bool  ContainsKey (string name)
+    public virtual bool  ContainsKey (string name)
     {
         return __records.ContainsKey(name);
     }
@@ -175,7 +176,7 @@ public class StandardData : MonoBehaviour
         AfterSaveData();  
         return true;
     }
-    protected bool SetRecord(DictStrObj rec,string keyfield="name" )
+    public virtual bool SetRecord(DictStrObj rec,string keyfield="name" )
     {
         if (rec.ContainsKey(keyfield) == false)
         {
@@ -202,7 +203,7 @@ public class StandardData : MonoBehaviour
         AfterSaveData();
         return true;
     }
-    public void  SetRecords(DictObjTable records)
+    public virtual void  SetRecords(DictObjTable records)
     {
         __records = records;
         UpdateDataRevision(4);        

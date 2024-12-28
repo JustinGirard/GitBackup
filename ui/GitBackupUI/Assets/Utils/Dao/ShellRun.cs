@@ -9,9 +9,6 @@ using DictStrObj = System.Collections.Generic.Dictionary<string, object>;
 using DictObjTable = System.Collections.Generic.Dictionary<string, System.Collections.Generic.Dictionary<string, object>>;
 
 using System.Text;
-
-
-using System.IO;
 using UnityEngine;
 
 public static class ImageLoader
@@ -147,9 +144,19 @@ public class DJson
 
     // Example usage
 
-    private static void BuildJsonTreeString(object jsonObject, StringBuilder sb, int indentLevel,bool debug = false)
+    private static void BuildJsonTreeString(object jsonObjectIn, StringBuilder sb, int indentLevel,bool debug = false)
     {
         string indent = new string(' ', indentLevel * 4);
+        object jsonObject = jsonObjectIn;
+        if (jsonObjectIn is Dictionary<string, Dictionary<string, object>>)
+        {
+            jsonObject = new Dictionary<string, object>();
+            foreach(string key2 in ((Dictionary<string, Dictionary<string, object>>)jsonObjectIn).Keys)
+            {
+                ((Dictionary<string, object>)jsonObject)[key2] =  ((Dictionary<string, Dictionary<string, object>>)jsonObjectIn)[key2];
+            }
+        }
+
 
         if (jsonObject is Dictionary<string, object> dict)
         {

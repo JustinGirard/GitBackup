@@ -52,63 +52,10 @@ public static class Sema
     }
 }
 
-/*
 
-            EffectHandler.ShootBlasterAt(bolt:Resources.Load<GameObject>(PrefabPath.BoltPath),
-                                number:10f,
-                                velocity:1f,
-                                delay:0.2f,
-                                maxDistance:3f,
-                                target:unit2.transform.position);
-*/
 public static class EffectHandler
 {
-    /*
-    public static IEnumerator ShootBlasterAt(GameObject boltPrefab, int number,float velocity, float delay, float maxDistance,  Vector3 source,Vector3 target)
-    {
-        GameObject[] bolts = new GameObject[number];
-        Dictionary<GameObject, Vector3> boltVelocities = new Dictionary<GameObject, Vector3>();
-        Debug.Log("Starting Bolts");
 
-        // Spawn all bolts
-        for (int i = 0; i < number; i++)
-        {
-            bolts[i] = UnityEngine.Object.Instantiate(boltPrefab);
-            bolts[i].transform.position = source;
-            // Apply random deviation to the target
-            float deviation = 0f;
-            Vector3 randomizedTarget = target + new Vector3(
-                UnityEngine.Random.Range(-deviation, deviation),
-                UnityEngine.Random.Range(-deviation, deviation),
-                UnityEngine.Random.Range(-deviation, deviation)
-            );
-
-            // Calculate the velocity required to reach the target in timeDelta
-            Vector3 vel = (randomizedTarget - bolts[i].transform.position) / delay;
-            boltVelocities[bolts[i]] = vel;
-
-            yield return new WaitForSeconds(0.05f);
-            break;
-        }
-        Debug.Log("Created Bolts");
-        float effectDelay = delay - 0.05f*number;
-        if (effectDelay < 0f)
-            effectDelay = 0.2f;
-
-        yield return new WaitForSeconds(effectDelay); // Wait for all bolts to "travel"
-
-        // Cleanup bolts
-        
-        foreach (var bolt in bolts)
-        {
-            if (bolt != null)
-            {
-                UnityEngine.Object.Destroy(bolt);
-            }
-        }
-        Debug.Log("Cleaned Bolts");
-
-    }*/
     public static IEnumerator ShootMissileAt(GameObject missilePrefab, GameObject explosionPrefab, int number, float duration, float delay, float arcHeight, Vector3 source, Vector3 target)
     {
         for (int i = 0; i < number; i++)
@@ -129,6 +76,129 @@ public static class EffectHandler
         }
          yield return new WaitForSeconds(delay);
     }
+
+
+    /*
+    public static IEnumerator CreateShield(GameObject shieldPrefab, Vector3 source)
+    {
+        // Instantiate the shield prefab
+        GameObject shield = UnityEngine.Object.Instantiate(shieldPrefab);
+        shield.transform.position = source;
+
+        // Get the Renderer and create a material instance
+        Renderer shieldRenderer = shield.GetComponent<Renderer>();
+        if (shieldRenderer == null)
+        {
+            Debug.LogError("Shield prefab does not have a Renderer.");
+            yield break;
+        }
+        Material shieldMaterial = new Material(shieldRenderer.sharedMaterial);
+        shieldRenderer.material = shieldMaterial;
+
+        // Gradually increase transparency (fade-in)
+        Color color = shieldMaterial.color;
+        color.a = 0f;
+        shieldMaterial.color = color;
+        float fadeInDuration = 1.0f; // Time in seconds to reach full transparency
+        for (float t = 0; t < fadeInDuration; t += Time.deltaTime)
+        {
+            color.a = Mathf.Lerp(0f, 1f, t / fadeInDuration);
+            shieldMaterial.color = color;
+            yield return null;
+        }
+        // Ensure it reaches full transparency
+        color.a = 1f;
+        shieldMaterial.color = color;
+
+        // Wait for the shield to stay fully visible
+        float shieldDuration = 2.0f; // Duration in seconds to keep the shield visible
+        yield return new WaitForSeconds(shieldDuration);
+
+        // Gradually decrease transparency (fade-out)
+        float fadeOutDuration = 0.5f; // Time in seconds to reach no transparency
+        for (float t = 0; t < fadeOutDuration; t += Time.deltaTime)
+        {
+            color.a = Mathf.Lerp(1f, 0f, t / fadeOutDuration);
+            shieldMaterial.color = color;
+            yield return null;
+        }
+        // Ensure it is completely invisible
+        color.a = 0f;
+        shieldMaterial.color = color;
+
+        // Destroy the shield GameObject
+        UnityEngine.Object.Destroy(shield);
+    }*/
+
+    public static IEnumerator CreateShield(GameObject shieldPrefab, Vector3 source)
+    {
+        GameObject shield = InstantiateObject(shieldPrefab, source);
+        if (shield == null)
+        {
+            Debug.LogError("Failed to create shield prefab.");
+            yield break;
+        }
+
+        Material shieldMaterial = GetMaterialInstance(shield);
+        if (shieldMaterial == null)
+        {
+            Debug.LogError("Shield prefab does not have a valid Renderer.");
+            yield break;
+        }
+
+        float fadeInDuration = 0.25f;
+        yield return FadeMaterialAlpha(shieldMaterial, 0f, 1f, fadeInDuration);
+
+        float shieldDuration = 2.5f;
+        yield return new WaitForSeconds(shieldDuration);
+
+        float fadeOutDuration = 0.25f;
+        yield return FadeMaterialAlpha(shieldMaterial, 1f, 0f, fadeOutDuration);
+
+        UnityEngine.Object.Destroy(shield);
+    }
+
+    // Sub-Effect 1: Instantiate an object at a given position
+    private static GameObject InstantiateObject(GameObject prefab, Vector3 position)
+    {
+        if (prefab == null) return null;
+        GameObject instance = UnityEngine.Object.Instantiate(prefab);
+        instance.transform.position = position;
+        return instance;
+    }
+
+    // Sub-Effect 2: Get a material instance for the given GameObject
+    private static Material GetMaterialInstance(GameObject obj)
+    {
+        Renderer renderer = obj.GetComponent<Renderer>();
+        if (renderer == null) return null;
+
+        Material materialInstance = new Material(renderer.sharedMaterial);
+        renderer.material = materialInstance;
+        return materialInstance;
+    }
+
+    // Sub-Effect 3: Fade a material's alpha over time
+    private static IEnumerator FadeMaterialAlpha(Material material, float startAlpha, float endAlpha, float duration)
+    {
+        if (material == null) yield break;
+
+        Color color = material.color;
+        color.a = startAlpha;
+        material.color = color;
+
+        for (float t = 0; t < duration; t += Time.deltaTime)
+        {
+            color.a = Mathf.Lerp(startAlpha, endAlpha, t / duration);
+            material.color = color;
+            yield return null;
+        }
+
+        // Ensure final alpha
+        color.a = endAlpha;
+        material.color = color;
+    }
+
 
     private static IEnumerator MoveMissileWithArc(GameObject missile, GameObject explosionPrefab, Vector3 source, Vector3 target, float duration, float arcHeight)
     {
@@ -154,7 +224,7 @@ public static class EffectHandler
         // Ensure the missile reaches the target position and trigger explosion
         missile.transform.position = target;
         UnityEngine.Object.Destroy(missile);
-
+        /*
         // Explosion logic
         GameObject explodeeoooeee = UnityEngine.Object.Instantiate(explosionPrefab);
         explodeeoooeee.transform.position = target;
@@ -178,10 +248,39 @@ public static class EffectHandler
             yield return null;
         }
 
+        UnityEngine.Object.Destroy(explodeeoooeee);*/
+        CoroutineRunner.Instance.StartCoroutine(SingleExplosion( explosionPrefab,  target,  0.5f,  1f));
+
+    }
+    public static IEnumerator SingleExplosion(GameObject explosionPrefab, Vector3 target, float sizeSmall, float sizeLarge)
+    {
+        // Explosion logic
+        GameObject explodeeoooeee = UnityEngine.Object.Instantiate(explosionPrefab);
+        explodeeoooeee.transform.position = target;
+
+        Vector3 smalleee = new Vector3(0.1f, 0.1f, 0.1f) * sizeSmall;
+        Vector3 bigeee = new Vector3(1, 1, 1) * sizeLarge;
+        float elapsedTime = 0f;
+        float durationExplode = 0.7f;
+
+        Transform sphereChild = explodeeoooeee.transform.Find("Sphere");
+        Material explodeMaterial = sphereChild.GetComponent<Renderer>().material;
+        Color initialColor = explodeMaterial.color;
+
+        while (elapsedTime < durationExplode)
+        {
+            explodeeoooeee.transform.localScale = Vector3.Lerp(smalleee, bigeee, elapsedTime / durationExplode);
+            float alpha = Mathf.Lerp(1f, 0f, elapsedTime / durationExplode);
+            explodeMaterial.color = new Color(initialColor.r, initialColor.g, initialColor.b, alpha);
+
+            elapsedTime += Time.deltaTime;
+            yield return null;
+        }
+
         UnityEngine.Object.Destroy(explodeeoooeee);
     }
 
-    public static IEnumerator ShootBlasterAt(GameObject boltPrefab,GameObject explosionPrefab , int number, float duration, float delay, float maxDistance, Vector3 source, Vector3 target)
+    public static IEnumerator ShootBlasterAt(GameObject boltPrefab,GameObject explosionPrefab , int number, float duration, float delay, float maxDistance, Vector3 source, Vector3 target,float deviation)
     {
         for (int i = 0; i < number; i++)
         {
@@ -189,7 +288,6 @@ public static class EffectHandler
             bolt.transform.position = source;
 
             // Apply random deviation to the target
-            float deviation = 0.4f;
             // float dist =  1f + UnityEngine.Random.Range(0, deviation*2);
             Vector3 randomizedTarget = target + new Vector3(
                 UnityEngine.Random.Range(-deviation, deviation),

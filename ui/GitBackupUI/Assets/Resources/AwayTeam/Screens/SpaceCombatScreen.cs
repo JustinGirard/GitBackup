@@ -219,39 +219,25 @@ public class SpaceCombatScreen : SpaceEncounterObserver,IShowHide
 
 
 
-    private void HandleDynamicButtonInteraction(string buttonId, string eventId,bool within)
+    private void HandleDynamicButtonInteraction(string actionId, string eventId,bool within)
     {
-        //Debug.Log($"HandleDynamicButtonInteraction called: {buttonId}.{eventId} ({SpaceEncounterManager.GUICommands.Attack })");
-        string agent_id = "agent_1";
-        if (buttonId== SpaceEncounterManager.AgentActions.Attack && eventId == "MouseUp" && within == true)
-        {
-            //Debug.Log($"HandleDynamicButtonInteraction {buttonId}");
-            encounterManager.SetTargetAction(agent_id,buttonId);
-            //StartCoroutine(encounterManager.ProcessAgentAction(SpaceEncounterManager.AgentActions.Attack));
-        }
-        if (buttonId== SpaceEncounterManager.AgentActions.Missile && eventId == "MouseUp" && within == true)
-        {
-            encounterManager.SetTargetAction(agent_id,buttonId);
-            //Debug.Log($"HandleDynamicButtonInteraction {buttonId}");
-            //StartCoroutine(encounterManager.ProcessAgentAction(SpaceEncounterManager.AgentActions.Missile));
-        }
-        if (buttonId== SpaceEncounterManager.AgentActions.Shield && eventId == "MouseUp" && within == true)
-        {
-            //Debug.Log($"HandleDynamicButtonInteraction {buttonId}");
-            encounterManager.SetTargetAction(agent_id,buttonId);
-            //StartCoroutine(encounterManager.ProcessAgentAction(SpaceEncounterManager.AgentActions.Shield));
-        }
-
+        Agent playerAgent = encounterManager.GetPlayerAgent();
+        if(eventId != "MouseUp" || within == false )
+            return;
+        playerAgent.SetTargetAction(actionId);
     }
 
-    public override bool VisualizeEffect(string effect)
+    public override bool VisualizeEffect(string effect,GameObject onBehalfOf)
     {
         if (effect == SpaceEncounterManager.ObservableEffects.AttackOn)
-            StartCoroutine(eApplyPulseAndActivate(DynamicButtonID.Attack));          
+        {
+            StartCoroutine(eApplyPulseAndActivate(DynamicButtonID.Attack));
+        }          
         
         if (effect == SpaceEncounterManager.ObservableEffects.AttackOff)
+        {
             SetButtonState(DynamicButtonID.Attack,"inactive");   
-
+        }
         if (effect == SpaceEncounterManager.ObservableEffects.MissileOn)
             StartCoroutine(eApplyPulseAndActivate(DynamicButtonID.Missile));          
         
@@ -272,10 +258,35 @@ public class SpaceCombatScreen : SpaceEncounterObserver,IShowHide
 
         if (effect == SpaceEncounterManager.ObservableEffects.EncounterOverWon)
             navigationManager.NavigateTo("AT_RoundWon");
-
+        if (effect == SpaceEncounterManager.ObservableEffects.TimerTick)
+            StartCoroutine(eShowTimerUpdates());
         return true;
     }
+    private System.Collections.IEnumerator eShowTimerUpdates()
+    {
+        float prog = encounterManager.GetTimerProgress();
+        float progMax = encounterManager.GetTimerProgressMax();
+        //
+        GameObject buttonObject =  dynamicButton[DynamicButtonID.Attack].GetGameObject();
+        IShowProgress dc = buttonObject.GetComponent<IShowProgress>();
+        dc.SetProgressMax((int)progMax);
+        dc.SetProgress((int)prog);
+        
+        //
+        //
+        buttonObject =  dynamicButton[DynamicButtonID.Missile].GetGameObject();
+        dc = buttonObject.GetComponent<IShowProgress>();
+        dc.SetProgressMax((int)progMax);
+        dc.SetProgress((int)prog);
 
+        //
+        //
+        buttonObject =  dynamicButton[DynamicButtonID.Shield].GetGameObject();
+        dc = buttonObject.GetComponent<IShowProgress>();
+        dc.SetProgressMax((int)progMax);
+        dc.SetProgress((int)prog);
+        yield break;
+    }
 
     private System.Collections.IEnumerator eApplyPulseAndActivate(string buttonId)
     {
@@ -319,12 +330,13 @@ public class SpaceCombatScreen : SpaceEncounterObserver,IShowHide
     {
        
     }
+    private bool __doSetMaxProgressOnFirstRun = false;
 
     public void Show()
     {
         var root = uiDocument.rootVisualElement;
         root.style.display = DisplayStyle.Flex;
-        // dynamicButton[dynamicButtonEntry.key]
+        StartCoroutine(eShowTimerUpdates());        
         foreach (var key in dynamicButton.Keys)
         {
             //Debug.Log($"Showing {key}");
@@ -334,7 +346,6 @@ public class SpaceCombatScreen : SpaceEncounterObserver,IShowHide
         //UpdateUI(true);
         __doSetMaxProgressOnFirstRun = true;
     }
-    private bool __doSetMaxProgressOnFirstRun = false;
     public void Hide()
     {
         var root = uiDocument.rootVisualElement;
@@ -342,8 +353,7 @@ public class SpaceCombatScreen : SpaceEncounterObserver,IShowHide
 
         foreach (var key in dynamicButton.Keys)
         {
-            //Debug.Log($"Hiding {key}");
-            dynamicButton[key].GetGameObject().SetActive(true);
+            dynamicButton[key].GetGameObject().SetActive(false);
         }
     }
 
@@ -385,6 +395,8 @@ public class SpaceCombatScreen : SpaceEncounterObserver,IShowHide
             string cardId = encounterManager.GetAgentGUICardId(agentId);
             VisualElement card = uiDocument.rootVisualElement.Q<VisualElement>(cardId);
             ATResourceData resourceData = encounterManager.GetResourceObject(agentId);
+            if (resourceData == null)
+                Debug.LogError($"Have a null resource data for agentId:{agentId}");
             UpdateAgentFields(agentId,resourceData, card,setMaxProgress);
         }
     }
@@ -492,12 +504,7 @@ public class SpaceCombatScreen : SpaceEncounterObserver,IShowHide
     /// </summary>
     private void UpdateAgentFields(string agent,ATResourceData resourceData, VisualElement cardElement, bool setMaxProgress= false)
     {
-        if(setMaxProgress == true)
-            Debug.Log("Setting Max Progress!");
-        //if (resourceData.GetDataRevision() == __revisionData[agent] || setMaxProgress==false)
-        //{
-        //    return;
-        //}
+
         if (resourceData.GetDataRevision() == __revisionData[agent] && setMaxProgress==false)
         {
             return;
@@ -507,8 +514,8 @@ public class SpaceCombatScreen : SpaceEncounterObserver,IShowHide
         if (cardElement == null)
         {
             //Debug.LogError("No Card Element Linked Element");
-            if (setMaxProgress == true)
-                Debug.LogError($"setting: FAILED TO SET PROGRESS");            
+            //if (setMaxProgress == true)
+            //    Debug.LogError($"setting: FAILED TO SET PROGRESS");            
             return;
         }
         Dictionary<string,string> currentMapping= null; 
@@ -554,7 +561,7 @@ public class SpaceCombatScreen : SpaceEncounterObserver,IShowHide
                     // progressBar.SetProgressMax((int)1337);
                     if (setMaxProgress == true)
                     {
-                        Debug.Log($"setting: {agent_resource_prefix}{resourceName} = {resourceAmount.ToString()}");
+                        //Debug.Log($"setting: {agent_resource_prefix}{resourceName} = {resourceAmount.ToString()}");
                         progressBar.SetProgressMax((int)resourceAmount);   
                     }
                     //if(progressBar.GetProgressMax() == (int)1337)

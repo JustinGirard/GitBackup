@@ -46,6 +46,7 @@ public abstract class StandardDynamicControl : MonoBehaviour, IDynamicControl
     }
     protected virtual void Start()
     {
+        
         if (useCamera == true)
         {
 
@@ -76,6 +77,7 @@ public abstract class StandardDynamicControl : MonoBehaviour, IDynamicControl
             DynamicControlRenderer.Instance.RegisterButton(this);
 
         }
+        
         if (useInputSystem == true)
         {
 

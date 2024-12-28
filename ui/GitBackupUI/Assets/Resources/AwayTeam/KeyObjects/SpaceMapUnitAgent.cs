@@ -2,13 +2,26 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using System.Linq;
+
+[System.Serializable]
+public class ProjectileEmitter
+{
+    [SerializeField] 
+    public GameObject gameObject;
+
+    [SerializeField] 
+    public string name;
+}
 
 public class SpaceMapUnitAgent : MonoBehaviour, IPausable
 {
+    [SerializeField]
+    private List<ProjectileEmitter> projectileEmitters = new List<ProjectileEmitter>();
 
     // Private target variables
-    private Vector3 targetLookAt = new Vector3(0, 0, 10);
-    private Vector3 targetTravelTo = new Vector3(10, 0, 10);
+    private Vector3 targetLookAt;
+    private Vector3 targetTravelTo;
 
     // Public speed and smoothness settings
     public float rotationSpeed = 1.0f;
@@ -32,20 +45,54 @@ public class SpaceMapUnitAgent : MonoBehaviour, IPausable
     public float decelerationDistance = 1.0f; // Distance to start decelerating
     public float stopDistance = 0.05f; // Distance to snap to the target
     private Vector3 velocity = Vector3.zero;
+
+    [SerializeField]
     Transform targetTransform;
+    
+    [SerializeField]
     Transform mapMarker;
+    
     private LineRenderer lineRenderer; // Reference to the LineRenderer    
 
     private Vector3 rootTravelTo;
-    Vector3 rootLookAt;
-
-
+    private Vector3 rootLookAt;
 
     Rigidbody rb;
     SphereCollider detectionCollider;
     float perceptionRadius = 100f;
     float maxForce = 1f;
+    public List<ProjectileEmitter> GetEmitters()
+    {
+        return projectileEmitters;
+    }
 
+    public void SafeDestroy()
+    {
+        // Debug.Log($"DESTROYING MYSELF: {name}");
+        GameObject.Destroy(this.gameObject);
+    }
+    void OnDestroy()
+    {
+        // Debug.Log($"NOTIFICATION MYSELF: {name}");
+        EncounterSquad unit = GetComponentInParent<EncounterSquad>();
+        if( unit != null)
+            unit.NotifyDestroy(this.gameObject
+            );
+    }    
+
+    public ProjectileEmitter GetEmitter(string emitterName)
+    {
+        return projectileEmitters.FirstOrDefault(emitter => emitter.name == emitterName);
+    }
+    public List<int> GetEmitterIds()
+    {
+        List<int> ids = new List<int>();
+        for (int i = 0; i < projectileEmitters.Count; i++)
+        {
+            ids.Add(i);
+        }
+        return ids;
+    }
 
     private bool __is_running = false;
     public void Run()
@@ -62,49 +109,57 @@ public class SpaceMapUnitAgent : MonoBehaviour, IPausable
     {
         return __is_running;
     }    
+    public void SetMapMarkerTransform(Transform mapMarker)
+    {
+        this.mapMarker = mapMarker;
+    }
+    public void SetShipTransform(Transform targetTransform)
+    {
+        this.targetTransform = targetTransform;
+    }
 
     void Start()
     {
-        // Initialize the position and rotation
-        //targetTransform = transform;
-        targetTransform = transform.Find("Ship");
-        mapMarker = transform.Find("MapMarker");
-        mapHeight = -5f;
-        if (rootTravelTo == null)
-            rootTravelTo = new Vector3(-10f,-2f,12f);
-        if (rootLookAt == null)
-            rootLookAt = new Vector3(10f,0f,12f);
-
-        targetTransform.position = new Vector3(
-                rootTravelTo.x + UnityEngine.Random.Range(-2, 2f),
-                rootTravelTo.y + UnityEngine.Random.Range(-2f, 2f),
-                rootTravelTo.z  + UnityEngine.Random.Range(-1f, 1f)
-            );
-
-
-        //targetTransform.position = Vector3.zero;
-        targetTransform.rotation = Quaternion.identity;
-        //
-        //
-        //
-
-        lineRenderer = gameObject.AddComponent<LineRenderer>();
-        lineRenderer.startWidth = 0.03f; // Width of the line at the start
-        lineRenderer.endWidth = 0.03f;   // Width of the line at the end
-        lineRenderer.material = new Material(Shader.Find("Sprites/Default")); // Basic material
-        lineRenderer.startColor = Color.white; // Line start color
-        lineRenderer.endColor = Color.white;   // Line end color
-        lineRenderer.positionCount = 2;       // Line will connect two points
-        //SetupPhysics();
+        //rootTravelTo = new Vector3(-100,-100,-100);
     }
+    /*    
+            public class ProjectileEmitter
+            {
+                [SerializeField] 
+                public GameObject gameObject;
+
+                [SerializeField] 
+                public string name;
+            }
+    */
+    /*GameObject CreateCube(Vector3 position, Color debugColor)
+    {
+        // Create a cube
+        GameObject cube = GameObject.CreatePrimitive(PrimitiveType.Cube);
+
+        // Set position
+        cube.transform.position = position;
+        cube.transform.localScale = cube.transform.localScale*0.5f;
+        // Add a material and color it yellow
+        Renderer renderer = cube.GetComponent<Renderer>();
+        renderer.material = new Material(Shader.Find("Standard"));
+        renderer.material.color = debugColor;
+        return cube;
+    }*/    
     public bool SetGoalPosition(Vector3 goalPosition, bool immediate = false)
     {
+        //Debug.Break();
         rootTravelTo = goalPosition;
         if (immediate == true)
         {
-            if (targetTransform != null)
-                targetTransform.position = goalPosition;
+            //if (targetTransform != null)
+            targetTransform.position = goalPosition;
         }
+        //GameObject cube = CreateCube(rootTravelTo,Color.green);
+        //cube.transform.parent = this.gameObject.transform;   
+
+
+        //Debug.Break();
         return true;
 
     }
@@ -120,6 +175,8 @@ public class SpaceMapUnitAgent : MonoBehaviour, IPausable
 
     void Update()
     {
+        //Debug.Log()
+        //return;
         if (__is_running == false)
             return;
         timer += Time.deltaTime;
@@ -128,7 +185,7 @@ public class SpaceMapUnitAgent : MonoBehaviour, IPausable
         if (timer >= 1f + UnityEngine.Random.Range(0.2f, 0.7f))
         {
             timer = 0f; // Reset timer
-
+            
             // Generate random positions for look at and travel
             Vector3 randomLookAt = new Vector3(
                 rootLookAt.x + UnityEngine.Random.Range(-0.1f, 0.1f),
@@ -141,7 +198,8 @@ public class SpaceMapUnitAgent : MonoBehaviour, IPausable
                 rootTravelTo.y + UnityEngine.Random.Range(-4f, 4f)*driftScale,
                 rootTravelTo.z + UnityEngine.Random.Range(-1f, 1f)*driftScale
             );
-
+            //GameObject cube = CreateCube(rootTravelTo + new Vector3(0,-0.5f,0),Color.red);
+            //cube.transform.parent = this.gameObject.transform;                
             // Set the new targets using accessor methods
             SetLookAtTarget(randomLookAt);
             SetTravelTarget(randomTravelTo);
@@ -335,6 +393,7 @@ public class SpaceMapUnitAgent : MonoBehaviour, IPausable
 
     private void UpdateMapMarker()
     {
+        mapHeight = -5f;
         if (mapMarker != null)
         {
             // Clamp MapMarker to ship's XZ coordinates with constant Y
