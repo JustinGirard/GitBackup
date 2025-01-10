@@ -1,4 +1,5 @@
 using UnityEngine;
+/*
 public class CoroutineRunner : MonoBehaviour
 {
     public static CoroutineRunner Instance { get; private set; }
@@ -9,4 +10,4 @@ public class CoroutineRunner : MonoBehaviour
         if (Instance == null) Instance = this;
         else Destroy(gameObject);
     }
-}
+}*/

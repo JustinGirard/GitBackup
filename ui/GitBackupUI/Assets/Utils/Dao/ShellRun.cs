@@ -204,13 +204,26 @@ public class DJson
     public static Dictionary<string, object> Parse(string json)
     {
         // Deserialize the JSON to a JObject first
-        var jsonObject = JsonConvert.DeserializeObject<JObject>(json);
+        JObject jsonObject = JsonConvert.DeserializeObject<JObject>(json);
 
         // Recursively convert JObject to a Dictionary
-        return ParseJObject(jsonObject);
+        return ParseJObjectDict(jsonObject);
     }
+    public static object ParseGeneric(string json)
+    {
+        var jsonObject = JsonConvert.DeserializeObject(json);
+        if (jsonObject is JObject nestedObject)
+        {
+            return ParseJObjectDict(nestedObject);
+        }
+        else if (jsonObject is JArray array)
+        {
+            return ParseJObjectList(array);
+        }        
+        return null;
+    }    
 
-    private static Dictionary<string, object> ParseJObject(JObject jObject)
+    private static Dictionary<string, object> ParseJObjectDict(JObject jObject)
     {
         var dictionary = new Dictionary<string, object>();
 
@@ -221,12 +234,12 @@ public class DJson
             if (value is JObject nestedObject)
             {
                 // Recursively convert JObject to Dictionary
-                dictionary[property.Name] = ParseJObject(nestedObject);
+                dictionary[property.Name] = ParseJObjectDict(nestedObject);
             }
             else if (value is JArray array)
             {
                 // Convert JArray to a List of objects
-                dictionary[property.Name] = ParseJArray(array);
+                dictionary[property.Name] = ParseJObjectList(array);
             }
             else
             {
@@ -238,7 +251,9 @@ public class DJson
         return dictionary;
     }
 
-    private static List<object> ParseJArray(JArray array)
+
+
+    private static List<object> ParseJObjectList(JArray array)
     {
         var list = new List<object>();
 
@@ -247,12 +262,12 @@ public class DJson
             if (item is JObject nestedObject)
             {
                 // Recursively convert JObject to Dictionary
-                list.Add(ParseJObject(nestedObject));
+                list.Add(ParseJObjectDict(nestedObject));
             }
             else if (item is JArray nestedArray)
             {
                 // Recursively convert nested JArray to List
-                list.Add(ParseJArray(nestedArray));
+                list.Add(ParseJObjectList(nestedArray));
             }
             else
             {

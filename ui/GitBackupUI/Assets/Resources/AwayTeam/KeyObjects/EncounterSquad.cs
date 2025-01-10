@@ -20,7 +20,7 @@ public class EncounterSquad : MonoBehaviour, IPausable
     {
         foreach(GameObject spaceMapUnit in spaceMapUnits)
         {
-            SpaceMapUnitAgent su = spaceMapUnit.GetComponent<SpaceMapUnitAgent>(); 
+            SpaceMapUnitAgent su = spaceMapUnit.GetComponentInChildren<SpaceMapUnitAgent>(); 
             su.Run();
         }
 
@@ -30,7 +30,7 @@ public class EncounterSquad : MonoBehaviour, IPausable
     {
         foreach(GameObject spaceMapUnit in spaceMapUnits)
         {
-            SpaceMapUnitAgent su = spaceMapUnit.GetComponent<SpaceMapUnitAgent>();
+            SpaceMapUnitAgent su = spaceMapUnit.GetComponentInChildren<SpaceMapUnitAgent>();
             su.Pause();
         }
         __is_running = false;
@@ -41,7 +41,7 @@ public class EncounterSquad : MonoBehaviour, IPausable
         List<SpaceMapUnitAgent> suses = new List<SpaceMapUnitAgent>();
         foreach(GameObject spaceMapUnit in spaceMapUnits)
         {
-            SpaceMapUnitAgent su = spaceMapUnit.GetComponent<SpaceMapUnitAgent>();
+            SpaceMapUnitAgent su = spaceMapUnit.GetComponentInChildren<SpaceMapUnitAgent>();
             suses.Add(su);
         }
         return suses;
@@ -96,7 +96,7 @@ public class EncounterSquad : MonoBehaviour, IPausable
         for (int i = 0; i < spaceMapUnits.Count; i++) // Support up to 5 units in the formation
         {
             Vector3 goalPosition = formation.GetPosition(i) + transform.position;
-            SpaceMapUnitAgent positionable = spaceMapUnits[i].GetComponent<SpaceMapUnitAgent>(); // Assuming SpaceMapUnit handles its position
+            SpaceMapUnitAgent positionable = spaceMapUnits[i].GetComponentInChildren<SpaceMapUnitAgent>(); // Assuming SpaceMapUnit handles its position
             if (positionable != null && goalPosition != null)
             {
                 positionable.SetGoalPosition(goalPosition,immediate:true);            
@@ -170,11 +170,12 @@ public class EncounterSquad : MonoBehaviour, IPausable
             {
                 Debug.LogError("Could not extract goal position");
             }
-            SpaceMapUnitAgent positionable = spaceMapUnit.GetComponent<SpaceMapUnitAgent>(); // Assuming SpaceMapUnit handles its position
+            SpaceMapUnitAgent positionable = spaceMapUnit.GetComponentInChildren<SpaceMapUnitAgent>(); // Assuming SpaceMapUnit handles its position
             if (positionable != null && goalPosition != null)
             {
                 positionable.SetGoalPosition(goalPosition,immediate:true);
-            
+                //Debug.Log("SetRootLookAt Setting Root Angle now");
+                positionable.SetRootLookAt(new Vector3(0,100,0),true);
             }
             else
             {

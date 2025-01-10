@@ -1,0 +1,210 @@
+using System.Collections.Generic;
+using System.Runtime.InteropServices.WindowsRuntime;
+using UnityEditor.PackageManager;
+using UnityEngine;
+using UnityEngine.EventSystems;
+using UnityEngine.UIElements;
+using System;
+
+public interface ICommandReceiver
+{
+    void OnCommandReceived(string commandId, Vector2 mousePosition);
+    GameObject GetGameObject();
+}
+
+public class GeneralInputManager : MonoBehaviour
+{
+    private static GeneralInputManager __instance;
+    public static GeneralInputManager Instance(){
+        return __instance;
+    }
+    public class Command
+    {
+        public static readonly List<string> all = new List<string>
+        {
+            primary_down,
+            primary_up,
+            primary_move,
+            secondary_down,
+            secondary_up,
+            secondary_move,
+            cancel
+        };
+
+
+        public const string primary_down = "primary_down";
+        public const string primary_up = "primary_up";
+        public const string primary_move = "primary_move";
+        public const string secondary_down = "secondary_down";
+        public const string secondary_up = "secondary_up";
+        public const string secondary_move = "secondary_move";
+        public const string cancel = "cancel";
+    }
+    [SerializeField]
+    public Vector2 lastMousePosition;
+    private List<ICommandReceiver> observers = new List<ICommandReceiver>();
+    public Camera viewportCamera; // Camera for raycasting
+    public bool __debugMode = false;
+    public List<string> transparentGameObjects = new List<string> { "uiElement.SystemPanelSettings", "uidoc.AT_SpaceCombatEncounterScreen", "uidoc.element.card-status" };
+    public Camera GetCamera(){
+
+        return viewportCamera;
+    }
+    
+    class CommandResult
+    {
+        public bool active;
+        public Vector2 position;
+
+        public CommandResult(bool isActive, Vector2 pos)
+        {
+            active = isActive;
+            position = pos;
+        }
+    }
+
+    private Dictionary<string, Func<CommandResult>> commandBindings;
+
+    void Awake()
+    {
+        __instance = this;
+        commandBindings = new Dictionary<string, Func<CommandResult>>
+        {
+            { Command.primary_down, () => Input.GetMouseButtonDown(0) ? new CommandResult(true, Input.mousePosition) : new CommandResult(false,  Input.mousePosition) },
+            { Command.primary_up, () => Input.GetMouseButtonUp(0) ? new CommandResult(true, Input.mousePosition) : new CommandResult(false,  Input.mousePosition) },
+            { Command.primary_move, () => new CommandResult(true, Input.mousePosition)},
+            { Command.secondary_down, () => Input.GetMouseButtonDown(1) ? new CommandResult(true, Input.mousePosition) : new CommandResult(false,Input.mousePosition) },
+            { Command.secondary_up, () => Input.GetMouseButtonUp(1) ? new CommandResult(true, Input.mousePosition) : new CommandResult(false,Input.mousePosition) },
+            { Command.secondary_move, () => new CommandResult(true, Input.mousePosition)},
+            { Command.cancel, () => Input.GetKeyDown(KeyCode.Escape) ? new CommandResult(true, Input.mousePosition) : new CommandResult(false, Input.mousePosition) }
+        };
+    }
+    void Start()
+    {
+        lastMousePosition = new Vector2();
+    }
+
+    void Update()
+    {
+        HandleDevices();
+    }
+
+    public void RegisterObserver(ICommandReceiver observer)
+    {
+        if (!observers.Contains(observer))
+        {
+            observers.Add(observer);
+        }
+    }
+
+    public void UnregisterObserver(ICommandReceiver observer)
+    {
+        observers.Remove(observer);
+    }
+
+
+
+    public (bool, Vector3) PollCommandStatus(string command)
+    {
+        if (!Command.all.Contains(command))
+        {
+            Debug.LogError($"Request for illegal command {command}");
+            return (false, Vector3.zero);
+        }
+
+        if (commandBindings.TryGetValue(command, out Func<CommandResult> func))
+        {
+            CommandResult result = func.Invoke();
+            return (result.active,result.position);
+        }
+        else
+            Debug.LogError($"Request for illegal commandBindings:{command}");
+
+        return (false, Vector3.zero);
+    }    
+    private void HandleDevices()
+    {
+        Vector2 mousePosition = Input.mousePosition;
+        foreach (var observer in observers)
+        {
+            if (__debugMode == true && Vector2.Distance(mousePosition, lastMousePosition) > 0.01f)
+            {
+                Debug.Log($@"--- Investigating pos to  {observer.GetGameObject().name}: {mousePosition}
+                - Distance:{ Vector2.Distance(mousePosition, lastMousePosition) > 0.01f}
+                - PointerActive:{IsPointerOverUIDocument()}
+                ");
+            }
+            if (Input.GetMouseButtonDown(0) && !IsPointerOverUIDocument())
+            {
+                observer.OnCommandReceived(Command.primary_down,mousePosition);
+            }
+            else if (Input.GetMouseButtonUp(0) && !IsPointerOverUIDocument())
+            {
+                observer.OnCommandReceived(Command.primary_up,mousePosition);
+            }
+            else if (Input.GetMouseButtonDown(1) && !IsPointerOverUIDocument())
+            {
+                observer.OnCommandReceived(Command.secondary_down,mousePosition);
+            }
+            else if (Input.GetMouseButtonUp(1) && !IsPointerOverUIDocument())
+            {
+                observer.OnCommandReceived(Command.secondary_up,mousePosition);
+            }
+            else if (!IsPointerOverUIDocument() && Vector2.Distance(mousePosition, lastMousePosition) > 0.01f)
+            {
+                if (__debugMode == true)
+                    Debug.Log($"--- Dispatching pos to  {observer.GetGameObject().name}: {mousePosition}");
+
+                observer.OnCommandReceived(Command.primary_move, mousePosition);
+                observer.OnCommandReceived(Command.secondary_move, mousePosition);
+            }
+            if (Input.GetKeyDown(KeyCode.Escape))
+            {
+                observer.OnCommandReceived(Command.cancel, mousePosition); // Pass empty Vector2 or adjust as needed
+            }            
+        }
+        lastMousePosition = mousePosition;
+    }
+
+    /// <summary>
+    /// Checks if the mouse is over a UI Toolkit element.
+    /// </summary>
+    private bool IsPointerOverUIDocument()
+    {
+        List<string> collidedNames = new List<string>();
+        Vector2 mousePosition = Input.mousePosition;
+        var uiDocs = FindObjectsOfType<UIDocument>();
+
+        foreach (var uiDoc in uiDocs)
+        {
+            if (!uiDoc.gameObject.activeInHierarchy || uiDoc.rootVisualElement.resolvedStyle.display == DisplayStyle.None)
+                continue;
+
+            var panel = uiDoc.rootVisualElement.panel;
+            if (panel != null)
+            {
+                Vector2 localMousePos = uiDoc.rootVisualElement.WorldToLocal(mousePosition);
+                VisualElement hoveredElement = panel.Pick(localMousePos);
+
+                if (hoveredElement != null && hoveredElement.name.Length > 0)
+                {
+                    collidedNames.Add("uidoc.element." + hoveredElement.name);
+                }
+                collidedNames.Add("uidoc." + uiDoc.gameObject.name);
+            }
+        }
+
+        collidedNames.RemoveAll(name => transparentGameObjects.Contains(name));
+
+        if (__debugMode && collidedNames.Count > 0)
+        {
+            Debug.Log("________________________________________");
+            foreach (string uiName in collidedNames)
+            {
+                Debug.Log("Collided with " + uiName);
+            }
+        }
+
+        return collidedNames.Count > 0;
+    }
+}

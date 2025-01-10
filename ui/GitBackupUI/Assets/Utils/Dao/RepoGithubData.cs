@@ -156,10 +156,27 @@ public class RepoGithubData : StandardData
 
             Debug.Log("LOADING REMOTE REPOS");
             Debug.Log((string)rawJsonString);
-            List<object> jsonObj = (List<object> )JsonParser.ParseJsonObjects((string)rawJsonString);
-            string jsonString = JsonConvert.SerializeObject(jsonObj, Formatting.Indented);
-            Debug.Log(jsonString);
-            if (jsonObj.Count <= 0)
+            //List<object> jsonObj = (List<object> )JsonParser.ParseJsonObjects((string)rawJsonString);
+            //List<object> jsonObj = (List<object> )DJson.ParseGeneric((string)rawJsonString);
+            var jsonData = DJson.ParseGeneric((string)rawJsonString);
+
+            string jsonString = JsonConvert.SerializeObject(jsonData, Formatting.Indented);
+            if ( jsonData is Dictionary<string,object>)
+            {
+                Debug.LogWarning(" Got an invalid object back from  github");
+                Debug.Log(jsonString);
+                NavigationManager navInst = navigatorObject.GetComponent<NavigationManager>();    
+                navInst.NotifyError($"Critical: Could not load repositories due to error:{jsonString}");
+                return;
+                /*
+                navInst.NavigateToWithRecord(
+                                    "NotificationScreen",
+                                    new DictStrObj{{"message",$"Could not load repositories due to error:{jsonString}"}},
+                                    false);*/
+
+            }
+            List<object> jsonObj = (List<object>)jsonData;
+            if ((jsonObj as List<object>).Count <= 0)
             {
                 Debug.Log("NO REPOS LOADED FROM A QUERY. COULD BE FINISHED?");
                 return;

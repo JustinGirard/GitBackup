@@ -97,7 +97,6 @@ public class SpaceMapUnitAgent : MonoBehaviour, IPausable
     private bool __is_running = false;
     public void Run()
     {
-
         __is_running = true;
     }
     public void Pause()
@@ -122,38 +121,19 @@ public class SpaceMapUnitAgent : MonoBehaviour, IPausable
     {
         //rootTravelTo = new Vector3(-100,-100,-100);
     }
-    /*    
-            public class ProjectileEmitter
-            {
-                [SerializeField] 
-                public GameObject gameObject;
-
-                [SerializeField] 
-                public string name;
-            }
-    */
-    /*GameObject CreateCube(Vector3 position, Color debugColor)
-    {
-        // Create a cube
-        GameObject cube = GameObject.CreatePrimitive(PrimitiveType.Cube);
-
-        // Set position
-        cube.transform.position = position;
-        cube.transform.localScale = cube.transform.localScale*0.5f;
-        // Add a material and color it yellow
-        Renderer renderer = cube.GetComponent<Renderer>();
-        renderer.material = new Material(Shader.Find("Standard"));
-        renderer.material.color = debugColor;
-        return cube;
-    }*/    
+    
     public bool SetGoalPosition(Vector3 goalPosition, bool immediate = false)
     {
+        if (targetTransform == null)
+        {
+            Debug.LogWarning("SetGoalPosition has null targetTransform ");
+            return false;
+        }
         //Debug.Break();
         rootTravelTo = goalPosition;
         if (immediate == true)
         {
-            //if (targetTransform != null)
-            targetTransform.position = goalPosition;
+                targetTransform.position = goalPosition;
         }
         //GameObject cube = CreateCube(rootTravelTo,Color.green);
         //cube.transform.parent = this.gameObject.transform;   
@@ -165,6 +145,12 @@ public class SpaceMapUnitAgent : MonoBehaviour, IPausable
     }
     private void UpdateLineRenderer()
     {
+        if (targetTransform == null)
+        {
+            Debug.LogWarning("UpdateLineRenderer has null targetTransform ");
+            return;
+        }
+
         if (lineRenderer != null && mapMarker != null && targetTransform != null)
         {
             // Set the positions of the line
@@ -186,23 +172,14 @@ public class SpaceMapUnitAgent : MonoBehaviour, IPausable
         {
             timer = 0f; // Reset timer
             
-            // Generate random positions for look at and travel
-            Vector3 randomLookAt = new Vector3(
-                rootLookAt.x + UnityEngine.Random.Range(-0.1f, 0.1f),
-                rootLookAt.y + UnityEngine.Random.Range(-0.1f, 0.1f),
-                rootLookAt.x + UnityEngine.Random.Range(-0.1f, 0.1f)
-            );
 
             Vector3 randomTravelTo = new Vector3(
                 rootTravelTo.x + UnityEngine.Random.Range(-2, 2f)*driftScale,
                 rootTravelTo.y + UnityEngine.Random.Range(-4f, 4f)*driftScale,
                 rootTravelTo.z + UnityEngine.Random.Range(-1f, 1f)*driftScale
             );
-            //GameObject cube = CreateCube(rootTravelTo + new Vector3(0,-0.5f,0),Color.red);
-            //cube.transform.parent = this.gameObject.transform;                
-            // Set the new targets using accessor methods
-            SetLookAtTarget(randomLookAt);
             SetTravelTarget(randomTravelTo);
+            SetLookAtTarget(rootLookAt);
         }
 
         UpdateDampeners();
@@ -211,9 +188,19 @@ public class SpaceMapUnitAgent : MonoBehaviour, IPausable
         UpdateMapMarker();
         UpdateLineRenderer();                
     }
-
     // Public accessors to set targets and reset dampeners
-    public void SetLookAtTarget(Vector3 newTargetLookAt)
+    public void SetRootLookAt(Vector3 newTargetLookAt,bool immediate = false)
+    {
+        //Debug.Log($"Setting new look at for {this.name}");
+        rootLookAt = newTargetLookAt;
+        if (immediate == true)
+        {
+            targetLookAt = rootLookAt;
+            this.transform.LookAt(newTargetLookAt);
+        }
+    }
+    // Public accessors to set targets and reset dampeners
+    private void SetLookAtTarget(Vector3 newTargetLookAt)
     {
         targetLookAt = newTargetLookAt;
         if (lookAtDampener >= 0.9f)
@@ -236,6 +223,12 @@ public class SpaceMapUnitAgent : MonoBehaviour, IPausable
 
     private void SmoothLookAt()
     {
+        if (targetTransform == null)
+        {
+            Debug.LogWarning("SmoothLookAt has null targetTransform ");
+            return;
+        }
+
         // Calculate the target direction
         Vector3 direction = targetLookAt - targetTransform.position;
         if (direction != Vector3.zero)
@@ -249,42 +242,15 @@ public class SpaceMapUnitAgent : MonoBehaviour, IPausable
             );
         }
     }
-    /*
+   
+
     private void SmoothTravel()
     {
-        Vector3 direction = targetTravelTo - targetTransform.position;
-        float distance = direction.magnitude;
-
-        direction.Normalize();
-
-        // Determine the target speed based on distance
-        float targetSpeed = maxTravelSpeed;
-
-        if (distance < decelerationDistance)
+        if (targetTransform == null)
         {
-            targetSpeed = Mathf.Lerp(0, maxTravelSpeed, distance / decelerationDistance);
-        }
-        velocity = targetSpeed*direction;
-
-        // Apply velocity
-        targetTransform.position += velocity * Time.deltaTime;
-        //targetTransform.
-        //Vector3 separation = CalculateSeparation();
-        //Vector3 steeringForce = separation*4f;
-        //steeringForce = Vector3.ClampMagnitude(steeringForce, maxForce);
-
-        // Apply forces
-        // Update velocity
-        //velocity = Vector3.MoveTowards(velocity, direction * targetSpeed, acceleration * Time.deltaTime);
-        //velocity = new Vector3(0f,0f,0f);
-        //velocity +=   steeringForce * Time.deltaTime;
-        //targetTransform.position += velocity * Time.deltaTime;
-
-
-    }    */
-
-    private void SmoothTravel()
-    {
+            Debug.LogWarning("SmoothTravel has null targetTransform ");
+            return;
+        }        
         Vector3 direction = targetTravelTo - targetTransform.position;
         float distance = direction.magnitude;
 
@@ -305,9 +271,10 @@ public class SpaceMapUnitAgent : MonoBehaviour, IPausable
         targetTransform.position += velocity * Time.deltaTime;
 
     }    
-
+    /*
     private Vector3 CalculateSeparation()
     {
+        
         Vector3 separationForce = Vector3.zero;
         Collider[] neighbors = Physics.OverlapSphere(targetTransform.position, perceptionRadius);
 
@@ -327,29 +294,9 @@ public class SpaceMapUnitAgent : MonoBehaviour, IPausable
             }
         }
         return separationForce.normalized * maxForce;
-    }    
+    }
+    */
 
-/*
-    private void SetupPhysics()
-    {
-        // Add Rigidbody if not already attached
-        rb = GetComponent<Rigidbody>();
-        if (rb == null)
-        {
-            rb = gameObject.AddComponent<Rigidbody>();
-        }
-        rb.useGravity = false; // Disable gravity
-        rb.isKinematic = false; // Allow physics interaction
-
-        // Add Sphere Collider for detection
-        detectionCollider = GetComponent<SphereCollider>();
-        if (detectionCollider == null)
-        {
-            detectionCollider = gameObject.AddComponent<SphereCollider>();
-        }
-        detectionCollider.isTrigger = true; // Set as trigger for detection
-        detectionCollider.radius = perceptionRadius; // Set radius to double the size of the ship
-    }    */
     private void SetupPhysics()
     {
         // Add Rigidbody if not already attached
@@ -378,6 +325,11 @@ public class SpaceMapUnitAgent : MonoBehaviour, IPausable
 
     private void OnDrawGizmos()
     {
+        if (targetTransform == null)
+        {
+            Debug.LogWarning("OnDrawGizmos has null targetTransform ");
+            return;
+        }           
         // Draw gizmos to visualize target positions
         Gizmos.color = Color.red;
         Gizmos.DrawSphere(targetLookAt, 0.5f); // LookAt target
@@ -385,7 +337,6 @@ public class SpaceMapUnitAgent : MonoBehaviour, IPausable
         Gizmos.DrawSphere(targetTravelTo, 0.5f); // TravelTo target
         Gizmos.color = Color.blue;
         Gizmos.DrawSphere(rootTravelTo, 0.5f); // TravelTo target
-
         Gizmos.color = Color.green;
         Gizmos.DrawLine(transform.position, targetTravelTo);
 
@@ -393,6 +344,11 @@ public class SpaceMapUnitAgent : MonoBehaviour, IPausable
 
     private void UpdateMapMarker()
     {
+        if (targetTransform == null)
+        {
+            Debug.LogWarning("UpdateMapMarker has null targetTransform ");
+            return;
+        }           
         mapHeight = -5f;
         if (mapMarker != null)
         {
@@ -403,109 +359,3 @@ public class SpaceMapUnitAgent : MonoBehaviour, IPausable
     }
 
 }
-
-/*
-using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
-
-public class SpaceMapUnitAgent : MonoBehaviour
-{
-    // Private target variables
-    private Vector3 targetLookAt = new Vector3(0, 0, 10);
-    private Vector3 targetTravelTo = new Vector3(10, 0, 10);
-
-    // Public speed and smoothness settings
-    public float rotationSpeed = 1.0f;
-    public float travelSpeed = 0.5f;
-    public float maxForce = 10.0f; // Maximum steering force
-    public float perceptionRadius = 10.0f; // Detection range for other ships
-    public float maxSpeed = 5.0f; // Maximum speed
-
-    private Rigidbody rb; // Rigidbody for physics-based movement
-    private SphereCollider detectionCollider; // Sphere collider for neighbor detection
-    private Vector3 velocity;
-
-    void Start()
-    {
-        // Initialize components
-        SetupPhysics();
-    }
-
-    void Update()
-    {
-        // Calculate movement forces
-        Vector3 separation = CalculateSeparation();
-        Vector3 seek = Seek(targetTravelTo);
-
-        // Combine forces
-        Vector3 force = separation + seek;
-        force = Vector3.ClampMagnitude(force, maxForce);
-
-        // Apply force to Rigidbody
-        rb.AddForce(force);
-
-        // Rotate to face movement direction
-        if (rb.velocity.sqrMagnitude > 0.01f)
-        {
-            Quaternion targetRotation = Quaternion.LookRotation(rb.velocity.normalized);
-            rb.rotation = Quaternion.Lerp(rb.rotation, targetRotation, Time.deltaTime * rotationSpeed);
-        }
-    }
-
-    private void SetupPhysics()
-    {
-        // Add Rigidbody if not already attached
-        rb = GetComponent<Rigidbody>();
-        if (rb == null)
-        {
-            rb = gameObject.AddComponent<Rigidbody>();
-        }
-        rb.useGravity = false; // Disable gravity
-        rb.isKinematic = false; // Allow physics interaction
-
-        // Add Sphere Collider for detection
-        detectionCollider = GetComponent<SphereCollider>();
-        if (detectionCollider == null)
-        {
-            detectionCollider = gameObject.AddComponent<SphereCollider>();
-        }
-        detectionCollider.isTrigger = true; // Set as trigger for detection
-        detectionCollider.radius = perceptionRadius; // Set radius to double the size of the ship
-    }
-
-    private Vector3 Seek(Vector3 target)
-    {
-        // Calculate desired velocity to the target
-        Vector3 desired = target - transform.position;
-        desired = desired.normalized * maxSpeed;
-
-        // Calculate steering force
-        return desired - rb.velocity;
-    }
-
-    private Vector3 CalculateSeparation()
-    {
-        Vector3 separationForce = Vector3.zero;
-        Collider[] neighbors = Physics.OverlapSphere(transform.position, perceptionRadius);
-
-        foreach (Collider neighbor in neighbors)
-        {
-            if (neighbor.gameObject != gameObject && neighbor.CompareTag("Vehicle"))
-            {
-                // Calculate direction away from the neighbor
-                Vector3 difference = transform.position - neighbor.transform.position;
-                float distance = difference.magnitude;
-
-                // Add force inversely proportional to the distance
-                if (distance > 0)
-                {
-                    separationForce += difference.normalized / distance;
-                }
-            }
-        }
-
-        return separationForce.normalized * maxForce;
-    }
-}
-*/

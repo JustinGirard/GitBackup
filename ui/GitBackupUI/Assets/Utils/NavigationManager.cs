@@ -30,6 +30,8 @@ public class NavigationManager : MonoBehaviour
         Debug.Log("Calling Notification Error");
 
         InitDataOnto("NotificationScreen", dataframe);
+        NavigatorSetAction("NotificationScreen", "OK", () =>{});
+        NavigatorSetAction("NotificationScreen", "Cancel",  () =>{});
         NavigateTo("NotificationScreen", hideAll);
 
     }
@@ -153,6 +155,14 @@ public class NavigationManager : MonoBehaviour
     {
         InitDataOnto(objectName, dataframe);
         NavigateTo(objectName, hideAll);
+    }
+    public void ShowErrorPopup(string message, bool hideAll=false)
+    {
+        NavigateToWithRecord(
+                    "NotificationScreen",
+                    new DictStrObj{{"message",message}},
+                    hideAll);
+
     }
 
     // Method to hide all UIDocument descendants

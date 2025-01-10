@@ -53,7 +53,7 @@ public class NotificationScreen : MonoBehaviour, NavigationManager.ICanInitalize
         newBtnOk.text = btnOk.text;
         okParent.Insert(okParent.IndexOf(btnOk), newBtnOk); // Insert new button in the same place
         okParent.Remove(btnOk); // Remove the old button
-
+        //SetAction("OK", action)
         // Replace the Cancel button (The only way to purge events, apparently)
         VisualElement cancelParent = btnCancel.parent;
         var newBtnCancel = new Button();
@@ -65,12 +65,14 @@ public class NotificationScreen : MonoBehaviour, NavigationManager.ICanInitalize
 
     }
     public void DoOK(ClickEvent evt, System.Action action) {
+        Debug.Log("Running OK");
         action.Invoke();
         var root = GetComponent<UIDocument>().rootVisualElement;
         root.style.display = DisplayStyle.None;
     }
     public void DoCancel(ClickEvent evt, System.Action action)
     {
+        Debug.Log("Running Cancel");
         action.Invoke();
         var root = GetComponent<UIDocument>().rootVisualElement;
         root.style.display = DisplayStyle.None;

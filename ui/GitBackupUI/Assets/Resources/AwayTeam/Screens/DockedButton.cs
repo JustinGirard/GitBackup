@@ -80,7 +80,6 @@ public abstract class StandardDynamicControl : MonoBehaviour, IDynamicControl
         
         if (useInputSystem == true)
         {
-
             action01 = new InputAction(name: "do_action_01", type: InputActionType.Button);
             action01.AddBinding("<Mouse>/rightButton");
             action01.Enable();
@@ -128,6 +127,7 @@ public abstract class StandardDynamicControl : MonoBehaviour, IDynamicControl
 
     public virtual void HandleInputAction(object action, InputActionChange change)
     {
+        /*
         if (action is InputAction inputAction && inputAction.name == "do_action_01")
         {
             if (inputAction.phase == InputActionPhase.Started) // Key down
@@ -136,9 +136,10 @@ public abstract class StandardDynamicControl : MonoBehaviour, IDynamicControl
             }
             else if (inputAction.phase == InputActionPhase.Canceled) // Key up
             {
+                Debug.Log($"Clicking! {name}");
                 OnButtonInteracted?.Invoke(GetCommandId(), "MouseUp", true);
             }
-        }
+        }*/
     }
 
     // Abstract methods to be implemented by derived classes

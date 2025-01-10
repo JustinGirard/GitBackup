@@ -33,7 +33,16 @@ public class ResourceTypes {
 
 public class ATResourceData : StandardData
 {
+    
+    public virtual void RefreshResources(){}
+    public virtual void Lock(){}
+    public virtual void Unlock(){}
+    public virtual void AddSubResource(string name, ATResourceData subResource){}
+    public virtual Dictionary<string,ATResourceData> GetSubResources(){ return null;}
+    public virtual void RefreshResources(bool doDebug = false){}
 
+    
+    // resources.AddSubResource(unit.name,unitResourceData);
     public static Dictionary<string, float> AddDeltas(Dictionary<string, float> dict1, Dictionary<string, float> dict2)
     {
         return dict1.Keys.Union(dict2.Keys)

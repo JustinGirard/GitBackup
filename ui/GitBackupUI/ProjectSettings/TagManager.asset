@@ -3,7 +3,13 @@
 --- !u!78 &1
 TagManager:
   serializedVersion: 2
-  tags: []
+  tags:
+  - SpaceScene_Nebula
+  - SpaceScene_Galaxy
+  - SpaceScene_Planet
+  - SpaceScene_LocalStar
+  - SpaceScene_Camera
+  - NPC
   layers:
   - Default
   - TransparentFX
@@ -29,10 +35,10 @@ TagManager:
   - 
   - 
   - 
+  - NonClippable
+  - SSC Celestials
   - 
-  - 
-  - 
-  - 
+  - Small Ships
   - 
   - 
   - 

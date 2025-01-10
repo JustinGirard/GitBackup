@@ -14,7 +14,7 @@ public class GameScreenController : MonoBehaviour,IShowHide
     [Header("Menu Screen Settings")]
     public MenuScreenType menuScreenType;
 
-    public SpaceEncounterManager __encounterManager;
+    public IATGameMode __encounterManager;
     private UIDocument uiDocument;
     private VisualElement root;
     private VisualElement buttonsContainer;
@@ -37,9 +37,9 @@ public class GameScreenController : MonoBehaviour,IShowHide
     void OnEnable()
     {
         // Dynamically create buttons based on the screen type
-        CreateButtonsForScreen(menuScreenType);
+        //CreateButtonsForScreen(menuScreenType);
         // Set initial text for the subject label
-        SetScreenState(menuScreenType);
+        //SetScreenState(menuScreenType);
     }
     public void Show()
     {
@@ -55,6 +55,8 @@ public class GameScreenController : MonoBehaviour,IShowHide
 
     private void CreateButtonsForScreen(MenuScreenType type)
     {
+        __encounterManager = SpaceCombatScreen.Instance().GetEncounterManager();
+
         count++;
         buttonsContainer.Clear();
         switch (type)
@@ -62,6 +64,7 @@ public class GameScreenController : MonoBehaviour,IShowHide
             case MenuScreenType.MainMenu:
                 AddButton("Play", () =>
                 {
+                    __encounterManager = SpaceCombatScreen.Instance().GetEncounterManager();
                     __encounterManager.Initalize();
                     __encounterManager.Begin();
                     NavigateTo("AT_SpaceCombatEncounterScreen");
@@ -72,6 +75,7 @@ public class GameScreenController : MonoBehaviour,IShowHide
                 level = level + 1;
                 AddButton($"{count.ToString()}: Start Level Round {level}", () =>
                 {
+                    __encounterManager = SpaceCombatScreen.Instance().GetEncounterManager();
                     __encounterManager.Initalize();
                     __encounterManager.SetLevel(level);
                     __encounterManager.Begin();
@@ -79,6 +83,7 @@ public class GameScreenController : MonoBehaviour,IShowHide
                 });
                 AddButton("Quit to Menu", () =>
                 {
+                    __encounterManager = SpaceCombatScreen.Instance().GetEncounterManager();
                      __encounterManager.End();
                     NavigateTo("AT_NewGame");
                 });
@@ -86,11 +91,13 @@ public class GameScreenController : MonoBehaviour,IShowHide
             case MenuScreenType.PausedScreen:
                 AddButton("Resume", () =>
                 {
+                    __encounterManager = SpaceCombatScreen.Instance().GetEncounterManager();
                     NavigateTo("AT_SpaceCombatEncounterScreen");
                     __encounterManager.Run();
                 });
                 AddButton("Quit to Menu", () =>
                 {
+                    __encounterManager = SpaceCombatScreen.Instance().GetEncounterManager();
                      __encounterManager.End();
                     NavigateTo("AT_NewGame");
                 });

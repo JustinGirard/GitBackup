@@ -1,5 +1,6 @@
 using UnityEditor;
 using UnityEngine;
+using VisualGraph;
 
 [CustomEditor(typeof(U3DGraphManager))]
 public class U3DGraphManagerEditor : Editor

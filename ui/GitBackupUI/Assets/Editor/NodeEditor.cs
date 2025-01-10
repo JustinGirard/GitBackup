@@ -1,5 +1,6 @@
 using UnityEditor;
 using UnityEngine;
+using VisualGraph;
 
 [CustomEditor(typeof(Node))]
 public class NodeEditor : Editor

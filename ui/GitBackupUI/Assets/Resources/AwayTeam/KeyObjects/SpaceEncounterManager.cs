@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+
 using Unity.VisualScripting;
 using UnityEngine;
 using Cinemachine;
@@ -8,7 +9,7 @@ using System.Linq;
 using UnityEditor;
 using System.Runtime.InteropServices.WindowsRuntime;
 using UnityEditor.MPE;
-
+using System.IO;
 
 [System.Serializable]
 public class ResourceEntry
@@ -17,19 +18,63 @@ public class ResourceEntry
     public float value;
 }
 
-[System.Serializable]
-public class SpaceEncounterObserverMapping
+public class SystemConstants
 {
-    public string key;
-    public SpaceEncounterObserver value;
+
+
+    public  static Dictionary<string, string> GetAccountFieldMapping ()
+    {
+        return new Dictionary<string, string>
+        {
+            { "status-value-1-1", ResourceTypes.Hull },
+            { "status-value-1-2", ResourceTypes.Currency},
+            { "status-value-2-1", ResourceTypes.Ammunition},
+            { "status-value-2-2", ResourceTypes.Fuel}
+        };
+    }
+    public static  Dictionary<string, string> GetAgentGUIFieldMapping (string agent_id)
+    {
+        return new Dictionary<string, string>
+        {
+            { "status-value-1-1",ResourceTypes.Ammunition },
+            { "status-value-1-2", ResourceTypes.Fuel},
+            { "status-value-2-1", ResourceTypes.Hull },
+            { "status-value-2-2", ResourceTypes.Missiles },
+            // { "status-value-3-1", "AttackPower" },
+            // { "status-value-3-2", "MissilePower" },
+            // { "status-value-4-1", "ShieldPower" },
+        };
+    }
+
+   public static   Dictionary<string, string> ResourceIdToIconMapping (string agent_id)
+    {
+        return new Dictionary<string, string>
+        {
+            { ResourceTypes.Ammunition,"A" },
+            { ResourceTypes.Fuel,"F" },
+            { ResourceTypes.Hull,"H" },
+            { ResourceTypes.Missiles,"M" },
+        };
+    }
+
+    
+    public static  string GetAgentGUICardId (string agent_id)
+    {
+        var d = new Dictionary<string, string>
+        {
+            { "account", "account-card-status" },
+            { "agent_1", "agent-1-card-status" },
+            { "agent_2", "agent-2-card-status" }
+        };
+        return d[agent_id];
+    }
+
 }
 
-[System.Serializable]
-public  class AgentPrefab {
-    public string agent_id;
-    public Agent agentPrefab; 
-}
-public class SpaceEncounterManager : MonoBehaviour,IPausable
+
+
+
+public class SpaceEncounterManager : MonoBehaviour,IPausable,IATGameMode
 {
     [SerializeField]
     CinemachineVirtualCamera __agentOneCam;
@@ -112,29 +157,6 @@ public class SpaceEncounterManager : MonoBehaviour,IPausable
         return __agents["agent_1"]; 
     }
 
-    public   Dictionary<string, string> GetAccountFieldMapping ()
-    {
-        return new Dictionary<string, string>
-        {
-            { "status-value-1-1", ResourceTypes.Hull },
-            { "status-value-1-2", ResourceTypes.Currency},
-            { "status-value-2-1", ResourceTypes.Ammunition},
-            { "status-value-2-2", ResourceTypes.Fuel}
-        };
-    }
-    public   Dictionary<string, string> GetAgentGUIFieldMapping (string agent_id)
-    {
-        return new Dictionary<string, string>
-        {
-            { "status-value-1-1",ResourceTypes.Ammunition },
-            { "status-value-1-2", ResourceTypes.Fuel},
-            { "status-value-2-1", ResourceTypes.Hull },
-            { "status-value-2-2", ResourceTypes.Missiles },
-            // { "status-value-3-1", "AttackPower" },
-            // { "status-value-3-2", "MissilePower" },
-            // { "status-value-4-1", "ShieldPower" },
-        };
-    }
     public static bool IsValidAgentAction(string actionId)
     {
         bool validAction = false;
@@ -146,28 +168,7 @@ public class SpaceEncounterManager : MonoBehaviour,IPausable
             validAction = true;        
         return validAction;
     }
-    public   Dictionary<string, string> ResourceIdToIconMapping (string agent_id)
-    {
-        return new Dictionary<string, string>
-        {
-            { ResourceTypes.Ammunition,"A" },
-            { ResourceTypes.Fuel,"F" },
-            { ResourceTypes.Hull,"H" },
-            { ResourceTypes.Missiles,"M" },
-        };
-    }
-
-    
-    public   string GetAgentGUICardId (string agent_id)
-    {
-        var d = new Dictionary<string, string>
-        {
-            { "account", "account-card-status" },
-            { "agent_1", "agent-1-card-status" },
-            { "agent_2", "agent-2-card-status" }
-        };
-        return d[agent_id];
-    }
+ 
 
 
     public void Initalize(){
@@ -267,11 +268,12 @@ public class SpaceEncounterManager : MonoBehaviour,IPausable
         __isReady = rdy;
 
     }
+    
     public void Begin()
     {
 
-    CinemachineVirtualCamera __agenOneCam;
-    CinemachineVirtualCamera __worldCam;
+        //CinemachineVirtualCamera __agenOneCam;
+        //CinemachineVirtualCamera __worldCam;
 
         // Debug.Log("RUNNING BEGIN");
         Dictionary<string,ATResourceData> redat ;
@@ -284,7 +286,6 @@ public class SpaceEncounterManager : MonoBehaviour,IPausable
         intervalRunner.ClearAllTimers();
         __timerProgress = 0;
 
-        float ammoAmount = 20f;
         Agent agent1 = __agents["agent_1"];
         Agent agent2 = __agents["agent_2"];
         
@@ -311,23 +312,22 @@ public class SpaceEncounterManager : MonoBehaviour,IPausable
         //Debug.Log($"Have resoruces for agent 1 {agent1.GetResourceObject().GetSubResources().Keys.Count }");
         // GetSubResources
 
+        List<SpaceMapUnitAgent> unit1sourceUnits = unit1.GetComponent<EncounterSquad>().GetUnitList();
 
-        if (unit1.GetComponent<BlasterSystem>() == null)
-            Debug.LogError("Could not find BlasterSystem attached to unit 1");
-        unit1.GetComponent<BlasterSystem>().SetEncounterManager(this);
-        //Debug.Log($"Have resoruces for agent 1 {agent1.GetResourceObject().GetSubResources().Keys.Count }");
+        for (int i = 0; i < unit1sourceUnits.Count; i++)
+        {
+            if (unit1sourceUnits[i].GetComponent<BlasterSystem>() == null)
+                Debug.LogError($"Could not find BlasterSystem attached to unit {i + 1}");
+            unit1sourceUnits[i].GetComponent<BlasterSystem>().SetEncounterManager(this);
 
-        if (unit1.GetComponent<MissileSystem>() == null)
-            Debug.LogError("Could not find MissileSystem attached to unit 1");
-        unit1.GetComponent<MissileSystem>().SetEncounterManager(this);
-        //Debug.Log($"Have resoruces for agent 1 {agent1.GetResourceObject().GetSubResources().Keys.Count }");
+            if (unit1sourceUnits[i].GetComponent<MissileSystem>() == null)
+                Debug.LogError($"Could not find MissileSystem attached to unit {i + 1}");
+            unit1sourceUnits[i].GetComponent<MissileSystem>().SetEncounterManager(this);
 
-        if (unit1.GetComponent<ShieldSystem>() == null)
-            Debug.LogError("Could not find ShieldSystem attached to unit 1");
-        unit1.GetComponent<ShieldSystem>().SetEncounterManager(this);
-        //Debug.Log($"Have resoruces for agent 1 {agent1.GetResourceObject().GetSubResources().Keys.Count }");
-
-
+            if (unit1sourceUnits[i].GetComponent<ShieldSystem>() == null)
+                Debug.LogError($"Could not find ShieldSystem attached to unit {i + 1}");
+            unit1sourceUnits[i].GetComponent<ShieldSystem>().SetEncounterManager(this);
+        }
         /////
         unit2 =  Instantiate(Resources.Load<GameObject>(encounterSquadPrefab));
         if ( unit2.GetComponent<EncounterSquad>() == null)
@@ -348,41 +348,101 @@ public class SpaceEncounterManager : MonoBehaviour,IPausable
         unit2.transform.parent = agent2.transform;
         unit2.GetComponent<EncounterSquad>().UpdatePosition(); 
         
-        if (unit2.GetComponent<BlasterSystem>() == null)
-            Debug.LogError("Could not find BlasterSystem attached to unit 2");
-        unit2.GetComponent<BlasterSystem>().SetEncounterManager(this);
+        List<SpaceMapUnitAgent> unit2sourceUnits = unit2.GetComponent<EncounterSquad>().GetUnitList();
+        for (int i = 0; i < unit2sourceUnits.Count; i++)
+        {
+            if (unit2sourceUnits[i].GetComponent<BlasterSystem>() == null)
+                Debug.LogError($"Could not find BlasterSystem attached to unit {i + 1}");
+            unit2sourceUnits[i].GetComponent<BlasterSystem>().SetEncounterManager(this);
 
-        if (unit2.GetComponent<MissileSystem>() == null)
-            Debug.LogError("Could not find MissileSystem attached to unit 2");
-        unit2.GetComponent<MissileSystem>().SetEncounterManager(this);
+            if (unit2sourceUnits[i].GetComponent<MissileSystem>() == null)
+                Debug.LogError($"Could not find MissileSystem attached to unit {i + 1}");
+            unit2sourceUnits[i].GetComponent<MissileSystem>().SetEncounterManager(this);
 
-       if (unit2.GetComponent<ShieldSystem>() == null)
-            Debug.LogError("Could not find ShieldSystem attached to unit 1");
-        unit2.GetComponent<ShieldSystem>().SetEncounterManager(this);        
+            if (unit2sourceUnits[i].GetComponent<ShieldSystem>() == null)
+                Debug.LogError($"Could not find ShieldSystem attached to unit {i + 1}");
+            unit2sourceUnits[i].GetComponent<ShieldSystem>().SetEncounterManager(this);
+        }    
+        //Directory<string,string> agentOne = new Directory<string,string >();
+        //Directory<string,string> agentTeo = new Directory<string,string >();
+        //System.Collections.Generic.Directory travis;
+
+        /*
+        float ammoAmount = 20f;
+        Dictionary<string,float> agentOneResources = new Dictionary<string,float >{
+                {ResourceTypes.Ammunition,100f},
+                {ResourceTypes.Missiles,50},
+                {ResourceTypes.Hull,300},
+                {ResourceTypes.Fuel,300}
+            };
+        Dictionary<string,float> agentTwoResources = new Dictionary<string,float >{
+                {ResourceTypes.Ammunition,ammoAmount*__currentLevel},
+                {ResourceTypes.Missiles,50},
+                {ResourceTypes.Hull,250*__currentLevel},
+                {ResourceTypes.Fuel,250*__currentLevel}
+            };
 
         // Resource Add
         //Debug.Log("Adding Resources");
         agent1.GetResourceObject().Unlock();
-        // Debug.Log($"Have resoruces for agent 1 {agent1.GetResourceObject().GetSubResources().Keys.Count }");
-        agent1.GetResourceObject().Deposit(ResourceTypes.Ammunition,10); // Player Investment
-        // Debug.Log($"Have resoruces for agent 1 {agent1.GetResourceObject().GetSubResources().Keys.Count }");
-        agent1.GetResourceObject().Deposit(ResourceTypes.Missiles,5); // Player Investment
-        // Debug.Log($"Have resoruces for agent 1 {agent1.GetResourceObject().GetSubResources().Keys.Count }");
-        agent1.GetResourceObject().Deposit(ResourceTypes.Hull,30); 
-        // Debug.Log($"Have resoruces for agent 1 {agent1.GetResourceObject().GetSubResources().Keys.Count }");
-        agent1.GetResourceObject().Deposit(ResourceTypes.Fuel,30); 
-        // Debug.Log($"Have resoruces for agent 1 {agent1.GetResourceObject().GetSubResources().Keys.Count }");
+        agent1.GetResourceObject().Deposit(ResourceTypes.Ammunition,100); // Player Investment
+        agent1.GetResourceObject().Deposit(ResourceTypes.Missiles,50); // Player Investment
+        agent1.GetResourceObject().Deposit(ResourceTypes.Hull,300); 
+        agent1.GetResourceObject().Deposit(ResourceTypes.Fuel,300); 
         agent1.GetResourceObject().Lock();
 
         agent2.GetResourceObject().Unlock();
-        agent2.GetResourceObject().Deposit(ResourceTypes.Ammunition,ammoAmount);
-        agent2.GetResourceObject().Deposit(ResourceTypes.Hull,5*__currentLevel); 
-        agent2.GetResourceObject().Deposit(ResourceTypes.Fuel,5*__currentLevel); 
+        agent2.GetResourceObject().Deposit(ResourceTypes.Ammunition,ammoAmount*__currentLevel);
+        agent2.GetResourceObject().Deposit(ResourceTypes.Missiles,50);
+        agent2.GetResourceObject().Deposit(ResourceTypes.Hull,250*__currentLevel); 
+        agent2.GetResourceObject().Deposit(ResourceTypes.Fuel,250*__currentLevel); 
+        agent2.GetResourceObject().Lock();*/
+        /*
+        float ammoAmount = 20f;
+        var agentResourceTemplates = new List<Dictionary<string, float>>
+        {
+            new Dictionary<string, float>
+            {
+                { ResourceTypes.Ammunition, 100f },
+                { ResourceTypes.Missiles, 50 },
+                { ResourceTypes.Hull, 300 },
+                { ResourceTypes.Fuel, 300 }
+            },
+            new Dictionary<string, float>
+            {
+                { ResourceTypes.Ammunition, ammoAmount * __currentLevel },
+                { ResourceTypes.Missiles, 50 },
+                { ResourceTypes.Hull, 250 * __currentLevel },
+                { ResourceTypes.Fuel, 250 * __currentLevel }
+            }
+        };
+
+        // Apply resources to agents
+        var resources = agentResourceTemplates[0];
+        agent1.GetResourceObject().Unlock();
+        foreach (var resource in resources)
+        {
+            agent1.GetResourceObject().Deposit(resource.Key, resource.Value);
+        }
+        agent1.GetResourceObject().Lock();
+        
+
+        resources = agentResourceTemplates[1];
+        agent2.GetResourceObject().Unlock();
+        foreach (var resource in resources)
+        {
+            agent2.GetResourceObject().Deposit(resource.Key, resource.Value);
+        }
         agent2.GetResourceObject().Lock();
 
+        */
         //Debug.Log($"------------------");
         //Debug.Log($"SET UP RESOURCES------------------");
         //Debug.Log($"------------------");
+        agent1.ResetResources();
+        agent2.ResetResources();
+
+
         redat = agent1.GetResourceObject().GetSubResources();
         if (redat.Keys.Count == 0)
         {
@@ -432,7 +492,7 @@ public class SpaceEncounterManager : MonoBehaviour,IPausable
 
 
         SetReadyToRun(true);
-        CameraToAgent();
+        //CameraToAgent();
         NotifyAllScreens(SpaceEncounterManager.ObservableEffects.ShieldOff);        
         NotifyAllScreens(SpaceEncounterManager.ObservableEffects.AttackOff);        
         NotifyAllScreens(SpaceEncounterManager.ObservableEffects.MissileOff);
@@ -455,7 +515,6 @@ public class SpaceEncounterManager : MonoBehaviour,IPausable
         __timerProgress = 0;
 
     }
-    bool __isRunning = false;
     /*
     private void ForEachAgent(System.Action<Agent> action)
     {
@@ -472,6 +531,7 @@ public class SpaceEncounterManager : MonoBehaviour,IPausable
             action(agentId);
         }
     }*/
+    bool __isRunning = false;
     private void ForEachAgent(System.Action<Agent> action)
     {
         //Sema.TryAcquireLock($"ForEachAgent{this.GetInstanceID()}");
@@ -480,16 +540,12 @@ public class SpaceEncounterManager : MonoBehaviour,IPausable
         
         foreach (var kvp in __agents)
         {
-            //Debug.Log($"1 kvp {kvp} ");
-            //Debug.Log($"1 kvp {kvp.Value} ");
             if (kvp.Value == null || kvp.Value.gameObject == null)
             {
                 toRemove.Add(kvp.Key);
             }
             else
             {
-               // Debug.Log($"2 kvp {kvp} ");
-                //Debug.Log($"2 kvp {kvp.Value} ");
                 action(kvp.Value);
             }
         }
@@ -716,7 +772,7 @@ public class SpaceEncounterManager : MonoBehaviour,IPausable
                         primaryAgent.AddAgentAction(primaryAction,targetAgent);
                 });
             });
-            //Debug.Log("(x)Starting Actions");
+            // Debug.Log("(x)Starting Actions");
             // TRIGGER Actions
             ForEachAgent(primaryAgent => 
             {

@@ -31,17 +31,21 @@ public static class Sema
 
     public static bool TryAcquireLock(string id)
     {
+        Debug.Log($"Aquiring {id}");
         var now = DateTime.UtcNow;
 
-        return _locks.AddOrUpdate(
+        bool success = _locks.AddOrUpdate(
             id,
             key => now, // Add new lock
             (key, timestamp) => (now - timestamp) > DefaultTimeout ? now : timestamp // Replace expired lock
         ) == now; // Return true if the current attempt succeeded
+        Debug.Log($"Aquired? {id}:{success}");
+        return success;
     }
 
     public static void ReleaseLock(string id)
     {
+        Debug.Log($"Removing? {id}");
         _locks.TryRemove(id, out _);
     }
     //Instantiate( Resources.Load<GameObject>(PrefabPath.BoltPath));
@@ -77,58 +81,6 @@ public static class EffectHandler
          yield return new WaitForSeconds(delay);
     }
 
-
-    /*
-    public static IEnumerator CreateShield(GameObject shieldPrefab, Vector3 source)
-    {
-        // Instantiate the shield prefab
-        GameObject shield = UnityEngine.Object.Instantiate(shieldPrefab);
-        shield.transform.position = source;
-
-        // Get the Renderer and create a material instance
-        Renderer shieldRenderer = shield.GetComponent<Renderer>();
-        if (shieldRenderer == null)
-        {
-            Debug.LogError("Shield prefab does not have a Renderer.");
-            yield break;
-        }
-        Material shieldMaterial = new Material(shieldRenderer.sharedMaterial);
-        shieldRenderer.material = shieldMaterial;
-
-        // Gradually increase transparency (fade-in)
-        Color color = shieldMaterial.color;
-        color.a = 0f;
-        shieldMaterial.color = color;
-        float fadeInDuration = 1.0f; // Time in seconds to reach full transparency
-        for (float t = 0; t < fadeInDuration; t += Time.deltaTime)
-        {
-            color.a = Mathf.Lerp(0f, 1f, t / fadeInDuration);
-            shieldMaterial.color = color;
-            yield return null;
-        }
-        // Ensure it reaches full transparency
-        color.a = 1f;
-        shieldMaterial.color = color;
-
-        // Wait for the shield to stay fully visible
-        float shieldDuration = 2.0f; // Duration in seconds to keep the shield visible
-        yield return new WaitForSeconds(shieldDuration);
-
-        // Gradually decrease transparency (fade-out)
-        float fadeOutDuration = 0.5f; // Time in seconds to reach no transparency
-        for (float t = 0; t < fadeOutDuration; t += Time.deltaTime)
-        {
-            color.a = Mathf.Lerp(1f, 0f, t / fadeOutDuration);
-            shieldMaterial.color = color;
-            yield return null;
-        }
-        // Ensure it is completely invisible
-        color.a = 0f;
-        shieldMaterial.color = color;
-
-        // Destroy the shield GameObject
-        UnityEngine.Object.Destroy(shield);
-    }*/
 
     public static IEnumerator CreateShield(GameObject shieldPrefab, Vector3 source)
     {

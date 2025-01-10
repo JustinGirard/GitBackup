@@ -257,7 +257,7 @@ public class JobUtils
             }
             // Create JobHandle
             object progressJson = "UNKNOWN";
-            JobHandle jobHandle = new JobHandle
+            DeceliumJobHandle jobHandle = new DeceliumJobHandle
             {
                 IsRunning = isRunning,
                 Cancel = cancel,
@@ -614,7 +614,7 @@ SYNC Version (example)
 
 }
 
-public class JobHandle
+public class DeceliumJobHandle
 {
     public DictStrObj dataframe; // Data associated with the job
     public Func<bool> IsRunning; // Function that returns whether the job is currently running
@@ -629,7 +629,7 @@ public class JobHandle
 public class JobData : StandardData
 {
     private static JobData __instance;
-    private Dictionary<string, JobHandle> __handles = new Dictionary<string, JobHandle>();
+    private Dictionary<string, DeceliumJobHandle> __handles = new Dictionary<string, DeceliumJobHandle>();
     private float updateInterval = 6.0f; // Check every 5 seconds
     private float timeSinceLastUpdate = 0.0f;
 
@@ -881,7 +881,7 @@ public class JobData : StandardData
     }    
 
     // Attach an existing JobHandle to a job ID
-    public bool AttachJobHandle(string id, JobHandle handle)
+    public bool AttachJobHandle(string id, DeceliumJobHandle handle)
     {
         LockReserve();
         try
