@@ -98,7 +98,7 @@ public class Agent:MonoBehaviour, IPausable
 
         if (resources.GetRecords().Count == 0 && GetAgentId() == "agent_1")
         {
-            Debug.Log($"NO RECORDS FOR AGENT 1: {GetAgentId() } , {resources.GetRecords().Count }");
+            //Debug.Log($"NO RECORDS FOR AGENT 1: {GetAgentId() } , {resources.GetRecords().Count }");
             foreach (var entry in defaultAgentOne)
             {
                 resources.Deposit(entry.Key,entry.Value);
@@ -239,7 +239,7 @@ public class Agent:MonoBehaviour, IPausable
 
         if (__navCommand != null)
         {
-            Debug.Log("!!!!!!!!Have Navigation Command!!!!!");
+            Debug.Log("TODO: Have Navigation Command to process here");
             __navCommand.Hide();
 
         }

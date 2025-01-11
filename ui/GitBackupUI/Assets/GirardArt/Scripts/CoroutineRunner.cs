@@ -7,6 +7,10 @@ public class CoroutineRunner : MonoBehaviour
     {
         
         if (Instance == null) Instance = this;
+
         else Destroy(gameObject);
+    }
+    public void DebugLog(string debugString){
+        Debug.Log(debugString);
     }
 }

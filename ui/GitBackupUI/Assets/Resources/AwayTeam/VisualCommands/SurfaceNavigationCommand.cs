@@ -6,6 +6,7 @@ using Unity.VisualScripting.Antlr3.Runtime.Misc;
 using UnityEditor;
 using UnityEditor.UI;
 using UnityEngine;
+using UnityEngine.AI;
 using UnityEngine.UI;
 
 namespace VisualCommand
@@ -44,7 +45,7 @@ namespace VisualCommand
         [SerializeField]
         private SelectionStyle styleSelectFinishedActive;
 
-        bool __debugMode = true;
+        public bool __debugMode = true;
         public class SelectionState {
             public const string off = "off";
             public const string inactive = "inactive";
@@ -188,7 +189,8 @@ namespace VisualCommand
         {
             if (visualStyle == null)
             {
-                Debug.LogError($"No Visual Style Present");
+                Debug.LogError($"No Visual Style Presen for state {state}");
+                return;
             }
             if (state == null || state.Length == 0)
             {
@@ -200,7 +202,7 @@ namespace VisualCommand
                 return;
             }
             SelectionStyle selectedStyle =visualStyle[state];
-            commandSelectionState =state; 
+
             foreach (SelectionStyle otherStyle in visualStyle.Values)
             {
                 if (otherStyle == null)
@@ -214,6 +216,16 @@ namespace VisualCommand
                 if (otherStyle.currentNodeStyle != null)
                     otherStyle.currentNodeStyle.SetActive(false);
             }
+            commandSelectionState =state; 
+            if (state == SelectionState.off)
+            {
+                return; // No need to activate anything for off state.
+            }
+            if (selectedStyle == null)
+            {
+                Debug.LogError($"No selectedStyle Present for state {state}");
+                return;
+            }            
             if (selectedStyle.prevNodeStyle != null)
                 selectedStyle.prevNodeStyle.SetActive(true);
             if (selectedStyle.edgeStyle != null)
@@ -383,7 +395,6 @@ namespace VisualCommand
             ScaleCursorByDistance(state,contactPositon);
             if (cmd == GeneralInputManager.Command.primary_up)
             {
-                Debug.Log("Setting to selecte height");
                 SetVisualState(SelectionState.select_height);
             }
             yield break;
@@ -412,23 +423,24 @@ namespace VisualCommand
         {
             yield break;
         }
+        void Awake()
+        {
+            StyleSetup();
+
+        }
 
         void Start()
         {
             __targetScreen = SpaceCombatScreen.Instance();
-            StyleSetup();
         }
 
         void Update()
         {
             if (GetActiveState() == SelectionState.select_height)
             {
-                //Debug.Log("I am POLLING primary move");
                 var (isPrimaryMove, primaryMovePosition) = GeneralInputManager.Instance().PollCommandStatus(GeneralInputManager.Command.primary_move);
-                Debug.Log($"POLL RESULT - isPrimaryMove: {isPrimaryMove}, primaryMovePosition: {primaryMovePosition}");
                 if (isPrimaryMove)
                 {
-                    Debug.Log("I am polling primary move");
                     AlignCursorWithHeight(SelectionState.select_height,primaryMovePosition);
                 }
                 var (isPrimaryUp, primaryUpPosition) = GeneralInputManager.Instance().PollCommandStatus(GeneralInputManager.Command.primary_down);

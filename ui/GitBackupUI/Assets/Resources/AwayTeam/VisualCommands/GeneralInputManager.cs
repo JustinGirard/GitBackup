@@ -5,6 +5,7 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UIElements;
 using System;
+using System.Linq;
 
 public interface ICommandReceiver
 {
@@ -127,13 +128,13 @@ public class GeneralInputManager : MonoBehaviour
         Vector2 mousePosition = Input.mousePosition;
         foreach (var observer in observers)
         {
-            if (__debugMode == true && Vector2.Distance(mousePosition, lastMousePosition) > 0.01f)
-            {
-                Debug.Log($@"--- Investigating pos to  {observer.GetGameObject().name}: {mousePosition}
-                - Distance:{ Vector2.Distance(mousePosition, lastMousePosition) > 0.01f}
-                - PointerActive:{IsPointerOverUIDocument()}
-                ");
-            }
+            //if (__debugMode == true && Vector2.Distance(mousePosition, lastMousePosition) > 0.01f)
+            //{
+            //    Debug.Log($@"--- Investigating pos to  {observer.GetGameObject().name}: {mousePosition}
+            //    - Distance:{ Vector2.Distance(mousePosition, lastMousePosition) > 0.01f}
+            //    - PointerActive:{IsPointerOverUIDocument()}
+            //    ");
+            //}
             if (Input.GetMouseButtonDown(0) && !IsPointerOverUIDocument())
             {
                 observer.OnCommandReceived(Command.primary_down,mousePosition);
@@ -152,8 +153,8 @@ public class GeneralInputManager : MonoBehaviour
             }
             else if (!IsPointerOverUIDocument() && Vector2.Distance(mousePosition, lastMousePosition) > 0.01f)
             {
-                if (__debugMode == true)
-                    Debug.Log($"--- Dispatching pos to  {observer.GetGameObject().name}: {mousePosition}");
+                //if (__debugMode == true)
+                //    Debug.Log($"--- Dispatching pos to  {observer.GetGameObject().name}: {mousePosition}");
 
                 observer.OnCommandReceived(Command.primary_move, mousePosition);
                 observer.OnCommandReceived(Command.secondary_move, mousePosition);
@@ -169,10 +170,26 @@ public class GeneralInputManager : MonoBehaviour
     /// <summary>
     /// Checks if the mouse is over a UI Toolkit element.
     /// </summary>
+    /// 
+    /*
+        Vector2 adjustedMousePos = new Vector2(
+            mousePosition.x,
+            Screen.height - mousePosition.y // Flip the Y-axis to match the top-left origin of UI Toolkit
+        );
+
+        // Convert the adjusted screen position to local UI coordinates
+        Vector2 localMousePos = RuntimePanelUtils.ScreenToPanel(uiDoc.rootVisualElement.panel, adjustedMousePos);
+            
+    */
+
     private bool IsPointerOverUIDocument()
     {
         List<string> collidedNames = new List<string>();
         Vector2 mousePosition = Input.mousePosition;
+        Vector2 adjustedMousePos = new Vector2(
+            mousePosition.x,
+            Screen.height - mousePosition.y // Flip the Y-axis to match the top-left origin of UI Toolkit
+        );        
         var uiDocs = FindObjectsOfType<UIDocument>();
 
         foreach (var uiDoc in uiDocs)
@@ -183,7 +200,8 @@ public class GeneralInputManager : MonoBehaviour
             var panel = uiDoc.rootVisualElement.panel;
             if (panel != null)
             {
-                Vector2 localMousePos = uiDoc.rootVisualElement.WorldToLocal(mousePosition);
+                //Vector2 localMousePos = uiDoc.rootVisualElement.WorldToLocal(mousePosition);
+                Vector2 localMousePos = RuntimePanelUtils.ScreenToPanel(uiDoc.rootVisualElement.panel, adjustedMousePos);
                 VisualElement hoveredElement = panel.Pick(localMousePos);
 
                 if (hoveredElement != null && hoveredElement.name.Length > 0)
@@ -191,17 +209,35 @@ public class GeneralInputManager : MonoBehaviour
                     collidedNames.Add("uidoc.element." + hoveredElement.name);
                 }
                 collidedNames.Add("uidoc." + uiDoc.gameObject.name);
+                //Debug.Log($"Colliding Inline: {string.Join(", ", collidedNames)}");
             }
         }
 
         collidedNames.RemoveAll(name => transparentGameObjects.Contains(name));
 
-        if (__debugMode && collidedNames.Count > 0)
+        //if (__debugMode && collidedNames.Count > 0)
+        //{
+        //    Debug.Log("________________________________________");
+        //    foreach (string uiName in collidedNames)
+        //    {
+        //        Debug.Log("Collided with " + uiName);
+        //    }
+        //}
+        if (__debugMode)
         {
-            Debug.Log("________________________________________");
-            foreach (string uiName in collidedNames)
+            // Store original collided names for debugging
+            List<string> ignoredCollisions = collidedNames.Where(name => transparentGameObjects.Contains(name)).ToList();
+            List<string> remainingCollisions = collidedNames.Except(ignoredCollisions).ToList();
+
+            // Remove ignored collisions from the original list
+            collidedNames.RemoveAll(name => transparentGameObjects.Contains(name));
+
+            // Format and log debug message
+            if (ignoredCollisions.Count > 0 || remainingCollisions.Count > 0)
             {
-                Debug.Log("Collided with " + uiName);
+                Debug.Log("________________________________________");
+                Debug.Log($"Ignored Collisions: {string.Join(", ", ignoredCollisions)}");
+                Debug.Log($"Collided With: {string.Join(", ", remainingCollisions)}");
             }
         }
 

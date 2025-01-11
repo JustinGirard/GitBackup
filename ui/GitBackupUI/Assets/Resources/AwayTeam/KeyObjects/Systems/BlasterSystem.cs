@@ -44,7 +44,7 @@ public class BlasterSystem : StandardSystem
         Dictionary<string, float> primaryDelta = new Dictionary<string, float>();
         Dictionary<string, float> targetDelta = new Dictionary<string, float>();
 
-        SpaceEncounterManager spaceEncounter = this.GetEncounterManager();
+        GameEncounterBase spaceEncounter = this.GetEncounterManager();
         if (spaceEncounter == null)
             Debug.LogError("MISSING spaceEncounter");
         spaceEncounter.NotifyAllScreens(SpaceEncounterManager.ObservableEffects.AttackOff);

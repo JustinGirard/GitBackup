@@ -44,7 +44,7 @@ public class MissileSystem : StandardSystem
         Dictionary<string, float> targetDelta = new Dictionary<string, float>();
 
 
-        SpaceEncounterManager spaceEncounter = this.GetEncounterManager();
+        GameEncounterBase spaceEncounter = this.GetEncounterManager();
         if (spaceEncounter == null)
             Debug.LogError("MISSING spaceEncounter");        
         spaceEncounter.NotifyAllScreens(SpaceEncounterManager.ObservableEffects.MissileOff);
@@ -105,8 +105,11 @@ public class MissileSystem : StandardSystem
                                         2f, 
                                         5f)
              );
-            SpaceMapUnitAgent unit = targetUnit.GetComponentInParent<SpaceMapUnitAgent>();
-            unit.SafeDestroy();
+            if (targetUnit != null)
+            {
+                SpaceMapUnitAgent unit = targetUnit.GetComponentInParent<SpaceMapUnitAgent>();
+                unit.SafeDestroy();
+            }
             //if (unit != null)
             //{
             //}

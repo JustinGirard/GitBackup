@@ -1,46 +1,24 @@
 using System;
 using System.Collections.Generic;
+//using System.Diagnostics;
+using UnityEngine;
 
 /// <summary>
 /// A lightweight scheduler to run named tasks at intervals.
 /// This is a bare minimum utility inspired by the IntervalRunner 
 /// used inside SpaceEncounterManager.
 /// </summary>
-namespace Encounter
-{
-    public class IntervalRunner
+/// 
+
+    public interface IGameEncounter
     {
-        private Dictionary<string, float> _timeTrackers = new Dictionary<string, float>();
-
-        /// <summary>
-        /// Attempts to run a callback if enough time (interval) has elapsed for the given key.
-        /// </summary>
-        /// <param name="key">Unique ID for this repeating operation.</param>
-        /// <param name="interval">Seconds that must pass before callback triggers.</param>
-        /// <param name="deltaTime">Time elapsed since last frame.</param>
-        /// <param name="callback">Action to invoke if interval has passed.</param>
-        public void RunIfTime(string key, float interval, float deltaTime, Action callback)
-        {
-            if (!_timeTrackers.ContainsKey(key))
-                _timeTrackers[key] = 0f;
-
-            _timeTrackers[key] += deltaTime;
-
-            if (_timeTrackers[key] >= interval)
-            {
-                _timeTrackers[key] = 0f;
-                callback?.Invoke();
-            }
-        }
-
-        /// <summary>
-        /// Clears all stored time trackers, effectively resetting them.
-        /// </summary>
-        public void ClearAllTimers()
-        {
-            _timeTrackers.Clear();
-        }
+        void Begin();
+        void End();
+        void Run();
+        void Pause();
+        void DoUpdate(float deltaTime);
     }
+
 
     /// <summary>
     /// Encapsulates a time-stepped "Encounter Loop" that can be used 
@@ -52,8 +30,9 @@ namespace Encounter
     ///  - Subscribe to events (OnTimerTick, OnActionIntervalStart, etc.) 
     ///    to handle your custom logic.
     /// </summary>
-    public class EncounterTimeLoop
+    public class EncounterTimeKeeper:MonoBehaviour, IPausable
     {
+        /*
         // ---------------------------------------------------------
         // Events/Callbacks that the encounter can subscribe to:
         // ---------------------------------------------------------
@@ -138,106 +117,106 @@ namespace Encounter
         {
             get => _epochLength;
             set => _epochLength = value;
+        }*/
+        Dictionary<string,IGameEncounter> __encounterUpdateFunction;
+
+        public void Awake()
+        {
+            __encounterUpdateFunction = new Dictionary<string,IGameEncounter> ();
+        }
+        
+        public void RegisterEncounter(string encounterId, IGameEncounter encounter)
+        {
+            __encounterUpdateFunction[encounterId]= encounter;
         }
 
-        /// <summary>
-        /// Resets internal timers and signals that the loop is about to run.
-        /// </summary>
-        public void StartLoop()
+
+        bool __isReady = false;
+        public bool AmReady()
+        {
+            return __isReady;
+        } 
+        public void SetReadyToRun(bool rdy)
+        {
+            if (IsRunning())
+                throw new System.Exception("Cant set the level if am running level");
+            __isReady = rdy;
+        }
+
+        private bool _isRunning = false;
+
+        public bool IsRunning(){
+            return _isRunning;
+        }
+        public void InitLoop()
+        {
+            _isRunning = false;
+            CoroutineRunner.Instance.DebugLog("In Init Loop");
+        }
+
+        public void Run()
         {
             if (_isRunning) 
                 return; // or throw an exception if you want strictness
+            _isRunning = true;
+            CoroutineRunner.Instance.DebugLog("In Start Loop");
+            /*
             
             _intervalRunner.ClearAllTimers();
             _timerProgress = 0f;
             _isRunning = true;
             OnUnpaused?.Invoke();
+            */
         }
-
-        /// <summary>
         /// Pauses the loop (no more timing checks).
-        /// </summary>
-        public void PauseLoop()
+        public void Pause()
         {
             if (!_isRunning) return;
+            _isRunning = false;
+            CoroutineRunner.Instance.DebugLog("In Pause Loop");
+            /*
             
             _isRunning = false;
             OnPaused?.Invoke();
+            */
         }
-
-        /// <summary>
         /// Ends the encounter loop entirely (cannot continue).
-        /// </summary>
         public void EndLoop()
         {
+            CoroutineRunner.Instance.DebugLog("In End Loop");
+
             // You may want to set a separate "ended" flag if you 
             // intend to allow "Resume" after End. 
             // Typically, End is final.
-            
+            /*
             _isRunning = false;
             _intervalRunner.ClearAllTimers();
             _timerProgress = 0f;
 
             OnEncounterOver?.Invoke();
+            */
         }
-
-        /// <summary>
         /// Main update that should be called each frame from outside (e.g. in a MonoBehaviour).
-        /// </summary>
-        /// <param name="deltaTime">Time elapsed since last frame.</param>
-        public void UpdateLoop(float deltaTime)
-        {
-            // If not running, do nothing.
-            if (!_isRunning) return;
-
-            // 1) Example: Check if the encounter should end every second.
-            _intervalRunner.RunIfTime("endEncounterCheck", 1f, deltaTime, () =>
+        public void Update(){
+            if (!AmReady())
             {
-                // You can do any "should the encounter end?" checks here.
-                // If it should end, call EndLoop().
-                // 
-                // e.g.:
-                // if (SomeConditionForEnd) { EndLoop(); }
-            });
-
-            // 2) Periodically update the "timer" or "progress bar" every 0.25s
-            //    so we can reflect the time passing for the current epoch.
-            _intervalRunner.RunIfTime("showActionProgress", 0.25f, deltaTime, () =>
+                return;
+            }
+            if (!IsRunning())
             {
-                // The original logic: __timerProgress += (0.25f / epochLength) * __timerProgressMax;
-                float increment = (0.25f / _epochLength) * _timerProgressMax;
-                _timerProgress = Math.Min(_timerProgress + increment, _timerProgressMax);
-
-                OnTimerTick?.Invoke();
-            });
-
-            // 3) Trigger an "action interval" every 5.0s (default _epochLength).
-            _intervalRunner.RunIfTime("doActions", _epochLength, deltaTime, () =>
+                return;
+            }
+            foreach (IGameEncounter encounter in __encounterUpdateFunction.Values)
             {
-                if (!_actionsRunning)
-                {
-                    _actionsRunning = true;
-                    StartActionInterval();
-                }
-            });
-
-            // 4) After a small delay (0.5s) from starting the action interval, 
-            //    check if we can end the action interval.
-            _intervalRunner.RunIfTime("doActionsClear", _postActionClearDelay, deltaTime, () =>
-            {
-                if (_actionsRunning)
-                {
-                    // In a real system, you might check if Agents are still busy.
-                    // For V1, we just assume they're done after 0.5s.
-                    EndActionInterval();
-                }
-            });
+                encounter.DoUpdate(Time.deltaTime);
+            }
         }
+        
 
         // ---------------------------------------------------------
         // Internal (Action Interval) 
         // ---------------------------------------------------------
-
+    /*
         private void StartActionInterval()
         {
             // Reset progress bar to 0 for the next epoch, if desired
@@ -256,5 +235,5 @@ namespace Encounter
 
             OnActionIntervalEnd?.Invoke();
         }
+    */
     }
-}

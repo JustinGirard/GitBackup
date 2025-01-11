@@ -30,7 +30,7 @@ public class ShieldSystem : StandardSystem
         Dictionary<string, float> targetDelta = new Dictionary<string, float>();
 
 
-        SpaceEncounterManager spaceEncounter = this.GetEncounterManager();
+        GameEncounterBase spaceEncounter = this.GetEncounterManager();
         spaceEncounter.NotifyAllScreens(SpaceEncounterManager.ObservableEffects.ShieldOff);
 
         if ((float)sourceResources.GetResourceAmount(ResourceTypes.Fuel) > 0)

@@ -31,7 +31,7 @@ public static class Sema
 
     public static bool TryAcquireLock(string id)
     {
-        Debug.Log($"Aquiring {id}");
+        //Debug.Log($"Aquiring {id}");
         var now = DateTime.UtcNow;
 
         bool success = _locks.AddOrUpdate(
@@ -39,13 +39,13 @@ public static class Sema
             key => now, // Add new lock
             (key, timestamp) => (now - timestamp) > DefaultTimeout ? now : timestamp // Replace expired lock
         ) == now; // Return true if the current attempt succeeded
-        Debug.Log($"Aquired? {id}:{success}");
+        //Debug.Log($"Aquired? {id}:{success}");
         return success;
     }
 
     public static void ReleaseLock(string id)
     {
-        Debug.Log($"Removing? {id}");
+        //Debug.Log($"Removing? {id}");
         _locks.TryRemove(id, out _);
     }
     //Instantiate( Resources.Load<GameObject>(PrefabPath.BoltPath));

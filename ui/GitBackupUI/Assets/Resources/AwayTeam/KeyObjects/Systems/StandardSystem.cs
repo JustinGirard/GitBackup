@@ -46,14 +46,14 @@ public abstract class StandardSystem : MonoBehaviour
     {
         yield break;
     }    
-    private SpaceEncounterManager spaceEncounter;
+    private GameEncounterBase spaceEncounter;
 
-    public void SetEncounterManager(SpaceEncounterManager eman){
+    public void SetEncounterManager(GameEncounterBase eman){
 
         spaceEncounter = eman;
     }    
 
-    public SpaceEncounterManager GetEncounterManager(){
+    public GameEncounterBase GetEncounterManager(){
 
         return spaceEncounter;
     }        
