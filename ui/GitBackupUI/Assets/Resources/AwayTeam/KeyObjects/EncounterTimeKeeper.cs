@@ -10,14 +10,6 @@ using UnityEngine;
 /// </summary>
 /// 
 
-    public interface IGameEncounter
-    {
-        void Begin();
-        void End();
-        void Run();
-        void Pause();
-        void DoUpdate(float deltaTime);
-    }
 
 
     /// <summary>
@@ -32,100 +24,25 @@ using UnityEngine;
     /// </summary>
     public class EncounterTimeKeeper:MonoBehaviour, IPausable
     {
-        /*
-        // ---------------------------------------------------------
-        // Events/Callbacks that the encounter can subscribe to:
-        // ---------------------------------------------------------
-        
-        /// <summary>
-        /// Fires when the loop is "unpaused" or started.
-        /// </summary>
-        public event Action OnUnpaused;
-        
-        /// <summary>
-        /// Fires when the loop is paused.
-        /// </summary>
-        public event Action OnPaused;
-        
-        /// <summary>
-        /// Fires when the encounter ends (for *any* reason).
-        /// </summary>
-        public event Action OnEncounterOver;
-        
-        /// <summary>
-        /// Fires periodically (e.g., every 0.25s) to update progress bars, 
-        /// countdown timers, etc.
-        /// </summary>
-        public event Action OnTimerTick;
-        
-        /// <summary>
-        /// Fires at the start of each action interval (e.g., every 5s).
-        /// Encounters can use this moment to queue up actions, do targeting, etc.
-        /// </summary>
-        public event Action OnActionIntervalStart;
-
-        /// <summary>
-        /// Fires when an action interval is considered finished (after a brief delay, etc.).
-        /// Typically a point to reset UI or prepare for the next round.
-        /// </summary>
-        public event Action OnActionIntervalEnd;
-
-        // ---------------------------------------------------------
-        // Internal loop state
-        // ---------------------------------------------------------
-        
-        private IntervalRunner _intervalRunner = new IntervalRunner();
-        
-        private bool _isRunning = false;
-        private bool _actionsRunning = false;
-
-        // For a simple “progress bar” or “timer.” 
-        private float _timerProgress = 0f;
-        private float _timerProgressMax = 100f;
-
-        // The time between “action intervals” (like a turn in a turn-based game).
-        private float _epochLength = 5.0f;
-
-        // A small delay used after starting the actions, to detect when to end them.
-        // (In the original code, it was 0.5f)
-        private float _postActionClearDelay = 0.5f;
-
-
-        // ---------------------------------------------------------
-        // Public API
-        // ---------------------------------------------------------
-
-        /// <summary>
-        /// True if the loop is currently running (unpaused).
-        /// </summary>
-        public bool IsRunning => _isRunning;
-
-        /// <summary>
-        /// Returns the current progress from 0..TimerProgressMax.
-        /// </summary>
-        public float TimerProgress => _timerProgress;
-
-        /// <summary>
-        /// The maximum progress value used for the “timer bar.”
-        /// </summary>
-        public float TimerProgressMax => _timerProgressMax;
-
-        /// <summary>
-        /// How many seconds between each "action interval."
-        /// </summary>
-        public float EpochLength
+        float __timerProgress = 0f;
+        float __timerProgressMax = 100f;
+        public float GetTimerProgress()
         {
-            get => _epochLength;
-            set => _epochLength = value;
-        }*/
-        Dictionary<string,IGameEncounter> __encounterUpdateFunction;
+            return __timerProgress;
+        }
+        public float GetTimerProgressMax()
+        {
+            return __timerProgressMax;
+        }
+
+        Dictionary<string,IATGameMode> __encounterUpdateFunction;
 
         public void Awake()
         {
-            __encounterUpdateFunction = new Dictionary<string,IGameEncounter> ();
+            __encounterUpdateFunction = new Dictionary<string,IATGameMode> ();
         }
         
-        public void RegisterEncounter(string encounterId, IGameEncounter encounter)
+        public void RegisterEncounter(string encounterId, IATGameMode encounter)
         {
             __encounterUpdateFunction[encounterId]= encounter;
         }
@@ -152,6 +69,11 @@ using UnityEngine;
         {
             _isRunning = false;
             CoroutineRunner.Instance.DebugLog("In Init Loop");
+        }
+
+        public void SetTimerProgress(float number)
+        {
+            __timerProgress = number; 
         }
 
         public void Run()
@@ -206,7 +128,7 @@ using UnityEngine;
             {
                 return;
             }
-            foreach (IGameEncounter encounter in __encounterUpdateFunction.Values)
+            foreach (IATGameMode encounter in __encounterUpdateFunction.Values)
             {
                 encounter.DoUpdate(Time.deltaTime);
             }

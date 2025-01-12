@@ -76,7 +76,7 @@ public class AgentManager : MonoBehaviour
 
     public string encounterSquadPrefab = "AwayTeam/KeyObjects/EncounterSquad"; // Path to SpaceMapUnit prefab in Resources
 
-    public bool InitializeAgent(Agent agent, string agentKey)
+    public bool RecreateUnits(Agent agent, string agentKey)
     {
         GameObject unit = Instantiate(Resources.Load<GameObject>(encounterSquadPrefab));
         if (unit.GetComponent<EncounterSquad>() == null)

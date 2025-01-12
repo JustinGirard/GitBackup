@@ -19,6 +19,29 @@ public class ResourceEntry
     public float value;
 }
 
+public interface IATGameMode
+{
+    float GetTimerProgress();
+    float GetTimerProgressMax();
+
+    void AttachGUIOberversToAgents();
+    void NotifyAllScreens(string effect);
+
+    void Initalize();
+    void Begin();
+    void End();
+    void Pause();
+    void Run();
+    void SetLevel(int lvl);
+    int GetLevel();
+    void DoUpdate(float deltaTime);
+    
+    ATResourceData GetResourceObject(string agent_id);
+    Agent GetPlayerAgent();
+
+}
+
+
 public class SystemConstants
 {
 
@@ -71,8 +94,10 @@ public class SystemConstants
     }
 
 }
-public class GameEncounterBase : MonoBehaviour,IGameEncounter
+
+public class GameEncounterBase : MonoBehaviour,IATGameMode
 {
+    
     public class PrefabPath
     {
         public const string BoltPath = "AwayTeam/KeyObjects/Effects/BlasterBolt";
@@ -101,28 +126,36 @@ public class GameEncounterBase : MonoBehaviour,IGameEncounter
             return all.Contains(action);
         }        
     }
+    
     [SerializeField]
     public string encounterSquadPrefab = "AwayTeam/KeyObjects/EncounterSquad"; // Path to SpaceMapUnit prefab in Resources
 
     [SerializeField]
-    public List<SpaceEncounterObserverMapping> gui_observers;
+    public ATResourceData accountResourceData = null;
 
-
-    // WTF is this. WTF did I make here.
-    public void RegisterNotificationWithAgents() 
+    [SerializeField]
+    public List<SpaceEncounterObserverMapping> gui_observers = null;
+    private IntervalRunner intervalRunner;
+    private EncounterTimeKeeper __timeKeeper;
+    
+    public virtual void SetLevel(int lvl)
     {
+        throw new System.Exception("NOT IMPLEMENTED");
+    }
 
-        /*
-        foreach (Agent agent in __agents.Values)
-        {
-            agent.ClearObservers();
-            //Debug.Log("Registering Observers");
-            foreach (SpaceEncounterObserverMapping mapping in gui_observers) 
-            {
-                SpaceEncounterObserver observer = mapping.value;
-                agent.AddObserver(observer);
-            }
-        }*/
+
+    public virtual int GetLevel()
+    {
+        throw new System.Exception("NOT IMPLEMENTED");
+    }
+
+
+    // The Encounter may have GUI observers. Make sure these 
+    // Obervers are also attached to agents, so agents notify the observers of 
+    // Game events.
+    public void AttachGUIOberversToAgents() 
+    {
+        
         AgentManager agentMan = GetComponent<AgentManager>();
         if(agentMan == null)
             Debug.LogError("CRITICAL ERROR: no AgentManager attached");
@@ -134,18 +167,23 @@ public class GameEncounterBase : MonoBehaviour,IGameEncounter
                 SpaceEncounterObserver observer = mapping.value;
                 agent.AddObserver(observer);
             }
-        });        
+        });    
+        
 
     }
+    
     public void NotifyAllScreens(string effect) 
     {
+        
         foreach (SpaceEncounterObserverMapping mapping in gui_observers) {
             SpaceEncounterObserver observer = mapping.value;
             if (observer != null) {
                 observer.VisualizeEffect(effect,this.gameObject);
             }
         }
+        
     }
+
     public void RunIfTime(string id, float delay, float deltaTime, System.Action action)
     {
         intervalRunner.RunIfTime( id,  delay,  deltaTime, action);
@@ -161,9 +199,9 @@ public class GameEncounterBase : MonoBehaviour,IGameEncounter
         if (actionId == AgentActionType.Attack)
             validAction = true;        
         return validAction;
+        
     }
 
-    private EncounterTimeKeeper __timeKeeper;
 
     public bool IsRunning(){
         return __timeKeeper.IsRunning();
@@ -172,19 +210,54 @@ public class GameEncounterBase : MonoBehaviour,IGameEncounter
         return __timeKeeper.AmReady();
     }
 
+
     public virtual void Awake()
     {
         intervalRunner = new IntervalRunner();
         __timeKeeper = GetComponent<EncounterTimeKeeper>();
         DoAwake();
     }
-    public virtual void DoAwake() { throw new System.Exception($"IMPLEMENT ME {this.gameObject.name}:{this.name}");}
+
+    public virtual void DoAwake() { 
+
+        throw new System.Exception($"IMPLEMENT ME {this.gameObject.name}:{this.name}");
+    }
+        
+
+    public float GetTimerProgress()
+    {
+        return __timeKeeper.GetTimerProgress();
+    }
+    public float GetTimerProgressMax()
+    {
+        return __timeKeeper.GetTimerProgressMax();
+    }
+
+    public void SetTimerProgress(float number)
+    {
+        __timeKeeper.SetTimerProgress(number);
+    }
+
+
+ 
     
+    public void Initalize()
+    {
+
+        DoInitalize();
     
-    private IntervalRunner intervalRunner;
+    } 
+    protected virtual void DoInitalize() 
+    { 
+        throw new System.Exception("IMPLEMENT ME");
+    }
+
+
+
 
     public virtual void Begin() 
     {     
+        
         if (IsRunning())
             throw new System.Exception("Cant begin a new match, one is already initalized");
         if (AmReady() || IsRunning())
@@ -194,74 +267,117 @@ public class GameEncounterBase : MonoBehaviour,IGameEncounter
         __timeKeeper.RegisterEncounter(uniqueString, this);        
         __timeKeeper.InitLoop();
         intervalRunner.ClearAllTimers();
+        __timeKeeper.SetTimerProgress(0);
+
+        /////// OLD DoBegin
+        AttachGUIOberversToAgents();
+       // ForEachAgentId(agentKey => 
+        //{
+        //    if (!RefAgentManager.HasAgentKey(agentKey) || RefAgentManager.GetAgent(agentKey) == null)
+        //    {
+        //        Debug.LogError($"{agentKey} is not assigned to agentManager.");
+        //        return;
+        //    }
+        // });          
+        /////// END OLD DoBegin
 
         DoBegin(); 
         
+
+        // Notify all screens after agents have been initialized
+        NotifyAllScreens(SpaceEncounterManager.ObservableEffects.ShieldOff);
+        NotifyAllScreens(SpaceEncounterManager.ObservableEffects.AttackOff);
+        NotifyAllScreens(SpaceEncounterManager.ObservableEffects.MissileOff);
         __timeKeeper.SetReadyToRun(true);
         Run();
 
     }
-    protected virtual void DoBegin() { throw new System.Exception("IMPLEMENT ME");}
+
+
+    protected virtual void DoBegin() { 
+         throw new System.Exception("IMPLEMENT ME");
+        }
 
     public virtual void End() { 
         
         Pause();
         DoEnd(); 
+        __timeKeeper.SetTimerProgress(0);
         intervalRunner.ClearAllTimers();
         __timeKeeper.SetReadyToRun(false);
 
     }
-    public virtual void DoEnd() { throw new System.Exception("IMPLEMENT ME");}
+    public virtual void DoEnd() 
+    { 
+        throw new System.Exception("IMPLEMENT ME");
+    }
 
     public virtual void Run() 
     { 
+        
+        if (IsRunning())
+            throw new System.Exception("Cant Run Twice");
         DoRun(); 
         __timeKeeper.Run();
+        
 
     }
-    protected virtual void DoRun() { throw new System.Exception("IMPLEMENT ME");}
+    protected virtual void DoRun() 
+    { 
+        throw new System.Exception("IMPLEMENT ME");
+    }
 
     public virtual void Pause() 
     { 
         __timeKeeper.Pause();
+        // TODO ForEachAgent(agent => { agent.Pause(); });    
+        NotifyAllScreens(ObservableEffects.ShowPaused);        
         DoPause(); 
     }
-    protected virtual void DoPause() { throw new System.Exception("IMPLEMENT ME");}
 
-    public virtual void DoUpdate(float deltaTime) { DoInnerUpdate(deltaTime); }
-    protected virtual void DoInnerUpdate(float deltaTime) { throw new System.Exception("IMPLEMENT ME");}
+    /// **** ---------------------------------------------
 
-}
+    protected virtual void DoPause() 
+    { 
+        throw new System.Exception("IMPLEMENT ME");
+    }
 
-   /*
-    public Vector3 GetAgentPosition(string agent_id)
+    public virtual void DoUpdate(float deltaTime) 
     {
-        if (!__agents.ContainsKey(agent_id))
+        
+        float epochLength = 5.0f;
+        RunIfTime("showActionProgress", 0.25f, deltaTime, () =>
         {
-            Debug.LogError($"Agent ID '{agent_id}' does not exist in the agent dictionary.");
-            return Vector3.zero;
-        }
+            float timerProgress = GetTimerProgress();
+            float timerProgressMax = GetTimerProgressMax();
+            Debug.Log($"Setting TImer Progress { timerProgress + (0.25f/epochLength)*timerProgressMax}/{timerProgressMax}");
+            SetTimerProgress( timerProgress + (0.25f/epochLength)*timerProgressMax);
+            Debug.Log($"Getting: {timerProgress}");
 
-        var agent = __agents[agent_id];
-        if (agent == null)
-        {
-            Debug.LogError($"Agent with ID '{agent_id}' is null.");
-            return Vector3.zero;
-        }
+            NotifyAllScreens(ObservableEffects.TimerTick);
+        });
+        DoInnerUpdate(deltaTime,epochLength); 
+    
+    }
+    protected virtual void DoInnerUpdate(float deltaTime, float epochLength) 
+    { 
+        // throw new System.Exception("IMPLEMENT ME");
+    }
 
-        var unit = agent.GetUnit();
-        if (unit == null)
-        {
-            Debug.LogError($"Unit for agent '{agent_id}' is null.");
-            return Vector3.zero;
-        }
+    /// <summary>
+    ///  
+    /// </summary>
+    /// <param name="agentId"></param>
+    /// <returns></returns>
+    public ATResourceData GetResourceObject(string agentId)
+    {
+        return null;
+    }
+     public Agent GetPlayerAgent()
+    {
+        return null;
+    }    
+    /// **** ---------------------------------------------
 
-        var transform = unit.transform;
-        if (transform == null)
-        {
-            Debug.LogError($"Transform for unit of agent '{agent_id}' is null.");
-            return Vector3.zero;
-        }
-
-        return transform.position;
-    }*/
+    
+}

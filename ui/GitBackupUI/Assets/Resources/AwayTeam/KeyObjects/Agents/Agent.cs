@@ -167,7 +167,7 @@ public class Agent:MonoBehaviour, IPausable
        return  __unitGameObject;
         
     }    
-    public void DestroyUnit(string reasonCode)
+    public void DestroyUnits(string reasonCode)
     {
         if(__unitGameObject != null)
            GameObject.Destroy( __unitGameObject);        

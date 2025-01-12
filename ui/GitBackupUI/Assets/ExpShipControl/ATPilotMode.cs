@@ -16,29 +16,8 @@ public  class AgentPrefab
     public Agent agentPrefab; 
 }
 
-public interface IATGameMode
-{
-    float GetTimerProgress();
-    float GetTimerProgressMax();
 
-    void RegisterNotificationWithAgents();
-    void NotifyAllScreens(string effect);
-
-    void Initalize();
-    void Begin();
-    void End();
-    void Pause();
-    void Run();
-    void SetLevel(int lvl);
-    int GetLevel();
-    
-    ATResourceData GetResourceObject(string agent_id);
-    Agent GetPlayerAgent();
-}
-
-
-
-public class ATPilotMode : MonoBehaviour,IATGameMode,IPausable
+public class ATPilotMode : MonoBehaviour,IPausable
 {
     [SerializeField]
     public List<SpaceEncounterObserverMapping> gui_observers;
@@ -75,7 +54,7 @@ public class ATPilotMode : MonoBehaviour,IATGameMode,IPausable
         return 0.0f;
     }
 
-    public void RegisterNotificationWithAgents() 
+    public void AttachGUIOberversToAgents() 
     {
 
         foreach (Agent agent in __agents.Values)
@@ -175,6 +154,5 @@ public class ATPilotMode : MonoBehaviour,IATGameMode,IPausable
         }        
         return __agents["agent_1"]; 
     }    
-
 
 }
