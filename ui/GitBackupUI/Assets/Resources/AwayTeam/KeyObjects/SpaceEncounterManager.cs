@@ -91,17 +91,33 @@ public class SpaceEncounterManager : GameEncounterBase,IPausable,IATGameMode
         }    
 
     }
-    protected override void DoBegin()
+    
+
+
+    protected override void DoBegin(System.Action onFinish)
     {
         CameraToWorld();
-        ForEachAgentId(agentKey => 
+
+        StartCoroutine(RefAgentManager.RecreateAllUnitsCoRoutine(onFinish));
+        /*ForEachAgentId(agentKey => 
         {
             Agent agent = RefAgentManager.GetAgent(agentKey);
-            if (!RefAgentManager.RecreateUnits(agent, agentKey))
+            if (!RefAgentManager.RecreateSingleUnit(agent, agentKey))
             {
                 return;
             }
-         });
+         });*/
+         // Early warning of any resource problems
+        /*
+        ForEachAgent(agent => {
+            float fuel = GetAgentResourceField(agent,ResourceTypes.Fuel);
+            float hull = GetAgentResourceField(agent,ResourceTypes.Hull);
+            if (hull <= 0 || fuel <=0 )
+            {
+                Debug.LogError($"Cant run. Agent One is out of hull {hull.ToString()} or fuel {fuel.ToString()}");
+            }       
+        });*/
+
     }
 
     public override void DoEnd()
@@ -113,75 +129,63 @@ public class SpaceEncounterManager : GameEncounterBase,IPausable,IATGameMode
         });  
     }
 
-    protected override void DoRun()
+    private float GetAgentResourceField(Agent agent,  string resourceType)
     {
-
-        if (!RefAgentManager.HasAgentKey("agent_1"))
+        if (agent == null)
         {
-            Debug.LogError("Agent 'agent_1' not found in __agents dictionary.");
-            return;
+            Debug.LogError("Agent is null.");
+            return 0f;
         }
 
-        Agent agent1 = RefAgentManager.GetAgent("agent_1");
-        if (agent1 == null)
-        {
-            Debug.LogError("Agent 'agent_1' is null.");
-            return;
-        }
-        Agent agent2 = RefAgentManager.GetAgent("agent_2");
-        if (agent2 == null)
-        {
-            Debug.LogError("Agent 'agent_2' is null.");
-            return;
-        }
-
-        var resourceObject = agent1.GetResourceObject();
-        resourceObject.RefreshResources();
-        //Debug.Log("RUN DEBUG");
-        bool doDebug = false;
-        agent1.GetResourceObject().RefreshResources(doDebug);
-        agent2.GetResourceObject().RefreshResources();
-        Dictionary<string,ATResourceData> redat = agent1.GetResourceObject().GetSubResources();
-
-        // Debug.Log($"Inspecting Resources for Agent 1");
-        foreach(string key in redat.Keys)
-        {   
-            //Debug.Log($"Have Agent 1 resource {key}");
-            ATResourceData unitData = redat[key];
-            var obj = unitData.GetRecords();  
-            //Debug.Log($"Values {DJson.Stringify(obj)}");
-        }        
-
+        ATResourceData resourceObject = agent.GetResourceObject();
         if (resourceObject == null)
         {
-            Debug.LogError("Resource object for 'agent_1' is null.");
-            return;
+            Debug.LogError("ResourceObject is null.");
+            return 0f;
         }
 
-        var hullObj = resourceObject.GetRecordField("Encounter", ResourceTypes.Hull);
-        if (hullObj == null)
+        object field = resourceObject.GetRecordField("Encounter", resourceType);
+        if (field == null)
         {
-            Debug.LogError("'Hull' record not found for 'agent_1' in Encounter.");
-            return;
+            Debug.LogError($"GetRecordField() returned null for {agent.gameObject.name}:{resourceType}.");
+            return 0f;
         }
 
-        float hull;
         try
         {
-            hull = (float)hullObj;
+            return System.Convert.ToSingle(field);
         }
-        catch
+        catch (System.Exception ex)
         {
-            Debug.LogError("Failed to cast Hull record to float for 'agent_1'.");
-            return;
-        }        
-        ///////////////
-        float fuel = (float)agent1.GetResourceObject().GetRecordField("Encounter",ResourceTypes.Fuel);
-        if (hull <= 0 || fuel <=0 )
+            Debug.LogError($"Failed to convert {resourceType} field to float. Error: {ex.Message}");
+            return 0f;
+        }
+    }
+
+
+    protected override void DoRun()
+    {
+        ForEachAgent(agent => {
+            bool doDebug = false;
+            agent.GetResourceObject().RefreshResources(doDebug);
+        });
+        if (!RefAgentManager.HasAgentKey("agent_1") || !RefAgentManager.HasAgentKey("agent_2"))
         {
-            Debug.LogError($"Cant run. Agent One is out of hull {hull.ToString()} or fuel {fuel.ToString()}");
+            Debug.LogError("Agent 'agent_1/agent_2' not found in __agents dictionary.");
             return;
-        }       
+        }
+        bool exit=false;
+        ForEachAgent(agent => {
+            float fuel = GetAgentResourceField(agent,ResourceTypes.Fuel);
+            float hull = GetAgentResourceField(agent,ResourceTypes.Hull);
+            if (hull <= 0 || fuel <=0 )
+            {
+                Debug.LogError($"Cant run. Agent One is out of hull {hull.ToString()} or fuel {fuel.ToString()}");
+                exit = true;
+            }       
+        });
+        if (exit)
+            return;
 
         ForEachAgent(agent => { agent.Run(); });    
         NotifyAllScreens(ObservableEffects.ShowUnpaused);
@@ -196,7 +200,6 @@ public class SpaceEncounterManager : GameEncounterBase,IPausable,IATGameMode
     bool __actionsRunning = false;
     protected override void DoInnerUpdate(float deltaTime, float epochLength)
     {
-
         RunIfTime("endEncounterCheck", 1f, deltaTime, () =>
         {
             ForEachAgentId(agentId =>
@@ -216,7 +219,7 @@ public class SpaceEncounterManager : GameEncounterBase,IPausable,IATGameMode
             });
         });
 
-        RunIfTime("doActions", epochLength, deltaTime, () =>
+        RunIfTime("doActionsKickoff", epochLength, deltaTime, () =>
         {
             if (__actionsRunning==false)
             {
@@ -243,7 +246,6 @@ public class SpaceEncounterManager : GameEncounterBase,IPausable,IATGameMode
 
     public void RunSingleAgentActions(Agent primaryAgent)
     {
-
         if (primaryAgent == null)
             Debug.LogError("primaryAgent was found to be null. This should be impossible (1)");
         ForEachAgent(targetAgent => 
@@ -254,7 +256,11 @@ public class SpaceEncounterManager : GameEncounterBase,IPausable,IATGameMode
 
             string primaryAction = GetTargetAction(primaryAgent.GetAgentId());
             if (primaryAction.Length > 0)
-                primaryAgent.AddAgentAction(primaryAction,targetAgent);
+                primaryAgent.AddAgentCommand("action",primaryAction,targetAgent);
+            
+            string primaryNavigation = GetTargetNavigation(primaryAgent.GetAgentId());
+            if (primaryNavigation.Length > 0)
+                primaryAgent.AddAgentCommand("navigation",primaryNavigation,targetAgent);
         });
 
     }
@@ -262,6 +268,7 @@ public class SpaceEncounterManager : GameEncounterBase,IPausable,IATGameMode
     public void RunAllAgentActions(){
             // CHOOSE -
             ForEachAgent(agent => { agent.ChooseTargetAction(); });
+            ForEachAgent(agent => { agent.ChooseTargetNavigation(); });
 
             // TARGET -
             ForEachAgent(primaryAgent => { RunSingleAgentActions(primaryAgent); });
@@ -278,79 +285,18 @@ public class SpaceEncounterManager : GameEncounterBase,IPausable,IATGameMode
             return RefAgentManager.GetAgent(agent_id).GetTargetAction();
         return null;
     }
-    ///
-    ///
-    ///
-    ///
-    //private AgentManager agentManager;
+    public string GetTargetNavigation(string agent_id){
 
-    public AgentManager RefAgentManager
-    {
-        get { 
-                return GetComponent<AgentManager>(); 
-            }
-        set {}
-    }
-
-    public ATResourceData GetResourceObject(string agentId)
-    {
-        if (agentId == "account")
-            return accountResourceData;
-        if (agentId == "agent_1")
-            return RefAgentManager.GetAgent("agent_1").GetResourceObject();
-        if (agentId == "agent_2")
-            return RefAgentManager.GetAgent("agent_2").GetResourceObject();
-        Debug.LogError("Could not find requested agent data");
+        if (RefAgentManager.HasAgentKey(agent_id))
+            return RefAgentManager.GetAgent(agent_id).GetTargetNavigation();
         return null;
-    }       
-
-    public Agent GetPlayerAgent()
-    {
-        return RefAgentManager.GetPlayerAgent();
     }    
-
-
-    public void ForEachAgent(System.Action<Agent> action)
-    {
-        RefAgentManager.ForEachAgent(action);
-    }
-
-    public void ForEachAgentId(System.Action<string> action)
-    {
-        RefAgentManager.ForEachAgentId(action);
-    }
-
-    public float GetResourceValue(string agentId, string resourceType)
-    {
-        if (!RefAgentManager.HasAgentKey(agentId))
-        {
-            Debug.LogError($"Agent with ID {agentId} not found.");
-            return 0.0f;
-        }
-
-        var agent = RefAgentManager.GetAgent(agentId);
-        if (agent == null)
-        {
-            Debug.LogError($"Agent with ID {agentId} is null.");
-            return 0.0f;
-        }
-
-        var resourceObject = agent.GetResourceObject();
-        if (resourceObject == null)
-        {
-            Debug.LogError($"Resource object for agent {agentId} is null.");
-            return 0.0f;
-        }
-
-        var record = resourceObject.GetRecordField("Encounter", resourceType);
-        if (record == null)
-        {
-            //Debug.LogError($"Record for resource {resourceType} not found for agent {agentId}.");
-            return 0.0f;
-        }
-
-        return (float)record;
-    }    
-    
-
+ 
 }
+
+
+
+// Issues:
+// 1 - Health not scaling properly
+// 2 - Nav Cursor not rendering
+// 3 - Pilot mode does not exist

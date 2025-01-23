@@ -1505,7 +1505,7 @@ namespace FXV
                 for (int i = 0; i < count; ++i)
                 {
                     ShieldHit sh = activeHits[i];
-                    Gizmos.DrawSphere(sh.GetWorldPosition(), 0.01f);
+                    //Gizmos.DrawSphere(sh.GetWorldPosition(), 0.01f);
                 }
             }
         }

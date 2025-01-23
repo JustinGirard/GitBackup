@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using JetBrains.Annotations;
 using Unity.VisualScripting;
 using UnityEngine;
 
@@ -7,9 +8,11 @@ public class EncounterSquad : MonoBehaviour, IPausable
     [Header("Settings")]
     // public Vector3 masterPosition = Vector3.zero; // The central "master position"
     public Quaternion masterRotation = Quaternion.identity; // Optional if rotations are needed
+    [SerializeField]
+    private int __numUnits = 2;
 
     [Header("Resources")]
-    public string spaceMapUnitResourcePath = "AwayTeam/KeyObjects/SpaceMapUnit"; // Path to SpaceMapUnit prefab in Resources
+    public string spaceMapUnitResourcePath = "AwayTeam/KeyObjects/UnitExplorerShip_Physics"; // Path to SpaceMapUnit prefab in Resources
     public string veeFormationResourcePath = "AwayTeam/KeyObjects/VeeFormation"; // Path to VeeFormation prefab in Resources
 
     private List<GameObject> spaceMapUnits = new List<GameObject>(); // Tracks spawned SpaceMapUnit instances
@@ -20,8 +23,8 @@ public class EncounterSquad : MonoBehaviour, IPausable
     {
         foreach(GameObject spaceMapUnit in spaceMapUnits)
         {
-            SpaceMapUnitAgent su = spaceMapUnit.GetComponentInChildren<SpaceMapUnitAgent>(); 
-            su.Run();
+            SimpleShipController su = spaceMapUnit.GetComponentInChildren<SimpleShipController>(); 
+            //su.Run();
         }
 
         __is_running = true;
@@ -30,19 +33,34 @@ public class EncounterSquad : MonoBehaviour, IPausable
     {
         foreach(GameObject spaceMapUnit in spaceMapUnits)
         {
-            SpaceMapUnitAgent su = spaceMapUnit.GetComponentInChildren<SpaceMapUnitAgent>();
-            su.Pause();
+            SimpleShipController su = spaceMapUnit.GetComponentInChildren<SimpleShipController>();
+            //su.Pause();
         }
         __is_running = false;
     }
-    public List<SpaceMapUnitAgent> GetUnitList()
+    public List<SimpleShipController> GetUnitList()
     {
     
-        List<SpaceMapUnitAgent> suses = new List<SpaceMapUnitAgent>();
+        List<SimpleShipController> suses = new List<SimpleShipController>();
+        List<GameObject> remove = new List<GameObject>();
         foreach(GameObject spaceMapUnit in spaceMapUnits)
         {
-            SpaceMapUnitAgent su = spaceMapUnit.GetComponentInChildren<SpaceMapUnitAgent>();
-            suses.Add(su);
+            SimpleShipController su = spaceMapUnit.GetComponentInChildren<SimpleShipController>();
+            if (su == null)
+            {
+                Debug.LogWarning("Found empty unit. Doing Autocleaning. This should not be needed.");
+                remove.Add(spaceMapUnit);
+            }
+            else
+            {
+                suses.Add(su);
+            }
+        }
+        foreach(GameObject invalidSpaceMapUnit in remove)
+        {
+            Debug.LogWarning($"Cleaning .. {invalidSpaceMapUnit.name}");
+            spaceMapUnits.Remove(invalidSpaceMapUnit);
+            GameObject.Destroy(invalidSpaceMapUnit);
         }
         return suses;
     }
@@ -51,24 +69,16 @@ public class EncounterSquad : MonoBehaviour, IPausable
         return __is_running;
     }    
 
-    void Start()
-    {
-        //Rebuild(); // Automatically rebuild on Start
-    }
 
     /// <summary>
     /// Cleans up and respawns all SpaceMapUnits and the VeeFormation.
     /// </summary>
-    public void Rebuild()
-    {
-        Cleanup();
-        Respawn();
-    }
+
 
     /// <summary>
     /// Cleans up all dynamically spawned units and formation objects.
     /// </summary>
-    private void Cleanup()
+    private  System.Collections.IEnumerator Cleanup()
     {
         // Destroy all existing SpaceMapUnits
         foreach (var unit in spaceMapUnits)
@@ -83,6 +93,7 @@ public class EncounterSquad : MonoBehaviour, IPausable
             Destroy(veeFormation);
             veeFormation = null;
         }
+        yield return null;
     }
 
     /// <summary>
@@ -91,63 +102,52 @@ public class EncounterSquad : MonoBehaviour, IPausable
     /// 
     public void UpdatePosition()
     {
-        VeeFormation formation =  veeFormation.GetComponent<VeeFormation>();
-        
-        for (int i = 0; i < spaceMapUnits.Count; i++) // Support up to 5 units in the formation
-        {
-            Vector3 goalPosition = formation.GetPosition(i) + transform.position;
-            SpaceMapUnitAgent positionable = spaceMapUnits[i].GetComponentInChildren<SpaceMapUnitAgent>(); // Assuming SpaceMapUnit handles its position
-            if (positionable != null && goalPosition != null)
-            {
-                positionable.SetGoalPosition(goalPosition,immediate:true);            
-            }
-            else
-            {
-                Debug.LogError("SpaceMapUnit does not have the expected positionable interface.");
-            }
-        }
-
+        return;
 
     }
     public void NotifyDestroy(GameObject removed){
         spaceMapUnits.Remove(removed);
     }
-    private void Respawn()
+    public System.Collections.IEnumerator Rebuild()
     {
-        // Load and instantiate VeeFormation
-        // Debug.Log($"Loading my position {this.name}");
-
+        yield return Cleanup();
+        yield return Respawn();
+    }
+    private System.Collections.IEnumerator Respawn()
+    {
         
         Transform units = transform.Find("Units");
         units.name = $"UnitsFor{name}";
         if (units == null)
         {
             Debug.LogError("Failed to load VeeFormation prefab from Resources.");
-            return;            
+            yield break;    
         }
         Transform formations = transform.Find("Formations");
         if (formations == null)
         {
             Debug.LogError("Failed to load VeeFormation prefab from Resources.");
-            return;            
+            yield break;            
         }
-
 
         veeFormation = Instantiate(Resources.Load<GameObject>(veeFormationResourcePath));
         if (veeFormation == null)
         {
             Debug.LogError("Failed to load VeeFormation prefab from Resources.");
-            return;
+            yield break;
         }
-        //veeFormation.transform.position = masterPosition;
-        //veeFormation.transform.rotation = masterRotation;
+
         veeFormation.transform.parent = formations;
+        yield return new WaitForEndOfFrame(); 
+        //spaceMapUnit.transform.SetParent(units, false);
+        yield return new WaitForFixedUpdate(); // Ensures parenting changes are synchronized
+
         veeFormation.transform.position = formations.position;
         veeFormation.transform.rotation = formations.rotation;
-        // Dynamically load SpaceMapUnits and position them using VeeFormation
-        for (int i = 0; i < 5; i++) // Support up to 5 units in the formation
+        yield return new WaitForEndOfFrame(); 
+        yield return new WaitForFixedUpdate(); // Ensures parenting changes are synchronized
+        for (int i = 0; i < __numUnits; i++)
         {
-            //     public string spaceMapUnitResourcePath = "AwayTeam/SpaceMapUnit"; // Path to SpaceMapUnit prefab in Resources
             var spaceMapUnitPrefab = Resources.Load<GameObject>(spaceMapUnitResourcePath);
             if (spaceMapUnitPrefab == null)
             {
@@ -158,38 +158,52 @@ public class EncounterSquad : MonoBehaviour, IPausable
             // Instantiate and configure SpaceMapUnit
             var spaceMapUnit = Instantiate(spaceMapUnitPrefab);
             spaceMapUnits.Add(spaceMapUnit);
+            yield return new WaitForEndOfFrame();   
+            yield return new WaitForFixedUpdate();
 
             // Parent to EncounterUnit for better hierarchy organization
             spaceMapUnit.transform.parent = units;
-            spaceMapUnit.name = name+".unit."+i.ToString();
-            // Set position and rotation based on VeeFormation
-            Vector3 goalPosition = veeFormation.GetComponent<VeeFormation>().GetPosition(i) + transform.position;
-            //Vector3 goalPosition = veeFormation.transform.position;
-            //Quaternion goalRotation = masterRotation; // Add rotation logic if needed
-            if (goalPosition == null)
-            {
-                Debug.LogError("Could not extract goal position");
-            }
-            SpaceMapUnitAgent positionable = spaceMapUnit.GetComponentInChildren<SpaceMapUnitAgent>(); // Assuming SpaceMapUnit handles its position
-            if (positionable != null && goalPosition != null)
-            {
-                positionable.SetGoalPosition(goalPosition,immediate:true);
-                //Debug.Log("SetRootLookAt Setting Root Angle now");
-                positionable.SetRootLookAt(new Vector3(0,100,0),true);
-            }
-            else
-            {
-                Debug.LogError("SpaceMapUnit does not have the expected positionable interface.");
-            }
-            if (__is_running)
-            {
-                positionable.Run();
-            }
-            else
-            {
-                positionable.Pause();
-            }
-            //Debug.Break();
+            yield return new WaitForEndOfFrame();             
+            yield return new WaitForFixedUpdate();
+
+            SimpleShipController unit = spaceMapUnit.GetComponentInChildren<SimpleShipController>(); 
+            unit.SetName(name+".unit."+i.ToString());
+            Transform formationPosition = veeFormation.GetComponent<VeeFormation>().GetPositionTransform(i); 
+            yield return new WaitForEndOfFrame();             
+            yield return new WaitForFixedUpdate();
+            // 
+            unit.transform.position =  formationPosition.position;
+            unit.transform.rotation =  formationPosition.rotation;
+            yield return new WaitForEndOfFrame();
+            yield return new WaitForFixedUpdate();
+
+            unit.SetGoalPosition(formationPosition, Vector3.zero);
+            unit.SetGoalTarget(formationPosition, formationPosition.forward *2f);
+            yield return new WaitForEndOfFrame(); 
+            yield return new WaitForFixedUpdate();
+
+        }
+        //Debug.Break(); // WHEN DEBUG BREAK RUNS, ALL SHIPS RENDER CORRECTLY
+        //yield return new WaitForSeconds(5);
+    }
+    public void SetGoalPosition(Transform t, Vector3? offset)
+    {
+        Debug.Log("Set goal position");
+        veeFormation.transform.position = t.position;
+        veeFormation.transform.rotation = t.rotation;
+    
+        //foreach(GameObject unit in spaceMapUnits)
+        //{
+        //    (unit.GetComponent<SimpleShipController>()).SetGoalPosition(t, Vector3.zero);
+        //}
+    }
+
+    public void SetGoalTarget(Transform t, Vector3? offset)
+    {
+        foreach(GameObject unit in spaceMapUnits)
+        {
+            (unit.GetComponent<SimpleShipController>()).SetGoalTarget(t,offset);
         }
     }
+
 }

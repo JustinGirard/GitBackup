@@ -8,7 +8,7 @@ namespace DataGraph
     public class GraphData : ScriptableObject
     {
         public List<NodeData> Nodes = new List<NodeData>();
-        public List<GroupData> Edges = new List<GroupData>();
+        public List<EdgeData> Edges = new List<EdgeData>();
     }
 
 
@@ -20,7 +20,7 @@ namespace DataGraph
     }
 
     [System.Serializable]
-    public class GroupData
+    public class EdgeData
     {
         public int SourceID;
         public int DestinationID;

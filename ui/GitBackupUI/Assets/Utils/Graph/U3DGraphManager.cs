@@ -57,7 +57,7 @@ namespace VisualGraph
             }
 
             // Add new edge to the graphData
-            GroupData newEdge = new GroupData
+            EdgeData newEdge = new EdgeData
             {
                 SourceID = node1.ID,
                 DestinationID = node2.ID
@@ -74,7 +74,7 @@ namespace VisualGraph
             int destinationID = edge.destinationNode.GetComponent<Node>().ID;
 
             // Find the exact edge in the graphData and remove it
-            GroupData edgeToRemove = graphData.Edges.Find(e =>
+            EdgeData edgeToRemove = graphData.Edges.Find(e =>
                 (e.SourceID == sourceID && e.DestinationID == destinationID) ||
                 (e.SourceID == destinationID && e.DestinationID == sourceID));
 
@@ -158,7 +158,7 @@ namespace VisualGraph
             {
                 for (int j = i + 1; j < graphData.Nodes.Count; j++)
                 {
-                    GroupData edge = new GroupData
+                    EdgeData edge = new EdgeData
                     {
                         SourceID = graphData.Nodes[i].ID,
                         DestinationID = graphData.Nodes[j].ID

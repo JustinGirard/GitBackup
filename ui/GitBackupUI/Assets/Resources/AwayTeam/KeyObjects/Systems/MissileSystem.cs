@@ -57,7 +57,7 @@ public class MissileSystem : StandardSystem
             primaryDelta[ResourceTypes.Fuel] = -1*fuelCost;
             yield return CoroutineRunner.Instance.StartCoroutine(EffectHandler.ShootMissileAt(
                 missilePrefab: Resources.Load<GameObject>(SpaceEncounterManager.PrefabPath.Missile),
-                explosionPrefab: Resources.Load<GameObject>(SpaceEncounterManager.PrefabPath.Explosion),
+                explosionPrefab: Resources.Load<GameObject>(SpaceEncounterManager.PrefabPath.ExplosionRed),
                 number: 20,
                 delay: 1f,
                 duration: 1f,
@@ -96,18 +96,21 @@ public class MissileSystem : StandardSystem
         }
         if ((float)targetResources.Balance(ResourceTypes.Hull) <= 0)
         {
-            GameObject explosionPrefab = Resources.Load<GameObject>(SpaceEncounterManager.PrefabPath.Explosion);
+            GameObject explosionPrefab = Resources.Load<GameObject>(SpaceEncounterManager.PrefabPath.ExplosionRed);
             
             yield return CoroutineRunner.Instance.StartCoroutine(
                 EffectHandler.SingleExplosion( 
-                                        explosionPrefab,  
-                                        targetUnit.transform.position,  
-                                        2f, 
-                                        5f)
+                                           explosionPrefab:explosionPrefab,  
+                                            targetParent:targetUnit,
+                                            target:  targetUnit.transform.position,
+                                            sizeSmall:2f, 
+                                            sizeLarge:5f,
+                                            cleanUp:null,
+                                            cleanupDelay:0f)
              );
             if (targetUnit != null)
             {
-                SpaceMapUnitAgent unit = targetUnit.GetComponentInParent<SpaceMapUnitAgent>();
+                SimpleShipController unit = targetUnit.GetComponentInParent<SimpleShipController>();
                 unit.SafeDestroy();
             }
             //if (unit != null)

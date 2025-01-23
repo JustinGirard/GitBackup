@@ -105,7 +105,7 @@ public class ATPilotMode : MonoBehaviour,IPausable
         if (__unitGO != null)
             GameObject.Destroy(__unitGO);
         __unitGO = Instantiate( Resources.Load<GameObject>(encounterUnitPrefab));
-        SpaceMapUnitAgent unit = __unitGO.GetComponentInChildren<SpaceMapUnitAgent>();
+        SimpleShipController unit = __unitGO.GetComponentInChildren<SimpleShipController>();
 
         //
         Agent agent = GetPlayerAgent();

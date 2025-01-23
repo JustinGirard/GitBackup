@@ -11,7 +11,8 @@ using System.Runtime.InteropServices.WindowsRuntime;
 using UnityEditor.MPE;
 using System.IO;
 using UnityEngine.SocialPlatforms;
-
+using PhysicalModel;
+using UnityEngine.PlayerLoop;
 [System.Serializable]
 public class ResourceEntry
 {
@@ -32,6 +33,9 @@ public interface IATGameMode
     void End();
     void Pause();
     void Run();
+
+    bool AmReady();
+    bool IsRunning();
     void SetLevel(int lvl);
     int GetLevel();
     void DoUpdate(float deltaTime);
@@ -44,8 +48,6 @@ public interface IATGameMode
 
 public class SystemConstants
 {
-
-
     public  static Dictionary<string, string> GetAccountFieldMapping ()
     {
         return new Dictionary<string, string>
@@ -97,11 +99,13 @@ public class SystemConstants
 
 public class GameEncounterBase : MonoBehaviour,IATGameMode
 {
-    
+
+    private PhysicalModel.Graph __physicalGraph;
     public class PrefabPath
     {
         public const string BoltPath = "AwayTeam/KeyObjects/Effects/BlasterBolt";
-        public const string Explosion = "AwayTeam/KeyObjects/Effects/Explosion";
+        public const string ExplosionRed = "AwayTeam/KeyObjects/Effects/ExplosionRed";
+        public const string ExplosionBlue = "AwayTeam/KeyObjects/Effects/ExplosionBlue";
         public const string Missile = "AwayTeam/KeyObjects/Effects/Missile";
         public const string UnitShield = "AwayTeam/KeyObjects/Effects/UnitShield";
     }
@@ -127,8 +131,8 @@ public class GameEncounterBase : MonoBehaviour,IATGameMode
         }        
     }
     
-    [SerializeField]
-    public string encounterSquadPrefab = "AwayTeam/KeyObjects/EncounterSquad"; // Path to SpaceMapUnit prefab in Resources
+    //[SerializeField]
+    //public string encounterSquadPrefab = "AwayTeam/KeyObjects/EncounterSquad"; // Path to SpaceMapUnit prefab in Resources
 
     [SerializeField]
     public ATResourceData accountResourceData = null;
@@ -143,12 +147,10 @@ public class GameEncounterBase : MonoBehaviour,IATGameMode
         throw new System.Exception("NOT IMPLEMENTED");
     }
 
-
     public virtual int GetLevel()
     {
         throw new System.Exception("NOT IMPLEMENTED");
     }
-
 
     // The Encounter may have GUI observers. Make sure these 
     // Obervers are also attached to agents, so agents notify the observers of 
@@ -156,10 +158,9 @@ public class GameEncounterBase : MonoBehaviour,IATGameMode
     public void AttachGUIOberversToAgents() 
     {
         
-        AgentManager agentMan = GetComponent<AgentManager>();
-        if(agentMan == null)
+        if(RefAgentManager == null)
             Debug.LogError("CRITICAL ERROR: no AgentManager attached");
-        agentMan.ForEachAgent(agent => 
+        RefAgentManager.ForEachAgent(agent => 
         {
             agent.ClearObservers();
             foreach (SpaceEncounterObserverMapping mapping in gui_observers) 
@@ -168,8 +169,6 @@ public class GameEncounterBase : MonoBehaviour,IATGameMode
                 agent.AddObserver(observer);
             }
         });    
-        
-
     }
     
     public void NotifyAllScreens(string effect) 
@@ -199,23 +198,28 @@ public class GameEncounterBase : MonoBehaviour,IATGameMode
         if (actionId == AgentActionType.Attack)
             validAction = true;        
         return validAction;
-        
     }
 
-
-    public bool IsRunning(){
+    public bool IsRunning()
+    {
         return __timeKeeper.IsRunning();
     }
-    public bool AmReady(){
+    public bool AmReady()
+    {
         return __timeKeeper.AmReady();
     }
 
-
     public virtual void Awake()
     {
+        __physicalGraph = new PhysicalModel.Graph();
         intervalRunner = new IntervalRunner();
         __timeKeeper = GetComponent<EncounterTimeKeeper>();
         DoAwake();
+    }
+
+    public PhysicalModel.Graph GetPhysicalModel()
+    {
+        return __physicalGraph;
     }
 
     public virtual void DoAwake() { 
@@ -238,22 +242,15 @@ public class GameEncounterBase : MonoBehaviour,IATGameMode
         __timeKeeper.SetTimerProgress(number);
     }
 
-
- 
     
     public void Initalize()
     {
-
         DoInitalize();
-    
     } 
     protected virtual void DoInitalize() 
     { 
         throw new System.Exception("IMPLEMENT ME");
     }
-
-
-
 
     public virtual void Begin() 
     {     
@@ -271,30 +268,34 @@ public class GameEncounterBase : MonoBehaviour,IATGameMode
 
         /////// OLD DoBegin
         AttachGUIOberversToAgents();
-       // ForEachAgentId(agentKey => 
-        //{
-        //    if (!RefAgentManager.HasAgentKey(agentKey) || RefAgentManager.GetAgent(agentKey) == null)
-        //    {
-        //        Debug.LogError($"{agentKey} is not assigned to agentManager.");
-        //        return;
-        //    }
-        // });          
-        /////// END OLD DoBegin
-
-        DoBegin(); 
+        DoBegin(onFinish:() => {
+            // Notify all screens after agents have been initialized
+            NotifyAllScreens(SpaceEncounterManager.ObservableEffects.ShieldOff);
+            NotifyAllScreens(SpaceEncounterManager.ObservableEffects.AttackOff);
+            NotifyAllScreens(SpaceEncounterManager.ObservableEffects.MissileOff);
+            SetReadyToRun(true);
+            //Debug.Log("FINISHED INIT. All Ships should be in place");
+            //Debug.Break();
+            Run();
+        }); 
         
 
-        // Notify all screens after agents have been initialized
-        NotifyAllScreens(SpaceEncounterManager.ObservableEffects.ShieldOff);
-        NotifyAllScreens(SpaceEncounterManager.ObservableEffects.AttackOff);
-        NotifyAllScreens(SpaceEncounterManager.ObservableEffects.MissileOff);
-        __timeKeeper.SetReadyToRun(true);
-        Run();
 
     }
+    private void SetReadyToRun(bool ready)
+    {
+        __timeKeeper.SetReadyToRun(ready);
+    }
 
+    public AgentManager RefAgentManager
+    {
+        get { 
+                return GetComponent<AgentManager>(); 
+            }
+        set {}
+    }
 
-    protected virtual void DoBegin() { 
+    protected virtual void DoBegin(System.Action onFinish) { 
          throw new System.Exception("IMPLEMENT ME");
         }
 
@@ -304,7 +305,7 @@ public class GameEncounterBase : MonoBehaviour,IATGameMode
         DoEnd(); 
         __timeKeeper.SetTimerProgress(0);
         intervalRunner.ClearAllTimers();
-        __timeKeeper.SetReadyToRun(false);
+        SetReadyToRun(false);
 
     }
     public virtual void DoEnd() 
@@ -317,10 +318,10 @@ public class GameEncounterBase : MonoBehaviour,IATGameMode
         
         if (IsRunning())
             throw new System.Exception("Cant Run Twice");
+        if (!AmReady())
+            throw new System.Exception("Run() NOT READY TO RUN");
         DoRun(); 
         __timeKeeper.Run();
-        
-
     }
     protected virtual void DoRun() 
     { 
@@ -344,15 +345,19 @@ public class GameEncounterBase : MonoBehaviour,IATGameMode
 
     public virtual void DoUpdate(float deltaTime) 
     {
+        if (!IsRunning())
+            throw new System.Exception("Cant DoUpdate-- Not Running().");
+        if (!AmReady())
+            throw new System.Exception("Am not ready, so can't update");
         
         float epochLength = 5.0f;
         RunIfTime("showActionProgress", 0.25f, deltaTime, () =>
         {
             float timerProgress = GetTimerProgress();
             float timerProgressMax = GetTimerProgressMax();
-            Debug.Log($"Setting TImer Progress { timerProgress + (0.25f/epochLength)*timerProgressMax}/{timerProgressMax}");
+            // Debug.Log($"Setting TImer Progress { timerProgress + (0.25f/epochLength)*timerProgressMax}/{timerProgressMax}");
             SetTimerProgress( timerProgress + (0.25f/epochLength)*timerProgressMax);
-            Debug.Log($"Getting: {timerProgress}");
+            //Debug.Log($"Getting: {timerProgress}");
 
             NotifyAllScreens(ObservableEffects.TimerTick);
         });
@@ -361,7 +366,7 @@ public class GameEncounterBase : MonoBehaviour,IATGameMode
     }
     protected virtual void DoInnerUpdate(float deltaTime, float epochLength) 
     { 
-        // throw new System.Exception("IMPLEMENT ME");
+        throw new System.Exception("IMPLEMENT ME");
     }
 
     /// <summary>
@@ -371,13 +376,62 @@ public class GameEncounterBase : MonoBehaviour,IATGameMode
     /// <returns></returns>
     public ATResourceData GetResourceObject(string agentId)
     {
+        if (agentId == "account")
+            return accountResourceData;
+        if (agentId == "agent_1")
+            return RefAgentManager.GetAgent("agent_1").GetResourceObject();
+        if (agentId == "agent_2")
+            return RefAgentManager.GetAgent("agent_2").GetResourceObject();
+        Debug.LogError("Could not find requested agent data");
         return null;
-    }
-     public Agent GetPlayerAgent()
+    }      
+    public Agent GetPlayerAgent()
     {
-        return null;
+        return RefAgentManager.GetPlayerAgent();
     }    
     /// **** ---------------------------------------------
 
-    
+    public void ForEachAgent(System.Action<Agent> action)
+    {
+        RefAgentManager.ForEachAgent(action);
+    }
+
+    public void ForEachAgentId(System.Action<string> action)
+    {
+        RefAgentManager.ForEachAgentId(action);
+    }  
+
+
+    public float GetResourceValue(string agentId, string resourceType)
+    {
+        if (!RefAgentManager.HasAgentKey(agentId))
+        {
+            Debug.LogError($"Agent with ID {agentId} not found.");
+            return 0.0f;
+        }
+
+        var agent = RefAgentManager.GetAgent(agentId);
+        if (agent == null)
+        {
+            Debug.LogError($"Agent with ID {agentId} is null.");
+            return 0.0f;
+        }
+
+        var resourceObject = agent.GetResourceObject();
+        if (resourceObject == null)
+        {
+            Debug.LogError($"Resource object for agent {agentId} is null.");
+            return 0.0f;
+        }
+
+        var record = resourceObject.GetRecordField("Encounter", resourceType);
+        if (record == null)
+        {
+            //Debug.LogError($"Record for resource {resourceType} not found for agent {agentId}.");
+            return 0.0f;
+        }
+
+        return (float)record;
+    }    
+
 }

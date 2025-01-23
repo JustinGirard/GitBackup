@@ -1,6 +1,8 @@
 using UnityEngine;
 using UnityEngine.UIElements;
-
+using System.Linq;
+using System.Collections.Generic;
+using UnityEngine.UI;
 public class GameScreenController : MonoBehaviour,IShowHide
 {
     public enum MenuScreenType
@@ -18,6 +20,8 @@ public class GameScreenController : MonoBehaviour,IShowHide
     private UIDocument uiDocument;
     private VisualElement root;
     private VisualElement buttonsContainer;
+    private Dictionary<string,UnityEngine.UIElements.Button> buttonDict;
+
     private Label subjectLabel;
     private int count=0;
     void Awake()
@@ -28,6 +32,7 @@ public class GameScreenController : MonoBehaviour,IShowHide
 
         // Find the container for buttons
         buttonsContainer = root.Q<VisualElement>("buttons-container");
+        buttonDict = new Dictionary<string, UnityEngine.UIElements.Button>();
         subjectLabel = root.Q<Label>("subject");
 
         // Clear existing buttons
@@ -36,17 +41,44 @@ public class GameScreenController : MonoBehaviour,IShowHide
 
     void OnEnable()
     {
-        // Dynamically create buttons based on the screen type
-        //CreateButtonsForScreen(menuScreenType);
-        // Set initial text for the subject label
-        //SetScreenState(menuScreenType);
+
+    }
+
+    public System.Collections.IEnumerator WaitForScreenReady(System.Action callback)
+    {
+        yield return new WaitForEndOfFrame();
+        callback?.Invoke();
+    }
+
+    [SerializeField]
+    private bool __debugAutoPlayNewGame = false;
+    public void AutoTest(){
+        if (__debugAutoPlayNewGame && menuScreenType == MenuScreenType.MainMenu)
+        {
+            __debugAutoPlayNewGame = false; // Prevent repeated triggering
+            Debug.Log("Debug: Auto-playing new game...");
+            UnityEngine.UIElements.Button playButton = buttonDict["Play"];
+
+            if (playButton != null)
+            {
+                //Debug.Log("Launching Play Mode.");
+                __encounterManager = SpaceCombatScreen.Instance().GetEncounterManager();
+                __encounterManager.Initalize();
+                __encounterManager.Begin();
+                NavigateTo("AT_SpaceCombatEncounterScreen");                
+                //playButton.SendEvent(new ClickEvent()); // Programmatically trigger the click
+                //Debug.Log("Debug: Invoked 'Play' button for auto-play.");
+            }
+        }
+
     }
     public void Show()
     {
         uiDocument.rootVisualElement.style.display = DisplayStyle.Flex;
         CreateButtonsForScreen(menuScreenType);
         SetScreenState(menuScreenType);
- 
+        //AutoTest();
+        StartCoroutine(WaitForScreenReady(() => AutoTest()));
     }
     public void Hide()
     {
@@ -59,15 +91,19 @@ public class GameScreenController : MonoBehaviour,IShowHide
 
         count++;
         buttonsContainer.Clear();
+        buttonDict.Clear();
         switch (type)
         {
             case MenuScreenType.MainMenu:
                 AddButton("Play", () =>
                 {
-                    __encounterManager = SpaceCombatScreen.Instance().GetEncounterManager();
-                    __encounterManager.Initalize();
-                    __encounterManager.Begin();
-                    NavigateTo("AT_SpaceCombatEncounterScreen");
+                    //WaitForScreenReady(() => {
+                        Debug.Log("Launching Play Mode.");
+                        __encounterManager = SpaceCombatScreen.Instance().GetEncounterManager();
+                        __encounterManager.Initalize();
+                        __encounterManager.Begin();
+                        NavigateTo("AT_SpaceCombatEncounterScreen");
+                    //});
                 });
                 break;
             case MenuScreenType.YouWinScreen:
@@ -81,22 +117,26 @@ public class GameScreenController : MonoBehaviour,IShowHide
                     __encounterManager.Begin();
                     NavigateTo("AT_SpaceCombatEncounterScreen");
                 });
-                AddButton("Quit to Menu", () =>
+                AddButton("Quit to Menu.", () =>
                 {
+                    Debug.Log("Quit To Menu.");
+
                     __encounterManager = SpaceCombatScreen.Instance().GetEncounterManager();
                      __encounterManager.End();
                     NavigateTo("AT_NewGame");
                 });
                 break;
             case MenuScreenType.PausedScreen:
-                AddButton("Resume", () =>
+                AddButton("Resume.", () =>
                 {
+                    Debug.Log("Resume");
                     __encounterManager = SpaceCombatScreen.Instance().GetEncounterManager();
                     NavigateTo("AT_SpaceCombatEncounterScreen");
                     __encounterManager.Run();
                 });
                 AddButton("Quit to Menu", () =>
                 {
+                    Debug.Log("Quit.");
                     __encounterManager = SpaceCombatScreen.Instance().GetEncounterManager();
                      __encounterManager.End();
                     NavigateTo("AT_NewGame");
@@ -126,7 +166,7 @@ public class GameScreenController : MonoBehaviour,IShowHide
     private void AddButton(string text, System.Action onClickAction)
     {
         // Create and configure the button
-        Button button = new Button
+        UnityEngine.UIElements.Button button = new UnityEngine.UIElements.Button
         {
             text = text
         };
@@ -136,6 +176,7 @@ public class GameScreenController : MonoBehaviour,IShowHide
 
         // Add the button to the container
         buttonsContainer.Add(button);
+        buttonDict[text] = button;
     }
 
     private void NavigateTo(string screenName)

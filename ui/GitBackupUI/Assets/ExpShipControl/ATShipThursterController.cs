@@ -34,11 +34,60 @@ public class SimpleShipController : MonoBehaviour
     float modeTimer = 0f;
     bool isPositionMode = false;
     List<ShipInput> __inputStack = new List<ShipInput> ();
+    public ProjectileEmitter GetEmitter(string type)
+    {
+        return new ProjectileEmitter(this.gameObject,type);
+    }
+    public void SafeDestroy()
+    {
+        // Debug.Log($"DESTROYING MYSELF: {name}");
+        EncounterSquad unit = GetComponentInParent<EncounterSquad>();
+        if( unit != null)
+            unit.NotifyDestroy(this.gameObject);
+        GameObject.Destroy(this.gameObject);
+    }
+    void OnDestroy()
+    {
+        // Debug.Log($"NOTIFICATION MYSELF: {name}");
+        EncounterSquad unit = GetComponentInParent<EncounterSquad>();
+        if( unit != null)
+            unit.NotifyDestroy(this.gameObject);
+    }   
+
 
     public void SendInput(ShipInput input)
     {
         __inputStack.Add(input); 
     }
+    public void SetName(string name)
+    {
+        this.gameObject.name = name;
+        aimAtObject.gameObject.name = "unit_aim."+name;
+        positionObject.gameObject.name = "position."+name;
+    }
+    public void SetGoalPosition(Transform t,Vector3? offset)
+    {
+        positionObject.transform.parent = t;
+        positionObject.transform.position = t.position;
+        //if (offset != null)
+        //    positionObject.transform.position = t.position + (Vector3)offset;
+        //else
+        //    positionObject.transform.position = t.position;
+    }
+    public GameObject GetGoalPosition()
+    {
+        return positionObject;
+    }
+    public void SetGoalTarget(Transform t, Vector3? offset)
+    {
+        aimAtObject.transform.parent = t;
+        if (offset != null)
+            aimAtObject.transform.position = t.position + (Vector3)offset;
+        else
+            aimAtObject.transform.position = t.position;
+    }
+    
+
     public void ProcessInput()
     {
         ShipInput inputTotal = new ShipInput();
@@ -56,8 +105,13 @@ public class SimpleShipController : MonoBehaviour
     }
     public float __orientTime = 0f;
     public float __velocityTime = 0f;
+    public bool __navigationActive = false;
     private void Update()
     {
+        if (__navigationActive == false)
+            return;
+        //return;
+        Initalize();            
         float angDist = ATShipControlEffects.AngDist(shipTransform:this.transform, source: transform, target: aimAtObject.transform);
         if (angDist > 5f)  
             StartCoroutine(ATShipControlEffects.AdjustOrientationSlerpOsc(
@@ -79,6 +133,8 @@ public class SimpleShipController : MonoBehaviour
             ));
 
         if (ATShipControlEffects.TransDist(shipTransform: this.transform, target: positionObject.transform) > 1f)
+        {
+
             StartCoroutine(ATShipControlEffects.AdjustVelocityTowardsTarget(
                 shipTransform: this.transform,
                 shipRigidbody: GetComponent<Rigidbody>(),  // Access Rigidbody for velocity
@@ -97,6 +153,9 @@ public class SimpleShipController : MonoBehaviour
                     return false;
                 }
             ));
+
+
+        }
 
         ProcessInput();
     }
@@ -188,15 +247,30 @@ public class SimpleShipController : MonoBehaviour
 
         return new ShipInput();  // Return zero input if fully locked to rotation
     }*/
-    
-
+    bool __isSetup = false;
+    private void Initalize()
+    {
+        if (__navigationActive == false)
+            return;        
+        //return;
+        
+        if (__isSetup == false)
+        {
+            playerInputModule = GetComponent<PlayerInputModule>();
+            shipControlModule = GetComponent<ShipControlModule>();
+            playerInputModule.DisableInput();
+            __isSetup = true;
+        }
+    }
 
     
     private void Start()
     {
-        playerInputModule = GetComponent<PlayerInputModule>();
-        shipControlModule = GetComponent<ShipControlModule>();
-        playerInputModule.DisableInput();
+        if (__navigationActive == false)
+            return;
+        //return;
+
+        Initalize();
     }
     
     /*
@@ -270,22 +344,23 @@ public class SimpleShipController : MonoBehaviour
     {
         if (!__debugMode) return;
 
+        /*
         Vector3 targetPos = positionObject.transform.position;
 
         Gizmos.color = Color.red;
-        Gizmos.DrawSphere(targetPos, 2.5f); // 0.5f radius for visibility
+        // Gizmos.DrawSphere(targetPos, 2.5f); // 0.5f radius for visibility
 
         // Use aimAtObject's forward direction as the "aim vector"
         Transform aimTarget = aimAtObject.transform;
         Vector3 directionToTarget = aimTarget.position - positionObject.transform.position;        
         Vector3 lineEnd = targetPos + directionToTarget * 10f;
-        Gizmos.DrawLine(targetPos, lineEnd);
+        // Gizmos.DrawLine(targetPos, lineEnd);
 
         aimTarget = aimAtObject.transform;
         directionToTarget = aimTarget.position - this.transform.position;        
         lineEnd = this.transform.position + directionToTarget * 10f;
-        Gizmos.DrawLine(this.transform.position, lineEnd);
-
+        // Gizmos.DrawLine(this.transform.position, lineEnd);
+        */
 
     }    
 }

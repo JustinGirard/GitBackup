@@ -3,6 +3,7 @@ using UnityEngine;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using Unity.VisualScripting;
 /*
 public static class QuickSema
 {
@@ -55,10 +56,105 @@ public static class Sema
         return _locks.TryGetValue(id, out var timestamp) && (DateTime.UtcNow - timestamp) <= DefaultTimeout;
     }
 }
+public static class PhysicsHandler
+{
+    public static IEnumerator ShootBlasterAt(GameObject boltPrefab,
+                                             GameObject explosionPrefab, 
+                                             int number, 
+                                             float speed,
+                                             float delay, 
+                                             float lifetime,
+                                             float projectileKickback,
+                                             float impactKickback,
+                                             GameObject sourceUnit, 
+                                             Vector3 sourceOffset,  //  (sourceUnit.transform.forward * 2);
+                                             GameObject targetUnit,
+                                             float deviation)
+    {
+        GameObject[] boltsGroups = new GameObject[number]; // Array to hold the instantiated bolts
 
+        for (int i = 0; i < number; i++)
+        {
+            // --- Instantiate the projectile ---
+            GameObject boltContainer = UnityEngine.Object.Instantiate(boltPrefab);
+            boltsGroups[i] = boltContainer;
+            Transform boltT = boltContainer.transform.Find("Bolt");
+            GameObject bolt = boltT.gameObject;
+            bolt.transform.position = sourceUnit.transform.position + sourceOffset;
+            bolt.layer = LayerMask.NameToLayer("EnergyPowers");
+            
+
+            Vector3 targetPosition = targetUnit.transform.position;
+            float distanceToTarget = Vector3.Distance(bolt.transform.position, targetPosition);
+            Vector3 randomizedTarget = targetPosition + new Vector3(
+                UnityEngine.Random.Range(-deviation * distanceToTarget, deviation * distanceToTarget),
+                UnityEngine.Random.Range(-deviation * distanceToTarget, deviation * distanceToTarget),
+                UnityEngine.Random.Range(-deviation * distanceToTarget, deviation * distanceToTarget));
+
+            Rigidbody sourceRigidbody = sourceUnit.GetComponent<Rigidbody>();
+            if (sourceRigidbody != null)
+            {
+                Vector3 kickbackDirection = (bolt.transform.position - randomizedTarget).normalized;
+                sourceRigidbody.AddForce(kickbackDirection * projectileKickback, ForceMode.Acceleration);
+            }
+            // --- Apply random deviation to the target ---
+            //Vector3 randomizedTarget = bolt.transform.position + new Vector3(
+            //    UnityEngine.Random.Range(-deviation, deviation),
+            //    UnityEngine.Random.Range(-deviation, deviation),
+            //    UnityEngine.Random.Range(-deviation, deviation)  );
+
+            // --- Calculate velocity vector (assuming no gravity) ---
+            Vector3 velocity = (randomizedTarget - sourceUnit.transform.position).normalized * speed;
+            Rigidbody rb = bolt.GetComponent<Rigidbody>();
+            rb.useGravity = false; 
+            rb.isKinematic = false;
+            Collider collider = bolt.GetComponent<Collider>();
+            collider.enabled = true;
+            rb.velocity = velocity;
+
+            // 
+            BindableCollisionHandler handler = bolt.GetComponent<BindableCollisionHandler>();
+            handler.BindCollisionHandler((self,collider, pos,norm) =>
+            {
+                /*
+GameObject explosionPrefab, Vector3 target, float sizeSmall, float sizeLarge, [GameObject cleanUp = null], [float cleanupDelay = 0])                
+                */
+                Rigidbody destRigidbody = collider.gameObject.GetComponent<Rigidbody>();
+                if (destRigidbody == null)
+                    destRigidbody = collider.gameObject.GetComponentInParent<Rigidbody>();
+                if (destRigidbody != null)
+                {
+                    //Debug.Log("Applying forcees 2");
+                    destRigidbody.AddForce(norm * -1 *impactKickback, ForceMode.Acceleration);
+                }
+                else
+                {
+                    Debug.Log($"No body on {collider.gameObject.name}");
+                }
+
+                CoroutineRunner.Instance.StartCoroutine( EffectHandler.SingleExplosion(
+                                                    explosionPrefab:explosionPrefab, 
+                                                    target:pos, 
+                                                    targetParent:collider.gameObject,
+                                                    sizeSmall:0.5f, 
+                                                    sizeLarge:0.8f,
+                                                    cleanUp:self,
+                                                    cleanupDelay:0.5f));
+                //return EffectHandler.CleanUp(new GameObject[] {self},0f, "explode");                                                    
+                //return null;
+            });
+            yield return new WaitForSeconds(delay); // Delay between shots
+        }
+        CoroutineRunner.Instance.StartCoroutine(EffectHandler.CleanUp(boltsGroups,lifetime, "shrink"));         
+    }
+}
 
 public static class EffectHandler
 {
+    //public static IEnumerator ShootMissileAt(GameObject missilePrefab, GameObject explosionPrefab, int number, float duration, float delay, float arcHeight, Vector3 source, Vector3 target)
+    //{
+    //    yield break;
+    //}
 
     public static IEnumerator ShootMissileAt(GameObject missilePrefab, GameObject explosionPrefab, int number, float duration, float delay, float arcHeight, Vector3 source, Vector3 target)
     {
@@ -201,15 +297,22 @@ public static class EffectHandler
         }
 
         UnityEngine.Object.Destroy(explodeeoooeee);*/
-        CoroutineRunner.Instance.StartCoroutine(SingleExplosion( explosionPrefab,  target,  0.5f,  1f));
+        CoroutineRunner.Instance.StartCoroutine(SingleExplosion( explosionPrefab, null ,target,  0.5f,  1f));
 
     }
-    public static IEnumerator SingleExplosion(GameObject explosionPrefab, Vector3 target, float sizeSmall, float sizeLarge)
+    public static IEnumerator SingleExplosion(GameObject explosionPrefab, 
+                                            GameObject targetParent, 
+                                            Vector3 target, 
+                                            float sizeSmall, 
+                                            float sizeLarge,
+                                            GameObject cleanUp=null,
+                                            float cleanupDelay=0f)
     {
         // Explosion logic
         GameObject explodeeoooeee = UnityEngine.Object.Instantiate(explosionPrefab);
+        if (targetParent != null)
+            explodeeoooeee.transform.parent = targetParent.transform;
         explodeeoooeee.transform.position = target;
-
         Vector3 smalleee = new Vector3(0.1f, 0.1f, 0.1f) * sizeSmall;
         Vector3 bigeee = new Vector3(1, 1, 1) * sizeLarge;
         float elapsedTime = 0f;
@@ -221,6 +324,13 @@ public static class EffectHandler
 
         while (elapsedTime < durationExplode)
         {
+            if (cleanUp!= null && elapsedTime > cleanupDelay)
+            {
+                UnityEngine.Object.Destroy(cleanUp);
+                cleanUp = null;
+            }
+            if(explodeeoooeee == null)
+                break;
             explodeeoooeee.transform.localScale = Vector3.Lerp(smalleee, bigeee, elapsedTime / durationExplode);
             float alpha = Mathf.Lerp(1f, 0f, elapsedTime / durationExplode);
             explodeMaterial.color = new Color(initialColor.r, initialColor.g, initialColor.b, alpha);
@@ -228,11 +338,29 @@ public static class EffectHandler
             elapsedTime += Time.deltaTime;
             yield return null;
         }
-
-        UnityEngine.Object.Destroy(explodeeoooeee);
+        if(explodeeoooeee != null)
+            UnityEngine.Object.Destroy(explodeeoooeee);
+        while (elapsedTime < cleanupDelay && cleanUp!= null)
+        {
+            yield return null;
+            elapsedTime += Time.deltaTime;
+        }
+        if (cleanUp != null)
+        {
+            UnityEngine.Object.Destroy(cleanUp);
+            cleanUp = null;
+        }        
     }
 
-    public static IEnumerator ShootBlasterAt(GameObject boltPrefab,GameObject explosionPrefab , int number, float duration, float delay, float maxDistance, Vector3 source, Vector3 target,float deviation)
+    public static IEnumerator ShootBlasterAt(GameObject boltPrefab,
+                                        GameObject explosionPrefab , 
+                                        int number, 
+                                        float duration, 
+                                        float delay, 
+                                        float maxDistance, 
+                                        Vector3 source, 
+                                        Vector3 target,
+                                        float deviation)
     {
         for (int i = 0; i < number; i++)
         {
@@ -261,6 +389,51 @@ public static class EffectHandler
         yield return new WaitForSeconds(delay);
 
         yield return null; // Allow other processes to resume
+    }
+    public static IEnumerator CleanUp(GameObject [] bolts, float duration, string style="shrink")
+    {
+        float elapsedTime = 0f;
+        while (elapsedTime < duration)
+        {
+            elapsedTime += Time.deltaTime;
+            yield return null; // Wait for next frame
+        }
+        if (style == "shrink")
+        {
+            float shrinkDuration = 0.5f;
+            float shrinkElapsedTime = 0f;
+
+            // Capture the initial local scale of each bolt
+            Vector3[] initialScales = new Vector3[bolts.Length];
+            for (int i = 0; i < bolts.Length; i++)
+            {
+                if (bolts[i] != null)
+                {
+                    initialScales[i] = bolts[i].transform.localScale;
+                }
+            }
+
+            while (shrinkElapsedTime < shrinkDuration)
+            {
+                shrinkElapsedTime += Time.deltaTime;
+                float scaleFactor = Mathf.Lerp(1f, 0f, shrinkElapsedTime / shrinkDuration);
+                for (int i = 0; i < bolts.Length; i++)
+                {
+                    if (bolts[i] != null)
+                    {
+                        bolts[i].transform.localScale = initialScales[i] * scaleFactor;
+                    }
+                }
+                yield return null; // Wait for the next frame
+            }
+        }
+        for (int i = 0; i < bolts.Length; i++)
+        {
+            if (bolts[i] != null)
+            {
+                UnityEngine.Object.Destroy(bolts[i] );
+            }
+        }
     }
 
     private static IEnumerator MoveBoltWithLerp(GameObject bolt,GameObject explosionPrefab, Vector3 source, Vector3 target, float duration)

@@ -71,7 +71,7 @@ public  class ATShipControlEffects
         ship.SendInput(shipInput);
 
     }
-    public static bool __AdjustOrientationSlerpOsc = false; 
+    //public static bool __AdjustOrientationSlerpOsc = false; 
     public static IEnumerator AdjustOrientationSlerpOsc(
         Transform shipTransform,
         Transform source,
@@ -82,9 +82,10 @@ public  class ATShipControlEffects
         System.Func<bool> onComplete // Function to determine exit condition
     )
     {
-        if (__AdjustOrientationSlerpOsc ==true)
+        string semaName = shipTransform.gameObject.name+"_AdjustOrientationSlerpOsc";
+        bool canRun = Sema.TryAcquireLock(semaName);
+        if (!canRun)
             yield break;
-        __AdjustOrientationSlerpOsc = true;
         try
         {
             float oscTimer = 0f;  // Internal timer for oscillation
@@ -127,14 +128,13 @@ public  class ATShipControlEffects
         }
         finally
         {
-            __AdjustOrientationSlerpOsc = false;
+            Sema.ReleaseLock(semaName);
         }
     }    
 
     ////
     ///
-    public static bool __AdjustVelocityTowardsTargetRunning = false;
-
+    
     public static IEnumerator AdjustVelocityTowardsTarget(
         Transform shipTransform,
         Rigidbody shipRigidbody,
@@ -146,9 +146,12 @@ public  class ATShipControlEffects
         System.Func<bool> onComplete // Exit condition
     )
     {
-        if (__AdjustVelocityTowardsTargetRunning)
-            yield break; // Prevent duplicate coroutines
-        __AdjustVelocityTowardsTargetRunning = true;
+        bool canRun = Sema.TryAcquireLock(shipTransform.gameObject.name+"_AdjustVelocityTowardsTarget");
+        if (!canRun)
+            yield break; 
+        //if (__AdjustVelocityTowardsTargetRunning)
+        //    yield break; // Prevent duplicate coroutines
+        //__AdjustVelocityTowardsTargetRunning = true;
 
         try
         {
@@ -194,7 +197,8 @@ public  class ATShipControlEffects
         }
         finally
         {
-            __AdjustVelocityTowardsTargetRunning = false; // Ensure the flag resets after coroutine completion
+            Sema.ReleaseLock(shipTransform.gameObject.name+"_AdjustVelocityTowardsTarget");
+            //__AdjustVelocityTowardsTargetRunning = false; // Ensure the flag resets after coroutine completion
         }
     }
 

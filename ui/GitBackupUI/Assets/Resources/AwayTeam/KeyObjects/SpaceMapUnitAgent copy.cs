@@ -307,16 +307,7 @@ public class SpaceMapUnitAgent : MonoBehaviour, IPausable
 
     private void OnDrawGizmos()
     {
-        // Draw gizmos to visualize target positions
-        Gizmos.color = Color.red;
-        Gizmos.DrawSphere(targetLookAt, 0.5f); // LookAt target
-        Gizmos.color = Color.green;
-        Gizmos.DrawSphere(targetTravelTo, 0.5f); // TravelTo target
-        Gizmos.color = Color.blue;
-        Gizmos.DrawSphere(rootTravelTo, 0.5f); // TravelTo target
 
-        Gizmos.color = Color.green;
-        Gizmos.DrawLine(transform.position, targetTravelTo);
 
     }
 

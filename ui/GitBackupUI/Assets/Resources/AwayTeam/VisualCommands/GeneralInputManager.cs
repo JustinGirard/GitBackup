@@ -29,8 +29,34 @@ public class GeneralInputManager : MonoBehaviour
             secondary_down,
             secondary_up,
             secondary_move,
-            cancel
+            cancel,
+            nav_up_up,
+            nav_down_up,
+            nav_left_up,
+            nav_right_up,
+            formation_up_up,
+            attackpattern_up_up,            
+            nav_up_down,
+            nav_down_down,
+            nav_left_down,
+            nav_right_down,
+            formation_up_down,
+            attackpattern_up_down            
         };
+
+        public const string nav_up_up = "nav_up_up";
+        public const string nav_down_up = "nav_down_up";
+        public const string nav_left_up = "nav_left_up";
+        public const string nav_right_up = "nav_right_up";
+        public const string formation_up_up = "formation_up_up";
+        public const string attackpattern_up_up = "attackpattern_up_up";
+
+        public const string nav_up_down = "nav_up_down";
+        public const string nav_down_down = "nav_down_down";
+        public const string nav_left_down = "nav_left_down";
+        public const string nav_right_down = "nav_right_down";
+        public const string formation_up_down = "formation_up_down";
+        public const string attackpattern_up_down = "attackpattern_up_down";
 
 
         public const string primary_down = "primary_down";
@@ -163,6 +189,20 @@ public class GeneralInputManager : MonoBehaviour
             {
                 observer.OnCommandReceived(Command.cancel, mousePosition); // Pass empty Vector2 or adjust as needed
             }            
+            if (Input.GetKeyDown(KeyCode.W)) observer.OnCommandReceived(Command.nav_up_down, mousePosition); 
+            if (Input.GetKeyDown(KeyCode.S)) observer.OnCommandReceived(Command.nav_down_down, mousePosition); 
+            if (Input.GetKeyDown(KeyCode.A)) observer.OnCommandReceived(Command.nav_left_down, mousePosition); 
+            if (Input.GetKeyDown(KeyCode.D)) observer.OnCommandReceived(Command.nav_right_down, mousePosition); 
+            if (Input.GetKeyDown(KeyCode.LeftBracket)) observer.OnCommandReceived(Command.formation_up_down, mousePosition); 
+            if (Input.GetKeyDown(KeyCode.Semicolon)) observer.OnCommandReceived(Command.attackpattern_up_down, mousePosition); 
+
+            if (Input.GetKeyUp(KeyCode.W)) observer.OnCommandReceived(Command.nav_up_up, mousePosition); 
+            if (Input.GetKeyUp(KeyCode.S)) observer.OnCommandReceived(Command.nav_down_up, mousePosition); 
+            if (Input.GetKeyUp(KeyCode.A)) observer.OnCommandReceived(Command.nav_left_up, mousePosition); 
+            if (Input.GetKeyUp(KeyCode.D)) observer.OnCommandReceived(Command.nav_right_up, mousePosition); 
+            if (Input.GetKeyUp(KeyCode.LeftBracket)) observer.OnCommandReceived(Command.formation_up_up, mousePosition); 
+            if (Input.GetKeyUp(KeyCode.Semicolon)) observer.OnCommandReceived(Command.attackpattern_up_up, mousePosition); 
+
         }
         lastMousePosition = mousePosition;
     }

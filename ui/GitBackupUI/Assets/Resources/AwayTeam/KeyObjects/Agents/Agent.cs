@@ -7,8 +7,10 @@ using System.Runtime.CompilerServices;
 using System;
 using Cinemachine;
 using VisualCommand;
-public class AgentActionPair
+using TMPro;
+public class AgentActionCommand
 {
+    public string commandType;
     public string destinationAgentId;
     public string sourceActionId;
 }
@@ -24,10 +26,21 @@ public class AgentActionType {
     public const string Shield = "Shield";
 }
 
+public class AgentNavigationType {
+
+    public static bool IsValid(string action)
+    {
+        return all.Contains(action);
+    }               
+    public static readonly List<string> all = new List<string> { NavigateTo, Halt };
+    public const string NavigateTo = "NavigateTo";
+    public const string Halt = "Halt";
+}
+
 class UnitAction
 {
-    public SpaceMapUnitAgent sourceUnit;
-    public SpaceMapUnitAgent destinationUnit;
+    public SimpleShipController sourceUnit;
+    public SimpleShipController destinationUnit;
     public List<string> actionsTowardMe;
     public string sourceActionId;
 }
@@ -38,6 +51,18 @@ public class Agent:MonoBehaviour, IPausable
 {
     private List<SpaceEncounterObserver> __observers = new List<SpaceEncounterObserver>();
 
+    [SerializeField]
+    private GameObject primaryAim; // Primary Squad Aim location
+    [SerializeField]
+    private GameObject primaryNavigation; // Primary Squad Navigation Target
+
+    public GameObject GetPrimaryAim(){
+        return       primaryAim;  
+    } 
+    public GameObject GetPrimaryNavigation(){
+        return       primaryNavigation;  
+    } 
+
    [SerializeField]
     private ATResourceData resources;
     private GameObject __unitGameObject = null;
@@ -47,7 +72,7 @@ public class Agent:MonoBehaviour, IPausable
     private string __agentId = "";
 
     private Dictionary<string,Agent > __pendingAgents;
-    private List<AgentActionPair > __pendingActions;
+    private List<AgentActionCommand > __pendingCommands;
 
     [System.Serializable]
     public class AgentResourceEntry
@@ -58,9 +83,14 @@ public class Agent:MonoBehaviour, IPausable
     public List<AgentResourceEntry> agentResourceEntries = new List<AgentResourceEntry>();
     private SurfaceNavigationCommand __navCommand;
 
-    public virtual bool SetNavigationAction(SurfaceNavigationCommand cmd)
+    public virtual bool AttachNavigationWaypoint(SurfaceNavigationCommand cmd)
     {
         __navCommand = cmd;
+        return true;
+    }
+    public virtual bool DetachNavigationWaypoint()
+    {
+        __navCommand = null;
         return true;
     }
 
@@ -125,7 +155,7 @@ public class Agent:MonoBehaviour, IPausable
     }
 
     void Awake(){
-        __pendingActions = new List<AgentActionPair >();
+        __pendingCommands = new List<AgentActionCommand >();
         __pendingAgents = new Dictionary<string, Agent >();
         
         if (__agentId=="")
@@ -134,22 +164,32 @@ public class Agent:MonoBehaviour, IPausable
     public string GetAgentId(){
         return __agentId;
     }
+    //public GameObject GetUnit()
+    //{
+    //    return __unitGameObject;
+    //}
     public void SetUnit(GameObject go)
     {
         __unitGameObject = go;
         EncounterSquad ec = go.GetComponent<EncounterSquad>();
         if(ec == null)
             Debug.LogError("");
+
         //resources.ClearSubResources();
-        List<SpaceMapUnitAgent> allUnits = ec.GetUnitList();
+        List<SimpleShipController> allUnits = ec.GetUnitList();
         if (allUnits.Count == 0)
-            Debug.LogError("Could not find any units");
+        {
+            Debug.LogError($"Could not find any units on {ec.gameObject.name}");
+            Debug.Break();
+            return;
+        }
+        
 
         //Debug.Log($"Adding Unit in Set Unit {unit.name}");
-        foreach(SpaceMapUnitAgent unit in allUnits)
+        foreach(SimpleShipController unit in allUnits)
         {
             //Debug.Log($"Adding Unit in Set Unit {unit.name}");
-            ATResourceData unitResourceData = unit.GetComponent<ATResourceData>();
+            ATResourceData unitResourceData = unit.GetComponentInChildren<ATResourceData>();
             if (unitResourceData == null)
             {
                 Debug.LogError($"Could not find resource attached to {unit.name}");
@@ -160,6 +200,16 @@ public class Agent:MonoBehaviour, IPausable
                 resources.AddSubResource(unit.name,unitResourceData);
             }
         }
+
+        foreach( SpaceEncounterObserver observer in __observers)
+        {
+            Debug.Log("Showing Indicator from Agent.cs");
+            observer.ShowFloatingActivePowers(allUnits[0].gameObject);
+        }
+
+
+
+
         
     }
     public GameObject GetUnit()
@@ -189,25 +239,52 @@ public class Agent:MonoBehaviour, IPausable
     {
         throw new System.Exception("No Implemented choice");
     }
+    public virtual void ChooseTargetNavigation()
+    {
+        throw new System.Exception("No Implemented choice");
+    }
+
     public virtual string GetTargetAction()
     {
         throw new System.Exception("No Implemented choice");
-        //return "";
     }    
+    public virtual string GetTargetNavigation()
+    {
+        throw new System.Exception("No Implemented choice");
+    }    
+    
 
     public virtual void ResetTargetAction()
     {
         throw new System.Exception("No Implemented reset");
     }    
+
+    public virtual void ResetTargetNavigation()
+    {
+        throw new System.Exception("No Implemented reset");
+    }    
+    
+
     public virtual bool SetTargetAction(string actionId)
     {
         throw new System.Exception("No Implemented reset");
         //return false;
     }
-
-
-    public void AddAgentAction(string targetActionId,Agent targetAgent)
+    public virtual bool SetTargetNavigation(string actionId)
     {
+        throw new System.Exception("No Implemented reset");
+    }
+
+    // ChooseTargetNavigation() -- ChooseTargetNavigation [X]
+    // GetTargetNavigation() -- GetTargetAction [X]
+    // ResetTargetNavigation() -- ResetTargetAction
+    // SetTargetNavigation(string actionId) -- SetTargetAction
+
+
+
+    public void AddAgentCommand(string commandType,string targetActionId,Agent targetAgent)
+    {
+        string [] commandTypes = new string [] {"navigation","action"};
         if (targetActionId =="")
         {
             Debug.LogError("AddAgentAction missing valid action id");
@@ -216,37 +293,80 @@ public class Agent:MonoBehaviour, IPausable
         //Debug.Log($"AddAgentAction({targetActionId},{targetAgent}({targetAgent.GetAgentId()}))");
         __pendingAgents[targetAgent.GetAgentId()] = targetAgent;
         string targetAgentId = targetAgent.GetAgentId();
-        AgentActionPair pr = new AgentActionPair();
-        pr.sourceActionId = targetActionId;
-        pr.destinationAgentId = targetAgentId;
-        //Debug.Log($"AddAgentAction Final: ({pr.sourceActionId},{pr.destinationAgentId}");
-        __pendingActions.Add(pr);
+
+        AgentActionCommand pr = new AgentActionCommand();
+            pr.commandType = commandType;
+            pr.sourceActionId = targetActionId;
+            pr.destinationAgentId = targetAgentId;
+        __pendingCommands.Add(pr);
     }
-    public List<AgentActionPair> GetActionsAffectingTarget(string destinationAgentId)
+    public List<AgentActionCommand> GetActionsAffectingTarget(string destinationAgentId)
     {
         //if (this.GetAgentId() == "agent_1")
         //    Debug.Log($"agent_1 GetActionsAffectingTarget: Actions affecting {destinationAgentId}");
-        List<AgentActionPair> actionsAtAgent = new List<AgentActionPair>();
-        foreach (AgentActionPair pr in __pendingActions)
+        List<AgentActionCommand> actionsAtAgent = new List<AgentActionCommand>();
+        foreach (AgentActionCommand pr in __pendingCommands)
         {
             if (pr.destinationAgentId == destinationAgentId)
                 actionsAtAgent.Add(pr);
         }
         return actionsAtAgent;
     }    
+
+    public GameObject GetPrimaryEnemyUnit()
+    {
+        // Attempt to find the GameObject
+        GameObject agent2 = GameObject.Find("AgentTwo");
+        if (agent2 == null)
+        {
+            Debug.LogError("GameObject 'AgentTwo' could not be found.");
+            return null;
+        }
+
+        // Attempt to get the Agent component
+        Agent agentComponent = agent2.GetComponent<Agent>();
+        if (agentComponent == null)
+        {
+            Debug.LogError($"GameObject 'AgentTwo' does not have an 'Agent' component.");
+            return null;
+        }
+
+        // Attempt to get the unit from the Agent component
+        GameObject unit = agentComponent.GetUnit();
+        if (unit == null)
+        {
+            Debug.LogError($"'Agent' component on 'AgentTwo' returned a null unit.");
+            return null;
+        }
+
+        // If all checks pass, return the unit
+        return unit;
+    }
+
+
     public System.Collections.IEnumerator RunActions()
     {
 
-        if (__navCommand != null)
-        {
-            Debug.Log("TODO: Have Navigation Command to process here");
-            __navCommand.Hide();
+        //if (__navCommand != null)
+        //{
+        //    //Debug.Log("TODO: Have Navigation Command to process here");
+        //    __navCommand.Hide();
+        //}
 
-        }
-        foreach (AgentActionPair agentAction in __pendingActions)
+        foreach (AgentActionCommand agentAction in __pendingCommands)
         {
-            Agent agent = __pendingAgents[agentAction.destinationAgentId];
-            CoroutineRunner.Instance.StartCoroutine(RunAction(agent, agentAction.sourceActionId));
+            if (agentAction.commandType == "action")
+            {
+                // TODO : Generalize to GameObject, to allow targeting non AI entities. 
+                Agent destinationAgent = __pendingAgents[agentAction.destinationAgentId];
+                CoroutineRunner.Instance.StartCoroutine(RunAction(destinationAgent, agentAction.sourceActionId));
+            }
+            if (agentAction.commandType == "navigation")
+            {
+    
+                CoroutineRunner.Instance.StartCoroutine(RunNavigation(__navCommand, agentAction.sourceActionId));
+            }
+
         } 
         yield break;
     }
@@ -255,12 +375,83 @@ public class Agent:MonoBehaviour, IPausable
     {
         return __is_running;
     }
+    
     public void ClearActions()
     {
-        __pendingActions.Clear();
+        __pendingCommands.Clear();
         __pendingAgents.Clear();
         ResetTargetAction();
+        ResetTargetNavigation();
+        DetachNavigationWaypoint();
     }
+    public System.Collections.IEnumerator RunNavigation( SurfaceNavigationCommand cursor,string sourceActionId)
+    {
+        Debug.Log($"Processing RunNavigation: agent:{this.gameObject.name}, navCommand: {sourceActionId}");
+        if (sourceActionId == null)
+        {
+            Debug.LogError("sourceActionId is null.");
+            yield break;
+        }
+        if (cursor == null)
+        {
+            Debug.LogError("cursor is null.");
+            yield break;
+        }
+        if (cursor.gameObject == null)
+        {
+            Debug.LogError("cursor.gameObject is null.");
+            yield break;
+        }
+
+        Debug.Log($"Running Navigation between {sourceActionId} and {cursor.gameObject.name}");
+        EncounterSquad sourceSquad = GetUnit().GetComponent<EncounterSquad>();
+        
+        //
+        // SET NAVIGATION TARGET
+        //
+        if (cursor.GetTarget() == null)
+        {
+            Debug.LogError("No active cursor target");
+            yield break;
+        }
+        Transform cursorT = cursor.GetTarget().transform;
+        GetPrimaryNavigation().transform.position = cursorT.position;
+        GetPrimaryAim().transform.position = GetPrimaryEnemyUnit().transform.position;
+        GetPrimaryNavigation().transform.LookAt(GetPrimaryAim().transform);
+
+        sourceSquad.SetGoalPosition(GetPrimaryNavigation().transform,Vector3.zero);
+        cursor.Hide();
+        StandardSystem subsystem = null;
+        List<SimpleShipController> sourceUnits = sourceSquad.GetUnitList();
+
+        //
+        // ACTIVATE NAVIGATION BEHAVIOUR
+        //
+        foreach (SimpleShipController sourceUnit in sourceUnits)
+        {        
+            if (sourceActionId == AgentNavigationType.NavigateTo)
+                subsystem = (StandardSystem)sourceUnit.GetComponent<NavigationSystem>();
+            if (sourceActionId == AgentNavigationType.Halt)
+                subsystem = (StandardSystem)sourceUnit.GetComponent<NavigationSystem>();
+
+            ATResourceData sourceResources = sourceUnit.GetComponent<ATResourceData>();
+            ATResourceData destinationResources = null;
+
+            CoroutineRunner.Instance.StartCoroutine(
+            subsystem.Execute(
+                    sourcePowerId:sourceActionId, 
+                    targetPowerIds:new List<string>(), 
+                    sourceUnit:sourceUnit.gameObject,
+                    targetUnit:sourceUnit.GetGoalPosition(), 
+                    sourceResources:sourceResources,
+                    targetResources:destinationResources
+            ));
+            yield return null;        
+        }
+
+        yield break;
+    }
+
     public System.Collections.IEnumerator RunAction(Agent destinationAgent,string sourceActionId)
     {
         //Debug.Log($"Agent Run Action {this.name}");
@@ -283,56 +474,47 @@ public class Agent:MonoBehaviour, IPausable
 
             // Analyze Opponent Actions
             string selfAgentId = sourceAgent.GetAgentId();        
-            List<AgentActionPair> actionsAffectingSelf =  destinationAgent.GetActionsAffectingTarget(selfAgentId);
+            List<AgentActionCommand> actionsAffectingSelf =  destinationAgent.GetActionsAffectingTarget(selfAgentId);
 
             //Debug.Log($"Running command for {this.name}:{sourceAgent.GetAgentId()}");
-            if (actionsAffectingSelf.Count == 0)
-                Debug.LogWarning("No actions found");
+            //if (actionsAffectingSelf.Count == 0)
+            //    Debug.LogWarning("No actions found");
             List<string> actionsTowardMe = new List<string>();
             //Debug.Log($"--I am targeting {destinationAgent.GetAgentId()} with {sourceActionId}");
-            foreach (AgentActionPair aap in actionsAffectingSelf)
+            foreach (AgentActionCommand aap in actionsAffectingSelf)
             {
                 actionsTowardMe.Add(aap.sourceActionId);                    
             }
 
-            //yield break;
-
-            //ATResourceData sourceResources = sourceAgent.GetResourceObject();
-            //ATResourceData destinationResources = destinationAgent.GetResourceObject();
-            //StandardSystem subsystem = null;
-            //if (sourceActionId == AgentActionType.Attack)
-            //    subsystem = (StandardSystem)__unitGameObject.GetComponent<BlasterSystem>();
-            //if (sourceActionId == AgentActionType.Missile)
-            //    subsystem = (StandardSystem)__unitGameObject.GetComponent<MissileSystem>();
-            //if (sourceActionId == AgentActionType.Shield)
-            //    subsystem = (StandardSystem)__unitGameObject.GetComponent<ShieldSystem>();
-            ////
-            //if (subsystem == null)
-            //{
-            //    Debug.LogError($"Could not find System on {sourceAgent.GetAgentId()} for {sourceActionId}");
-            //    yield break;
-            //}
-            // Agent destinationAgent
             EncounterSquad sourceSquad = GetUnit().GetComponent<EncounterSquad>();
             EncounterSquad destinationSquad = destinationAgent.GetUnit().GetComponent<EncounterSquad>();
             if (sourceSquad == null)
                 Debug.LogError("sourceSquad  was null, but it can't be");
             if (destinationSquad == null)
                 Debug.LogError("destinationSquad  was null, but it can't be");
-            // Dictionary<string,SpaceMapUnitAgent> squadUnits = __unitGameObject.GetComponent<EncounterSquad>.GetUnits();
-            List<SpaceMapUnitAgent> sourceUnits = sourceSquad.GetUnitList();
-            List<SpaceMapUnitAgent> destinationUnits = destinationSquad.GetUnitList();
+
+            List<SimpleShipController> sourceUnits = sourceSquad.GetUnitList();
+            List<SimpleShipController> destinationUnits = destinationSquad.GetUnitList();
+
             if (sourceUnits.Count == 0)
                 Debug.LogError("No units can make this action");
             if (destinationUnits.Count == 0)
                 Debug.LogError("no destinations can make this action");
             List<UnitAction> unitActions = new List<UnitAction>();
-// Create UnitActions for each combination of source and destination
-            //
             foreach (var sourceUnit in sourceUnits)
             {
+                if (sourceUnit == null)
+                {
+                    Debug.Log("Have invalid source unit! ");
+                    continue;
+                }
                 foreach (var destinationUnit in destinationUnits)
                 {
+                    if (destinationUnit == null)
+                    {
+                        Debug.Log("Have invalid destination unit! ");
+                        continue;
+                    }
                     unitActions.Add(new UnitAction
                     {
                         sourceUnit = sourceUnit,
@@ -346,6 +528,9 @@ public class Agent:MonoBehaviour, IPausable
             foreach(UnitAction unitAction in unitActions)
             {
                 ATResourceData sourceResources = unitAction.sourceUnit.GetComponent<ATResourceData>();
+                //if(destinationResources == null)
+                //    Debug.LogError($"destinationResources is null");
+
                 ATResourceData destinationResources = unitAction.destinationUnit.GetComponent<ATResourceData>();
                 ProjectileEmitter sourceEm = unitAction.sourceUnit.GetEmitter("primary");
                 ProjectileEmitter destEm = unitAction.destinationUnit.GetEmitter("primary");
@@ -417,6 +602,7 @@ public class Agent:MonoBehaviour, IPausable
         {
             observer.VisualizeEffect(effect,this.gameObject);
         }
+
 
     }
 }

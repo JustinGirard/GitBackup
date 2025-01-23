@@ -25,7 +25,7 @@ Transform:
   m_GameObject: {fileID: 860216483671944842}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: -11.54, y: 0, z: 15.615}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 0.5, y: 0.5, z: 0.5}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -46,7 +46,6 @@ GameObject:
   - component: {fileID: 8143193039609879616}
   - component: {fileID: 733175889074115669}
   - component: {fileID: 5202689957570116841}
-  - component: {fileID: 7037207167893756094}
   - component: {fileID: 4076465591998099988}
   - component: {fileID: 3950434557652048640}
   - component: {fileID: 7631301363057487250}
@@ -110,7 +109,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1231430347136350881}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 5ff76e040520ea54389db3b37e7116a4, type: 3}
   m_Name: 
@@ -756,7 +755,7 @@ MonoBehaviour:
     shipDamageModel: 10
     mainDamageRegion:
       name: Main Damage Region
-      isInvincible: 0
+      isInvincible: 1
       relativePosition: {x: 0, y: 0, z: 0}
       size: {x: 10, y: 10, z: 10}
       startingHealth: 100
@@ -832,7 +831,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1231430347136350881}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: e07c81fee451331498d1e80f65efc197, type: 3}
   m_Name: 
@@ -1089,7 +1088,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1231430347136350881}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 68532e2d28a694f748ddc3446518db79, type: 3}
   m_Name: 
@@ -1103,33 +1102,8 @@ MonoBehaviour:
   moveDrift: 0.1
   __orientTime: 0
   __velocityTime: 0
+  __navigationActive: 0
   __debugMode: 1
---- !u!114 &7037207167893756094
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1231430347136350881}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 11b462e5251d840c5b70637886f08874, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  projectileEmitters:
-  - gameObject: {fileID: 5687399089853328058}
-    name: primary
-  rotationSpeed: 1
-  travelSpeed: 0.5
-  rotationSmoothTime: 0.3
-  positionSmoothTime: 0.3
-  dampenerSpeed: 1
-  maxTravelSpeed: 1
-  acceleration: 0.5
-  decelerationDistance: 1
-  stopDistance: 0.05
-  targetTransform: {fileID: 0}
-  mapMarker: {fileID: 0}
 --- !u!114 &4076465591998099988
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -16016,7 +15990,7 @@ Transform:
   m_GameObject: {fileID: 4657414261674067192}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 21.7, y: -1.89, z: 18.3}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -30725,7 +30699,7 @@ Transform:
   m_GameObject: {fileID: 8433833875001332908}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 22.4, y: 1, z: -14.5}
+  m_LocalPosition: {x: 0, y: 0, z: 3.2}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:

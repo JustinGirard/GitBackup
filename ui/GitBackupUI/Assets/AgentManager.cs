@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using System.Linq;
+using Unity.VisualScripting;
 public class AgentManager : MonoBehaviour
 {
     private Dictionary<string,Agent> __agents = new Dictionary<string, Agent>();
@@ -48,12 +49,33 @@ public class AgentManager : MonoBehaviour
     }
 
 
+    public IEnumerator ForEachAgentCo(System.Func<Agent, IEnumerator> coroutine)
+    {
+        List<string> toRemove = new List<string>();
+
+        foreach (var kvp in __agents)
+        {
+            if (kvp.Value == null || kvp.Value.gameObject == null)
+            {
+                toRemove.Add(kvp.Key);
+            }
+            else
+            {
+                // Execute the provided coroutine with the current agent
+                yield return coroutine(kvp.Value);
+            }
+        }
+
+        foreach (var key in toRemove)
+        {
+            __agents.Remove(key);
+        }
+    }
+
 
 
     public void ForEachAgent(System.Action<Agent> action)
     {
-        //Sema.TryAcquireLock($"ForEachAgent{this.GetInstanceID()}");
-        
         List<string> toRemove = new List<string>();
         
         foreach (var kvp in __agents)
@@ -74,36 +96,76 @@ public class AgentManager : MonoBehaviour
         }
     }
 
-    public string encounterSquadPrefab = "AwayTeam/KeyObjects/EncounterSquad"; // Path to SpaceMapUnit prefab in Resources
+    //public string encounterSquadPrefab = "AwayTeam/KeyObjects/EncounterSquad"; // Path to SpaceMapUnit prefab in Resources
+    [SerializeField]
+    private GameObject encounterSquadPrefab; // Path to SpaceMapUnit prefab in Resources
+    
+    public System.Collections.IEnumerator RecreateAllUnitsCoRoutine(System.Action onFinish){
 
-    public bool RecreateUnits(Agent agent, string agentKey)
+        foreach (var agentKVP in __agents)
+        {
+            yield return RecreateUnitCoRoutine( (Agent)agentKVP.Value,agentKVP.Key);
+        }
+        onFinish.Invoke();
+        yield break;
+    }
+    
+    
+    public bool RecreateSingleUnit(Agent agent, string agentKey)
     {
-        GameObject unit = Instantiate(Resources.Load<GameObject>(encounterSquadPrefab));
+        StartCoroutine(RecreateUnitCoRoutine(agent, agentKey));
+        return true;
+    }
+
+    public System.Collections.IEnumerator RecreateUnitCoRoutine(Agent agent, string agentKey)
+    {
+        //GameObject unit = Instantiate(Resources.Load<GameObject>(encounterSquadPrefab));
+        GameObject unit = Instantiate(encounterSquadPrefab);
+        unit.name = $"{agent.gameObject.name}:Squad_{agentKey.Last()}";
+        unit.transform.parent = agent.transform;
+        yield return new WaitForEndOfFrame(); 
+        yield return new WaitForFixedUpdate();
+
+        unit.transform.position = agent.transform.position;
+        unit.transform.rotation = agent.transform.rotation;
+        yield return new WaitForEndOfFrame(); 
+        yield return new WaitForFixedUpdate();
+        
         if (unit.GetComponent<EncounterSquad>() == null)
         {
             Debug.LogError($"Unit{agentKey.Last()} could not create EncounterSquad");
-            return false;
+            yield break;
         }
+        unit.name = $"{agent.gameObject.name}(2):Squad_{agentKey.Last()}";
 
-        unit.name = $"Squad{agentKey.Last()}";
-        unit.GetComponent<EncounterSquad>().Rebuild();
+        yield  return unit.GetComponent<EncounterSquad>().Rebuild(); // IMPORTANT <-- Bulds and sets position
+        yield return new WaitForEndOfFrame(); 
+        yield return new WaitForFixedUpdate();
+
         agent.SetUnit(unit);
+        yield return new WaitForEndOfFrame(); 
+        yield return new WaitForFixedUpdate();
+        unit.name = $"{agent.gameObject.name}(3):Squad_{agentKey.Last()}";
 
         Dictionary<string, ATResourceData> redat = agent.GetResourceObject().GetSubResources();
         if (redat.Keys.Count == 0)
         {
             Debug.LogError($"No Agents in Unit {agentKey.Last()} Agent");
-            return false;
+            yield break;
         }
+        unit.name = $"{agent.gameObject.name}(4):Squad_{agentKey.Last()}";
 
-        unit.transform.position = agent.transform.position + (agentKey == "agent_2" ? new Vector3(0, 2, 0) : Vector3.zero);
-        unit.transform.rotation = agent.transform.rotation;
-        unit.transform.parent = agent.transform;
-        unit.GetComponent<EncounterSquad>().UpdatePosition();
+        // unit.GetComponent<EncounterSquad>().UpdatePosition();
+
         GameEncounterBase encounter = this.GetComponent<GameEncounterBase>();
+        unit.name = $"{agent.gameObject.name}(5):Squad_{agentKey.Last()}";
+
         if (encounter == null)
             Debug.LogError("Critica: Could not find attached GameEncounterBase ");
-        List<SpaceMapUnitAgent> sourceUnits = unit.GetComponent<EncounterSquad>().GetUnitList();
+        List<SimpleShipController> sourceUnits = unit.GetComponent<EncounterSquad>().GetUnitList();
+
+
+        
         foreach (var unitAgent in sourceUnits)
         {
             if (unitAgent.GetComponent<BlasterSystem>() == null)
@@ -128,7 +190,7 @@ public class AgentManager : MonoBehaviour
         if (redat.Keys.Count == 0)
         {
             Debug.LogError($"No Resources in Unit {agentKey.Last()} Agent");
-            return false;
+            yield break;
         }
 
         bool doDebug = false;
@@ -138,7 +200,7 @@ public class AgentManager : MonoBehaviour
         if (resourceObject == null)
         {
             Debug.LogError($"GetResourceObject() returned null for {agentKey}.");
-            return false;
+            yield break;
         }
 
         var recordField = resourceObject.GetRecordField("Encounter", ResourceTypes.Ammunition);
@@ -146,10 +208,10 @@ public class AgentManager : MonoBehaviour
         {
             Debug.LogError($"GetRecordField() returned null for 'Encounter' and 'Ammunition'. Records:");
             Debug.LogError(DJson.Stringify(resourceObject.GetRecords()));
-            return false;
+            yield break;
         }
 
-        return true;
+        yield break;
     }
 
 

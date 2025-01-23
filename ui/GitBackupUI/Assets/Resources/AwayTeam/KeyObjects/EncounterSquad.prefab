@@ -47,7 +47,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   masterRotation: {x: 0, y: 0, z: 0, w: 1}
-  spaceMapUnitResourcePath: AwayTeam/KeyObjects/SpaceMapUnit2
+  __numUnits: 3
+  spaceMapUnitResourcePath: AwayTeam/KeyObjects/UnitExplorerShip_Physics
   veeFormationResourcePath: AwayTeam/KeyObjects/VeeFormation
 --- !u!1 &5553707538120329147
 GameObject:

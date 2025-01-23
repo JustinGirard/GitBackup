@@ -14,7 +14,7 @@ namespace VisualCommand
     public class SurfaceNavigationCommand : MonoBehaviour, IShowHide
     {
         [Serializable]
-        class SelectionStyle
+        public class SelectionStyle
         {
            //=public string styleId;
             public GameObject prevNodeStyle;
@@ -22,10 +22,15 @@ namespace VisualCommand
             public GameObject currentNodeStyle;
 
         }
-        GameObject targetSurface;
-        GameObject currentNode;
-        GameObject previousNode;
-
+        //GameObject targetSurface;
+        //GameObject currentNode;
+        //GameObject previousNode;
+        public GameObject GetTarget(){
+            SelectionStyle st = GetActiveStyle();
+            if (st.currentNodeStyle != null)
+                return st.currentNodeStyle;
+            return st.prevNodeStyle;
+        }
         [SerializeField]
         private SpaceCombatScreen __targetScreen;
         //public void SetTargetScreen(SpaceCombatScreen targetScreen){
@@ -67,7 +72,13 @@ namespace VisualCommand
         public string GetActiveState(){
             return commandSelectionState;
         }
-        
+
+        public SelectionStyle GetActiveStyle()
+        {
+            return visualStyle[commandSelectionState];
+        }
+
+
         public void Show(){
             //Debug.Log("I SHOULD SHOW");
             gameObject.SetActive(true);
@@ -87,10 +98,34 @@ namespace VisualCommand
             //Debug.Log($"IsShowing TRUE");
             return true;
         }
-
+        /*
+            public IEnumerator RunSelectHeight(string state, string cmd, Vector3 mousePosition, Vector3 contactPositon,Vector3 contactNormal  )
+            {
+                if (cmd == GeneralInputManager.Command.primary_up)
+                {
+                    SetVisualState(SelectionState.active);
+                }
+                // Rely on "Update()" for height
+                AlignCursorWithHeight(state,mousePosition);
+                ScaleCursorByDistance(state,contactPositon);
+                yield break;
+            }        
+        */
+        public void QuickNavTo(Vector3 topPoint,Vector3 bottomPoint)
+        {
+            SelectionStyle selectedStyle = visualStyle[SelectionState.active];
+            __lastHeightPosition = topPoint; 
+            __lastSurfacePosition = bottomPoint;
+            selectedStyle.prevNodeStyle.transform.position = __lastSurfacePosition;
+            selectedStyle.currentNodeStyle.transform.position = __lastHeightPosition;
+            Show();
+            __targetScreen.HandleNavigationEvent(this);
+            SetVisualState(SelectionState.active);
+        }
 
         public void ProcessEvent(string cmd, Vector3 mousePosition, Vector3 contactPosition, Vector3 contactNormal )
         {
+            return;
             if (string.IsNullOrEmpty(cmd))
                 Debug.LogError("ProcessEvent: Command is null or empty.");
 
@@ -287,13 +322,14 @@ namespace VisualCommand
             selectedStyle.currentNodeStyle.transform.position = newPosition;
             __lastHeightPosition = newPosition;
         }
+
         public void AlignWithSelectedSurfaceAndHeight(string state) {
             SelectionStyle selectedStyle = visualStyle[state];
             if (selectedStyle == null || selectedStyle.currentNodeStyle == null) {
                 Debug.LogError($"AlignCursorWithHeight: selectedStyle or currentNodeStyle is null for {state}");
                 return;
             }
-            selectedStyle.currentNodeStyle.transform.position = __lastHeightPosition;
+            selectedStyle.currentNodeStyle.transform.position = __lastHeightPosition; // __lastSurfacePosition
             if (selectedStyle == null || selectedStyle.prevNodeStyle == null) {
                 Debug.LogError($"AlignCursorWithHeight: selectedStyle or currentNodeStyle is null for {state}");
                 return;
@@ -311,11 +347,11 @@ namespace VisualCommand
         void OnDrawGizmos() {
             // Draw contactNormal (Blue)
             Gizmos.color = Color.blue;
-            Gizmos.DrawLine(__lastSurfacePosition, __lastSurfacePosition + __lastContactNormal*2f);
+            Gizmos.DrawLine(__lastSurfacePosition, __lastSurfacePosition + __lastContactNormal*5f);
 
             // Draw projectedForward (Green)
             Gizmos.color = Color.green;
-            Gizmos.DrawLine(__lastSurfacePosition, __lastSurfacePosition + __lastProjectedForward*2f);
+            Gizmos.DrawLine(__lastSurfacePosition, __lastSurfacePosition + __lastProjectedForward*5f);
         }
 
 

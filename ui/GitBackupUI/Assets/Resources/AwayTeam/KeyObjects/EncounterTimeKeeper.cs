@@ -68,7 +68,7 @@ using UnityEngine;
         public void InitLoop()
         {
             _isRunning = false;
-            CoroutineRunner.Instance.DebugLog("In Init Loop");
+            //CoroutineRunner.Instance.DebugLog("In Init Loop");
         }
 
         public void SetTimerProgress(float number)
@@ -81,7 +81,7 @@ using UnityEngine;
             if (_isRunning) 
                 return; // or throw an exception if you want strictness
             _isRunning = true;
-            CoroutineRunner.Instance.DebugLog("In Start Loop");
+            //CoroutineRunner.Instance.DebugLog("In Start Loop");
             /*
             
             _intervalRunner.ClearAllTimers();
@@ -95,7 +95,7 @@ using UnityEngine;
         {
             if (!_isRunning) return;
             _isRunning = false;
-            CoroutineRunner.Instance.DebugLog("In Pause Loop");
+            //CoroutineRunner.Instance.DebugLog("In Pause Loop");
             /*
             
             _isRunning = false;
@@ -105,7 +105,7 @@ using UnityEngine;
         /// Ends the encounter loop entirely (cannot continue).
         public void EndLoop()
         {
-            CoroutineRunner.Instance.DebugLog("In End Loop");
+            //CoroutineRunner.Instance.DebugLog("In End Loop");
 
             // You may want to set a separate "ended" flag if you 
             // intend to allow "Resume" after End. 

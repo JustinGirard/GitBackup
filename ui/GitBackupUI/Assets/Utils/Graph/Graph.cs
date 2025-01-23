@@ -14,7 +14,7 @@ namespace VisualGraph
         private Dictionary<int, GameObject> nodeObjects = new Dictionary<int, GameObject>();
 
 
-        public void RenderGraph(List<NodeData> nodes, List<GroupData> edges)
+        public void RenderGraph(List<NodeData> nodes, List<EdgeData> edges)
         {
             // Step 1: Reconcile Node GameObjects
             HashSet<int> existingNodeIDs = new HashSet<int>(nodeObjects.Keys);
@@ -67,7 +67,7 @@ namespace VisualGraph
                 }
             }
 
-            foreach (GroupData edgeData in edges)
+            foreach (EdgeData edgeData in edges)
             {
                 string edgeName = $"Edge_{edgeData.SourceID}_{edgeData.DestinationID}";
 
