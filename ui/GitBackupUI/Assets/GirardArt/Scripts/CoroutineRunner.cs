@@ -11,6 +11,6 @@ public class CoroutineRunner : MonoBehaviour
         else Destroy(gameObject);
     }
     public void DebugLog(string debugString){
-        Debug.Log(debugString);
+        //Debug.Log(debugString);
     }
 }

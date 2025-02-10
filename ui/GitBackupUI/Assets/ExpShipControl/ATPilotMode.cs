@@ -83,21 +83,6 @@ public class ATPilotMode : MonoBehaviour,IPausable
     {
         if (__unitGO != null)
             GameObject.Destroy(__unitGO);
-        //__unitGO = Instantiate( Resources.Load<GameObject>(encounterUnitPrefab));
-        //SpaceMapUnitAgent unit = __unitGO.GetComponent<SpaceMapUnitAgent>();
-        
-        /*
-        if (unit.GetComponent<BlasterSystem>() == null)
-            Debug.LogError($"Could not find BlasterSystem attached to unit {i + 1}");
-        unit.GetComponent<BlasterSystem>().SetEncounterManager(this);
-
-        if (unit.GetComponent<MissileSystem>() == null)
-            Debug.LogError($"Could not find MissileSystem attached to unit {i + 1}");
-        unit.GetComponent<MissileSystem>().SetEncounterManager(this);
-
-        if (unit.GetComponent<ShieldSystem>() == null)
-            Debug.LogError($"Could not find ShieldSystem attached to unit {i + 1}");
-        unit.GetComponent<ShieldSystem>().SetEncounterManager(this);*/
 
     }
     public void Begin()
@@ -152,7 +137,7 @@ public class ATPilotMode : MonoBehaviour,IPausable
             // Debug.Log($"adding agent {apre.agent_id}");
             __agents[apre.agent_id] = apre.agentPrefab;
         }        
-        return __agents["agent_1"]; 
+        return __agents["AgentOne"]; 
     }    
 
 }

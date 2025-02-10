@@ -39,7 +39,7 @@ public interface IATGameMode
     void SetLevel(int lvl);
     int GetLevel();
     void DoUpdate(float deltaTime);
-    
+    AgentManager GetAgentManager();
     ATResourceData GetResourceObject(string agent_id);
     Agent GetPlayerAgent();
 
@@ -89,8 +89,8 @@ public class SystemConstants
         var d = new Dictionary<string, string>
         {
             { "account", "account-card-status" },
-            { "agent_1", "agent-1-card-status" },
-            { "agent_2", "agent-2-card-status" }
+            { "player_agent", "agent-1-card-status" },
+            { "ai_agent", "agent-2-card-status" }
         };
         return d[agent_id];
     }
@@ -109,11 +109,16 @@ public class GameEncounterBase : MonoBehaviour,IATGameMode
         public const string Missile = "AwayTeam/KeyObjects/Effects/Missile";
         public const string UnitShield = "AwayTeam/KeyObjects/Effects/UnitShield";
     }
+    public void AddAgent(Agent agent){
+        RefAgentManager.AddAgent(agent);
+    }
 
     public class ObservableEffects {
         public static readonly List<string> all = new List<string> {EncounterOverLost, EncounterOverWon,ShowPaused, 
                                                                     ShowUnpaused, AttackOn, MissileOn, ShieldOn, AttackOff, 
-                                                                    MissileOff, ShieldOff,TimerTick };
+                                                                    MissileOff, ShieldOff,TimerTick,
+                                                                    FormationDiamond,FormationClaw,FormationLine
+                                                                     };
         public const string EncounterOverLost = "EncounterOverLost";
         public const string EncounterOverWon = "EncounterOverWon";
         public const string ShowPaused = "PauseEnable";
@@ -125,6 +130,11 @@ public class GameEncounterBase : MonoBehaviour,IATGameMode
         public const string AttackOff = "AttackOff";
         public const string MissileOff = "MissileOff";
         public const string ShieldOff = "ShieldOff";
+
+        public const string FormationDiamond = "formation_diamond";
+        public const string FormationClaw = "formation_claw";
+        public const string FormationLine = "formation_line";
+
         public static bool IsValid(string action)
         {
             return all.Contains(action);
@@ -191,11 +201,11 @@ public class GameEncounterBase : MonoBehaviour,IATGameMode
     public static bool IsValidAgentAction(string actionId)
     {
         bool validAction = false;
-        if (actionId == AgentActionType.Missile)
+        if (actionId == AgentPowerType.Missile)
             validAction = true;
-        if (actionId == AgentActionType.Shield)
+        if (actionId == AgentPowerType.Shield)
             validAction = true;
-        if (actionId == AgentActionType.Attack)
+        if (actionId == AgentPowerType.Attack)
             validAction = true;        
         return validAction;
     }
@@ -268,6 +278,11 @@ public class GameEncounterBase : MonoBehaviour,IATGameMode
 
         /////// OLD DoBegin
         AttachGUIOberversToAgents();
+        RefAgentManager.ForEachAgent(agent => 
+        {
+            agent.SetEncounter(this);
+        });    
+
         DoBegin(onFinish:() => {
             // Notify all screens after agents have been initialized
             NotifyAllScreens(SpaceEncounterManager.ObservableEffects.ShieldOff);
@@ -286,7 +301,11 @@ public class GameEncounterBase : MonoBehaviour,IATGameMode
     {
         __timeKeeper.SetReadyToRun(ready);
     }
-
+    
+    public AgentManager GetAgentManager()
+    {
+        return RefAgentManager;
+    }
     public AgentManager RefAgentManager
     {
         get { 
@@ -314,12 +333,13 @@ public class GameEncounterBase : MonoBehaviour,IATGameMode
     }
 
     public virtual void Run() 
-    { 
-        
+    {         
         if (IsRunning())
             throw new System.Exception("Cant Run Twice");
         if (!AmReady())
             throw new System.Exception("Run() NOT READY TO RUN");
+
+        NotifyAllScreens(ObservableEffects.ShowUnpaused);
         DoRun(); 
         __timeKeeper.Run();
     }
@@ -355,8 +375,10 @@ public class GameEncounterBase : MonoBehaviour,IATGameMode
         {
             float timerProgress = GetTimerProgress();
             float timerProgressMax = GetTimerProgressMax();
+            float timeStep = (0.25f/epochLength)*timerProgressMax;
+
             // Debug.Log($"Setting TImer Progress { timerProgress + (0.25f/epochLength)*timerProgressMax}/{timerProgressMax}");
-            SetTimerProgress( timerProgress + (0.25f/epochLength)*timerProgressMax);
+            SetTimerProgress( timerProgress + timeStep);
             //Debug.Log($"Getting: {timerProgress}");
 
             NotifyAllScreens(ObservableEffects.TimerTick);
@@ -378,12 +400,7 @@ public class GameEncounterBase : MonoBehaviour,IATGameMode
     {
         if (agentId == "account")
             return accountResourceData;
-        if (agentId == "agent_1")
-            return RefAgentManager.GetAgent("agent_1").GetResourceObject();
-        if (agentId == "agent_2")
-            return RefAgentManager.GetAgent("agent_2").GetResourceObject();
-        Debug.LogError("Could not find requested agent data");
-        return null;
+        return RefAgentManager.GetAgent(agentId).GetResourceObject();
     }      
     public Agent GetPlayerAgent()
     {

@@ -4,6 +4,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using Unity.VisualScripting;
+using FXV;
 /*
 public static class QuickSema
 {
@@ -61,6 +62,7 @@ public static class PhysicsHandler
     public static IEnumerator ShootBlasterAt(GameObject boltPrefab,
                                              GameObject explosionPrefab, 
                                              int number, 
+                                             float baseDamage,
                                              float speed,
                                              float delay, 
                                              float lifetime,
@@ -78,7 +80,7 @@ public static class PhysicsHandler
             // --- Instantiate the projectile ---
             GameObject boltContainer = UnityEngine.Object.Instantiate(boltPrefab);
             boltsGroups[i] = boltContainer;
-            Transform boltT = boltContainer.transform.Find("Bolt");
+            Transform boltT = boltContainer.GetComponentInChildren<Rigidbody>().transform; // Find the actual physical projectile
             GameObject bolt = boltT.gameObject;
             bolt.transform.position = sourceUnit.transform.position + sourceOffset;
             bolt.layer = LayerMask.NameToLayer("EnergyPowers");
@@ -124,28 +126,54 @@ GameObject explosionPrefab, Vector3 target, float sizeSmall, float sizeLarge, [G
                     destRigidbody = collider.gameObject.GetComponentInParent<Rigidbody>();
                 if (destRigidbody != null)
                 {
-                    //Debug.Log("Applying forcees 2");
                     destRigidbody.AddForce(norm * -1 *impactKickback, ForceMode.Acceleration);
+                    self.GetComponent<Rigidbody>().AddForce(norm *impactKickback, ForceMode.Acceleration);
                 }
                 else
                 {
                     Debug.Log($"No body on {collider.gameObject.name}");
                 }
+                Shield sh = collider.gameObject.GetComponent<Shield>();
+                if(sh != null)
+                {
+                    AudioManager.Instance.Play("laser_impact_01");
+                    //Debug.Log($"Hit shield");
+                    return;
+                }
+                else
+                {
+                    //Debug.Log($"Hit {collider.gameObject.name}");
+                    ATResourceData rd = collider.gameObject.GetComponentInParent<ATResourceData>();
+                    if(rd != null)
+                    {
+                        //Debug.Log($"Found Damageable object Object {rd}");
+                        rd.Deposit(ResourceTypes.Hull,-1f*baseDamage);
+                    }
+                    else
+                    {
+                        Debug.Log($"Can not do damage to {collider.gameObject}");
+                    }
 
-                CoroutineRunner.Instance.StartCoroutine( EffectHandler.SingleExplosion(
-                                                    explosionPrefab:explosionPrefab, 
-                                                    target:pos, 
-                                                    targetParent:collider.gameObject,
-                                                    sizeSmall:0.5f, 
-                                                    sizeLarge:0.8f,
-                                                    cleanUp:self,
-                                                    cleanupDelay:0.5f));
-                //return EffectHandler.CleanUp(new GameObject[] {self},0f, "explode");                                                    
-                //return null;
+                    CoroutineRunner.Instance.StartCoroutine( EffectHandler.SingleExplosion(
+                                                        explosionPrefab:explosionPrefab, 
+                                                        target:pos, 
+                                                        targetParent:collider.gameObject,
+                                                        sizeSmall:0.5f, 
+                                                        sizeLarge:1.8f,
+                                                        cleanUp:self,
+                                                        cleanupDelay:0.5f));
+                    //EffectHandler.CleanUp(new GameObject[] {self},0f, "shrink");                                                    
+                    GameObject.Destroy(self);
+                    //return null;
+
+                }
+
             });
+
             yield return new WaitForSeconds(delay); // Delay between shots
         }
-        CoroutineRunner.Instance.StartCoroutine(EffectHandler.CleanUp(boltsGroups,lifetime, "shrink"));         
+        //yield return new WaitForSeconds(delay); // Delay between shots
+        CoroutineRunner.Instance.StartCoroutine(EffectHandler.CleanUp(boltsGroups,lifetime,"die"));         
     }
 }
 
@@ -319,8 +347,8 @@ public static class EffectHandler
         float durationExplode = 0.7f;
 
         Transform sphereChild = explodeeoooeee.transform.Find("Sphere");
-        Material explodeMaterial = sphereChild.GetComponent<Renderer>().material;
-        Color initialColor = explodeMaterial.color;
+        //Material explodeMaterial = sphereChild.GetComponent<Renderer>().material;
+        //Color initialColor = explodeMaterial.color;
 
         while (elapsedTime < durationExplode)
         {
@@ -333,7 +361,7 @@ public static class EffectHandler
                 break;
             explodeeoooeee.transform.localScale = Vector3.Lerp(smalleee, bigeee, elapsedTime / durationExplode);
             float alpha = Mathf.Lerp(1f, 0f, elapsedTime / durationExplode);
-            explodeMaterial.color = new Color(initialColor.r, initialColor.g, initialColor.b, alpha);
+            //explodeMaterial.color = new Color(initialColor.r, initialColor.g, initialColor.b, alpha);
 
             elapsedTime += Time.deltaTime;
             yield return null;

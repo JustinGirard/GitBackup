@@ -3,58 +3,52 @@ class LocalAIAgent:Agent
 {
     private string __targetAction = "";
     private string __targetNavigation = "";
-    public override void ChooseTargetAction()
+    private string __targetFormation = "";
+    private string __targetAttackPattern = "";
+
+    public override void ChooseCommand(string commandType)
     {
-        return; 
+        return;
+        //Debug.Log("Choosing Action");
+        //__targetAction= AgentAttackType.Shield;
+        
         int randomIndex = Random.Range(0, 3);
         if (randomIndex == 0)
         {
-            __targetAction = AgentActionType.Attack;
+            __targetAction = AgentPowerType.Attack;
         }
         else if (randomIndex == 1)
         {
-            __targetAction= AgentActionType.Missile;
+            __targetAction= AgentPowerType.Missile;
         }
         else if (randomIndex == 2)
         {
-            __targetAction= AgentActionType.Shield;
+            __targetAction= AgentPowerType.Shield;
         }        
 
     }
-    public override void ChooseTargetNavigation()
-    {
-         return;
-        __targetNavigation = AgentNavigationType.Halt;
-    }
 
-    public override bool SetTargetAction(string actionId)
+    public override bool AddCommand(string commandType, string actionId, GameObject subject)
     {
         throw new System.Exception("AI can not be controlled by mortls");
         return false;   
     }
     
-    public override bool SetTargetNavigation(string actionId)
+    public override string GetSelectedCommand(string commandType)
     {
-        throw new System.Exception("AI can not be controlled by mortls");
-        return false;   
+        if (commandType == AgentCommand.Type.Combat)
+        {
+            //Debug.Log($"Getting Combat Action '{__targetAction}'");
+            return __targetAction;
+
+        }
+        if (commandType == AgentCommand.Type.Navigation)
+            return __targetNavigation;
+        if (commandType == AgentCommand.Type.Formation)
+            return __targetFormation;
+        if (commandType == AgentCommand.Type.AttackPattern)
+            return __targetAttackPattern;
+        return null;
     }
 
-    public override string GetTargetAction()
-    {
-       return __targetAction;
-    }
-    public override string GetTargetNavigation()
-    {
-       return __targetNavigation;
-    }
-
-
-    public override void ResetTargetAction()
-    {
-        __targetAction = "";
-    }   
-    public override void ResetTargetNavigation()
-    {
-        __targetNavigation = "";
-    }    
-}    
+}

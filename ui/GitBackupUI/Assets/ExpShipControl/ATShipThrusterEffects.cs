@@ -135,28 +135,16 @@ public  class ATShipControlEffects
     ////
     ///
     
-    public static IEnumerator AdjustVelocityTowardsTarget(
+    public static void DoAdjustVelocityTowardsTarget(
         Transform shipTransform,
         Rigidbody shipRigidbody,
         Vector3 powerScaler,
         Vector3 considerationWeight,
         Transform target,
         float dampingFactorDivide,
-        float dampingFactorPower,
-        System.Func<bool> onComplete // Exit condition
+        float dampingFactorPower
     )
     {
-        bool canRun = Sema.TryAcquireLock(shipTransform.gameObject.name+"_AdjustVelocityTowardsTarget");
-        if (!canRun)
-            yield break; 
-        //if (__AdjustVelocityTowardsTargetRunning)
-        //    yield break; // Prevent duplicate coroutines
-        //__AdjustVelocityTowardsTargetRunning = true;
-
-        try
-        {
-            while (!onComplete())
-            {
                 // Calculate direction and distance to the target
                 Vector3 toTarget = target.position - shipTransform.position;
                 float distanceToTarget = toTarget.magnitude;
@@ -191,6 +179,88 @@ public  class ATShipControlEffects
                 //Debug.Log($"Ship Input: [ Longitudinal: {shipInput.longitudinal:F2}, Vertical: {shipInput.vertical:F2}, Horizontal: {shipInput.horizontal:F2} ]");
                 
                 shipTransform.GetComponent<SimpleShipController>().SendInput(shipInput);
+    }
+
+
+    public static void DoSmoothAdjustVelocityTowardsTarget(
+        Transform shipTransform,
+        Rigidbody shipRigidbody,
+        Vector3 powerScaler,
+        Vector3 considerationWeight,
+        Transform target,
+        float dampingFactorDivide,
+        float dampingFactorPower,
+        ref Vector3 smoothVelocity,
+        float smoothVelocityTime
+    )
+    {
+        // Calculate direction and distance to the target
+
+        Vector3 toTarget = target.position - shipTransform.position;
+        toTarget = Vector3.SmoothDamp(Vector3.zero,toTarget, ref smoothVelocity, smoothVelocityTime);               
+        float distanceToTarget = toTarget.magnitude;
+        Vector3 targetDirection = toTarget.normalized;
+
+        // Get current velocity
+        Vector3 currentVelocity = shipRigidbody.velocity;
+
+        // === Distance-Based Damping (Non-linear Deceleration) ===
+        float dampingFactor = Mathf.Clamp01(distanceToTarget / 
+            (dampingFactorDivide + dampingFactorDivide * currentVelocity.sqrMagnitude));
+        dampingFactor = Mathf.Pow(dampingFactor, dampingFactorPower);
+
+        // Calculate desired velocity change
+        Vector3 desiredVelocityChange = targetDirection * powerScaler.magnitude * dampingFactor;
+
+        // Calculate velocity correction considering weights
+        Vector3 velocityCorrection = desiredVelocityChange - currentVelocity;
+        velocityCorrection = Vector3.Scale(velocityCorrection, considerationWeight);
+
+        // Convert correction to local ship frame
+        Vector3 localVelocityCorrection = shipTransform.InverseTransformDirection(velocityCorrection);
+
+        // Generate thruster inputs
+        ShipInput shipInput = new ShipInput
+        {
+            longitudinal = Mathf.Clamp(localVelocityCorrection.z, -100f, 100f),  // Forward/backward thrust
+            vertical = Mathf.Clamp(localVelocityCorrection.y, -100f, 100f),       // Up/down thrust
+            horizontal = Mathf.Clamp(localVelocityCorrection.x, -100f, 100f)      // Left/right thrust
+        };
+
+        //Debug.Log($"Ship Input: [ Longitudinal: {shipInput.longitudinal:F2}, Vertical: {shipInput.vertical:F2}, Horizontal: {shipInput.horizontal:F2} ]");
+        
+        shipTransform.GetComponent<SimpleShipController>().SendInput(shipInput);
+    }    
+    public static IEnumerator AdjustVelocityTowardsTarget(
+        Transform shipTransform,
+        Rigidbody shipRigidbody,
+        Vector3 powerScaler,
+        Vector3 considerationWeight,
+        Transform target,
+        float dampingFactorDivide,
+        float dampingFactorPower,
+        System.Func<bool> onComplete // Exit condition
+    )
+    {
+        bool canRun = Sema.TryAcquireLock(shipTransform.gameObject.name+"_AdjustVelocityTowardsTarget");
+        if (!canRun)
+            yield break; 
+        //if (__AdjustVelocityTowardsTargetRunning)
+        //    yield break; // Prevent duplicate coroutines
+        //__AdjustVelocityTowardsTargetRunning = true;
+
+        try
+        {
+            while (!onComplete())
+            {
+                DoAdjustVelocityTowardsTarget(
+                    shipTransform,
+                    shipRigidbody,
+                    powerScaler,
+                    considerationWeight,
+                    target,
+                    dampingFactorDivide,
+                    dampingFactorPower);
 
                 yield return null; // Wait for the next frame
             }

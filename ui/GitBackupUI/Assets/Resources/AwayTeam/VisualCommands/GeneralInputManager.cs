@@ -19,6 +19,8 @@ public class GeneralInputManager : MonoBehaviour
     public static GeneralInputManager Instance(){
         return __instance;
     }
+
+
     public class Command
     {
         public static readonly List<string> all = new List<string>
@@ -30,6 +32,8 @@ public class GeneralInputManager : MonoBehaviour
             secondary_up,
             secondary_move,
             cancel,
+            nav_plane_up,
+            nav_plane_down,
             nav_up_up,
             nav_down_up,
             nav_left_up,
@@ -41,8 +45,36 @@ public class GeneralInputManager : MonoBehaviour
             nav_left_down,
             nav_right_down,
             formation_up_down,
-            attackpattern_up_down            
+            attackpattern_up_down,
+            player_aim_cycle_down,
+            player_control_mode_down,    
+            player_aim_cycle_up,
+            player_control_mode_up,    
+            dash_up,
+            dash_down,    
+
+            power_01_down,
+            power_01_up,
+            power_02_down,
+            power_02_up,
+            power_03_down,
+            power_03_up,
+            power_04_down,
+            power_04_up,
+            power_05_down,
+            power_05_up,
+
         };
+        public const string dash_up = "dash_up";
+        public const string dash_down = "dash_down";
+
+        public const string player_aim_cycle_down = "player_aim_cycle_down";
+        public const string player_aim_cycle_up = "player_aim_cycle_up";
+        public const string player_control_mode_down = "player_control_mode_down";
+        public const string player_control_mode_up = "player_control_mode_up";
+
+        public const string nav_plane_up = "nav_plane_up";
+        public const string nav_plane_down = "nav_plane_down";
 
         public const string nav_up_up = "nav_up_up";
         public const string nav_down_up = "nav_down_up";
@@ -58,7 +90,6 @@ public class GeneralInputManager : MonoBehaviour
         public const string formation_up_down = "formation_up_down";
         public const string attackpattern_up_down = "attackpattern_up_down";
 
-
         public const string primary_down = "primary_down";
         public const string primary_up = "primary_up";
         public const string primary_move = "primary_move";
@@ -66,6 +97,17 @@ public class GeneralInputManager : MonoBehaviour
         public const string secondary_up = "secondary_up";
         public const string secondary_move = "secondary_move";
         public const string cancel = "cancel";
+
+        public const string power_01_down = "power_01_down";
+        public const string power_01_up = "power_01_up";        
+        public const string power_02_down = "power_02_down";
+        public const string power_02_up = "power_02_up";        
+        public const string power_03_down = "power_03_down";
+        public const string power_03_up = "power_03_up";        
+        public const string power_04_down = "power_04_down";
+        public const string power_04_up = "power_04_up";        
+        public const string power_05_down = "power_05_down";
+        public const string power_05_up = "power_05_up";        
     }
     [SerializeField]
     public Vector2 lastMousePosition;
@@ -188,20 +230,41 @@ public class GeneralInputManager : MonoBehaviour
             if (Input.GetKeyDown(KeyCode.Escape))
             {
                 observer.OnCommandReceived(Command.cancel, mousePosition); // Pass empty Vector2 or adjust as needed
-            }            
+            }
+
+            // public const string dash_up = "dash_up";
+            // public const string dash_down = "dash_down";
+            if (Input.GetKeyDown(KeyCode.Space)) observer.OnCommandReceived(Command.dash_down, mousePosition); 
+
+            if (Input.GetKeyDown(KeyCode.T)) observer.OnCommandReceived(Command.player_aim_cycle_down, mousePosition); 
+            if (Input.GetKeyDown(KeyCode.R)) observer.OnCommandReceived(Command.player_control_mode_down, mousePosition); 
+            
+            if (Input.GetKeyDown(KeyCode.X)) observer.OnCommandReceived(Command.nav_plane_down, mousePosition); 
             if (Input.GetKeyDown(KeyCode.W)) observer.OnCommandReceived(Command.nav_up_down, mousePosition); 
             if (Input.GetKeyDown(KeyCode.S)) observer.OnCommandReceived(Command.nav_down_down, mousePosition); 
             if (Input.GetKeyDown(KeyCode.A)) observer.OnCommandReceived(Command.nav_left_down, mousePosition); 
             if (Input.GetKeyDown(KeyCode.D)) observer.OnCommandReceived(Command.nav_right_down, mousePosition); 
             if (Input.GetKeyDown(KeyCode.LeftBracket)) observer.OnCommandReceived(Command.formation_up_down, mousePosition); 
             if (Input.GetKeyDown(KeyCode.Semicolon)) observer.OnCommandReceived(Command.attackpattern_up_down, mousePosition); 
+            
+            /// ---
+            if (Input.GetKeyUp(KeyCode.Space)) observer.OnCommandReceived(Command.dash_up, mousePosition); 
 
+            if (Input.GetKeyUp(KeyCode.T)) observer.OnCommandReceived(Command.player_aim_cycle_up, mousePosition); 
+            if (Input.GetKeyUp(KeyCode.R)) observer.OnCommandReceived(Command.player_control_mode_up, mousePosition); 
+
+            if (Input.GetKeyUp(KeyCode.X)) observer.OnCommandReceived(Command.nav_plane_up, mousePosition); 
             if (Input.GetKeyUp(KeyCode.W)) observer.OnCommandReceived(Command.nav_up_up, mousePosition); 
             if (Input.GetKeyUp(KeyCode.S)) observer.OnCommandReceived(Command.nav_down_up, mousePosition); 
             if (Input.GetKeyUp(KeyCode.A)) observer.OnCommandReceived(Command.nav_left_up, mousePosition); 
             if (Input.GetKeyUp(KeyCode.D)) observer.OnCommandReceived(Command.nav_right_up, mousePosition); 
             if (Input.GetKeyUp(KeyCode.LeftBracket)) observer.OnCommandReceived(Command.formation_up_up, mousePosition); 
             if (Input.GetKeyUp(KeyCode.Semicolon)) observer.OnCommandReceived(Command.attackpattern_up_up, mousePosition); 
+
+
+            if (Input.GetKeyUp(KeyCode.Alpha1)) observer.OnCommandReceived(Command.power_01_up, mousePosition); 
+            if (Input.GetKeyDown(KeyCode.Alpha1)) observer.OnCommandReceived(Command.power_01_down, mousePosition); 
+
 
         }
         lastMousePosition = mousePosition;
@@ -283,4 +346,18 @@ public class GeneralInputManager : MonoBehaviour
 
         return collidedNames.Count > 0;
     }
+
+
+    // Ship movement settings (modifiable at runtime)
+    [SerializeField] private Vector3 settingPowerScaler = new Vector3(30f, 30f, 30f);
+    [SerializeField] private Vector3 settingConsiderationWeight = new Vector3(1f, 1f, 1f);
+    [SerializeField] private float settingDampingFactorDivide = 1f;
+    [SerializeField] private float settingDampingFactorPower = 1.0f;
+    [SerializeField] private float settingSmoothVelocityTime = 0.01f;
+    public Vector3 SettingPowerScaler() => settingPowerScaler;
+    public Vector3 SettingConsiderationWeight() => settingConsiderationWeight;
+    public float SettingDampingFactorDivide() => settingDampingFactorDivide;
+    public float SettingDampingFactorPower() => settingDampingFactorPower;
+    public float SettingSmoothVelocityTime() => settingSmoothVelocityTime;
+
 }

@@ -9,6 +9,11 @@ namespace AwayTeam
     // A Basic power. Should handle all power concerns
     class BlasterPowerExecution 
     { 
+        GameObject __muzzleChargePrefab;
+        GameObject __boltPrefab;
+        GameObject __damagePrefab;
+        GameObject __impactPrefab;
+        GameObject __muzzleFlashPrefab;
 
         float __fuelCost;
         float __ammoCost;
@@ -16,22 +21,22 @@ namespace AwayTeam
         GameEncounterBase __spaceEncounter;
         GameObject __sourceUnit;
         string __sourcePowerId;
-        GameObject __targetUnit;
-        List<string> __targetPowerIds;
+        List<GameObject> __targetUnits;
         ATResourceData __sourceResources;
-        ATResourceData __targetResources;
 
         PhysicalModel.Transaction __physicalExecution = null;
 
         // Constructor
         public BlasterPowerExecution(
+            GameObject muzzleChargePrefab,
+            GameObject boltPrefab,
+            GameObject damagePrefab,
+            GameObject impactPrefab,
+            GameObject muzzleFlashPrefab,
             ATResourceData sourceResources,
-            ATResourceData targetResources,
             GameObject sourceUnit,
-            GameObject targetUnit,
+            List<GameObject> targetUnits,
             GameEncounterBase spaceEncounter,
-            string sourcePowerId,
-            List<string> targetPowerIds,
             float fuelCost,
             float ammoCost,
             float baseDamage)
@@ -39,26 +44,26 @@ namespace AwayTeam
             // Null checks with Debug.LogError
             if (sourceResources == null)
                 Debug.LogError("BlasterPowerExecution: sourceResources is null.");
-            if (targetResources == null)
-                Debug.LogError("BlasterPowerExecution: targetResources is null.");
             if (sourceUnit == null)
                 Debug.LogError("BlasterPowerExecution: sourceUnit is null.");
-            if (targetUnit == null)
+            if (targetUnits == null)
                 Debug.LogError("BlasterPowerExecution: targetUnit is null.");
             if (spaceEncounter == null)
                 Debug.LogError("BlasterPowerExecution: spaceEncounter is null.");
-            if (string.IsNullOrEmpty(sourcePowerId))
-                Debug.LogError("BlasterPowerExecution: sourcePowerId is null or empty.");
-            if (targetPowerIds == null)
-                Debug.LogError("BlasterPowerExecution: targetPowerIds is null or empty.");
+            if (muzzleChargePrefab == null)
+                Debug.LogError("BlasterPowerExecution: muzzleChargePrefab is null.");
 
+            __muzzleChargePrefab = muzzleChargePrefab;
+            __boltPrefab = boltPrefab;
+            __damagePrefab = damagePrefab;
+            __impactPrefab = impactPrefab;
+            __muzzleFlashPrefab = muzzleFlashPrefab;
+
+            //Debug.Log($"Loaded Muzzle {__muzzleChargePrefab}");
             __sourceResources = sourceResources;
-            __targetResources = targetResources;
             __sourceUnit = sourceUnit;
-            __targetUnit = targetUnit;
+            __targetUnits = targetUnits;
             __spaceEncounter = spaceEncounter;
-            __sourcePowerId = sourcePowerId;
-            __targetPowerIds = targetPowerIds;
             __fuelCost = fuelCost;
             __ammoCost = ammoCost;
             __baseDamage = baseDamage;
@@ -85,6 +90,7 @@ namespace AwayTeam
             // RESOURCES
             // 
             // Withdraw resources from source
+            
             Dictionary<string, float> primaryDelta = new Dictionary<string, float>();
             primaryDelta[ResourceTypes.Fuel] = -1*__fuelCost;
             primaryDelta[ResourceTypes.Ammunition] = -1*__ammoCost;
@@ -93,6 +99,11 @@ namespace AwayTeam
             float totalRemainder = remainder.Values.Sum();
             if (totalRemainder >0)
                 onFinish.Invoke(false);
+            //Debug.Log("Loading Muzzle");
+            //__muzzleChargeInstance = ObjectPool.Instance().Load(__muzzleChargePrefab);
+            //Debug.Log($"Loading Muzzle {__muzzleChargeInstance} ");
+            //__muzzleChargeInstance.transform.parent = __sourceUnit.transform;
+            //__muzzleChargeInstance.transform.position = __sourceUnit.transform.position;
 
             if (onFinish!= null)
                 onFinish.Invoke(true);
@@ -102,44 +113,45 @@ namespace AwayTeam
         public System.Collections.IEnumerator  AfterExecute(System.Action<bool> onFinish)
         {
             //CoroutineRunner.Instance.DebugLog("");
+            /*
             float baseMultiplier = 1.0f;
-            foreach(string targetPowerId in __targetPowerIds)
-            {
-                baseMultiplier *= GetDamageMultiplierFor( __sourceUnit,  
-                                                        __sourcePowerId, 
-                                                        __targetUnit,  
-                                                        targetPowerId);
-
-            }
             Dictionary<string, float> targetDelta = new Dictionary<string, float>();
             targetDelta[ResourceTypes.Hull] = -1f*__baseDamage*baseMultiplier;
 
             Dictionary<string,float> remainder;
-            //((ATResourceDataGroup) sourceResources).
+            ATResourceData targetResources = __targetUnits[0].GetComponent<ATResourceData>();
+            if (targetResources == null)
+            {
+                if (onFinish!= null)
+                    onFinish.Invoke(true);
+                yield break;
+            }
+
             if (targetDelta.Count > 0)
             {
-                remainder = __targetResources.Deposit(targetDelta);
-                //float totalRemainder = remainder.Values.Sum();
+                remainder = targetResources.Deposit(targetDelta);
             }
-            if ((float)__targetResources.Balance(ResourceTypes.Hull) <= 0)
+
+            if ((float)targetResources.Balance(ResourceTypes.Hull) <= 0)
             {
                 GameObject explosionPrefab = Resources.Load<GameObject>(SpaceEncounterManager.PrefabPath.ExplosionRed);
                 
                 yield return CoroutineRunner.Instance.StartCoroutine(
                     EffectHandler.SingleExplosion( 
                                             explosionPrefab:explosionPrefab,  
-                                            targetParent:__targetUnit,
-                                            target:  __targetUnit.transform.position,
+                                            targetParent:__targetUnits[0],
+                                            target:  __targetUnits[0].transform.position,
                                             sizeSmall:2f, 
                                             sizeLarge:5f,
                                             cleanUp:null,
                                             cleanupDelay:0f
                                             )
                 );
-                SimpleShipController unit = __targetUnit.GetComponentInParent<SimpleShipController>();
+                SimpleShipController unit = __targetUnits[0].GetComponentInParent<SimpleShipController>();
                 //Debug.Log("DESTROYING UNIT");
                 unit.SafeDestroy();
             }
+            */
 
             if (onFinish!= null)
                 onFinish.Invoke(true);
@@ -150,47 +162,38 @@ namespace AwayTeam
         {
             // Submit power to the physics engine
             PhysicalModel.Graph graph = __spaceEncounter.GetPhysicalModel();
-            //Transaction t = new Transaction( 
-            //    TransactionType.Projectile, 
-            //    __sourceUnit,
-            //    __targetUnit);
-            //graph.AddTransaction(t);
 
-            // Get Physics result
             // Save Records for processing (?)
-            yield return InnerExecute(sourceUnit: __sourceUnit,targetUnit: __targetUnit);
+            //__muzzleChargeInstance.SetActive(false);
+            //__muzzleChargeInstance = null;
+            AudioManager.Instance.Play("laser_gun_01");            
+            yield return InnerExecute(sourceUnit: __sourceUnit,
+                                        targetUnit: __targetUnits[0],
+                                        boltPrefab:__boltPrefab,
+                                        explosionPrefab:__impactPrefab,
+                                        baseDamage:__baseDamage);
             if (onFinish!= null)
                 onFinish.Invoke(true);
             yield break;
         }
 
-        private static float GetDamageMultiplierFor(GameObject sourceAgent, string sourcePowerId,GameObject targetAgent, string targetPowerId)
+        private static System.Collections.IEnumerator InnerExecute( GameObject sourceUnit, 
+                                                                    GameObject targetUnit,
+                                                                    GameObject boltPrefab,
+                                                                    GameObject explosionPrefab,
+                                                                    float baseDamage
+                                                                    )
         {
-            if (AgentActionType.Attack == targetPowerId)
-            {
-                return 0.5f;
-            }
-            if (AgentActionType.Shield == targetPowerId)
-            {
-                return 0.0f;
-            }
-            if (AgentActionType.Missile == targetPowerId)
-            {
-                return 2f;
-            }
-            return 1f;
-        }
-
-        private static System.Collections.IEnumerator InnerExecute( GameObject sourceUnit, GameObject targetUnit)
-        {
+            
             yield return CoroutineRunner.Instance.StartCoroutine(
                 PhysicsHandler.ShootBlasterAt(
-                    boltPrefab: Resources.Load<GameObject>(SpaceEncounterManager.PrefabPath.BoltPath),
-                    explosionPrefab: Resources.Load<GameObject>(SpaceEncounterManager.PrefabPath.ExplosionBlue),
-                    number: 4,
+                    boltPrefab: boltPrefab,
+                    explosionPrefab: explosionPrefab,
+                    number: 1,
+                    baseDamage:baseDamage,
                     delay: 0.01f,
                     speed: 30f,
-                    lifetime:15f,
+                    lifetime:1f,
                     projectileKickback:50f,
                     impactKickback:50f,
                     sourceUnit: sourceUnit,

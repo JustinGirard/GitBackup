@@ -11,7 +11,7 @@ using UnityEngine.UI;
 
 namespace VisualCommand
 {
-    public class SurfaceNavigationCommand : MonoBehaviour, IShowHide
+    public class SurfaceNavigationCommand : MonoBehaviour, IShowHide,ISurfaceNavigationCommand
     {
         [Serializable]
         public class SelectionStyle
@@ -22,6 +22,10 @@ namespace VisualCommand
             public GameObject currentNodeStyle;
 
         }
+        public GameObject GameObject()
+        {
+            return this.gameObject;
+        }        
         //GameObject targetSurface;
         //GameObject currentNode;
         //GameObject previousNode;
@@ -49,9 +53,18 @@ namespace VisualCommand
 
         [SerializeField]
         private SelectionStyle styleSelectFinishedActive;
+        
+        [SerializeField]
+        private bool clickEnabled = false;
 
         public bool __debugMode = true;
         public class SelectionState {
+            public static bool IsValid(string state)
+            {
+                return all.Contains(state);
+            }               
+            public static readonly List<string> all = new List<string> { off, inactive,select_surface,select_height,active };
+
             public const string off = "off";
             public const string inactive = "inactive";
             public const string select_surface = "select_surface";
@@ -111,7 +124,7 @@ namespace VisualCommand
                 yield break;
             }        
         */
-        public void QuickNavTo(Vector3 topPoint,Vector3 bottomPoint)
+        /*public void QuickNavTo(Vector3 topPoint,Vector3 bottomPoint)
         {
             SelectionStyle selectedStyle = visualStyle[SelectionState.active];
             __lastHeightPosition = topPoint; 
@@ -121,11 +134,11 @@ namespace VisualCommand
             Show();
             __targetScreen.HandleNavigationEvent(this);
             SetVisualState(SelectionState.active);
-        }
-
+        }*/
         public void ProcessEvent(string cmd, Vector3 mousePosition, Vector3 contactPosition, Vector3 contactNormal )
         {
-            return;
+            if (clickEnabled == false)
+                return;
             if (string.IsNullOrEmpty(cmd))
                 Debug.LogError("ProcessEvent: Command is null or empty.");
 
@@ -267,8 +280,8 @@ namespace VisualCommand
                 selectedStyle.edgeStyle.SetActive(true);
             if (selectedStyle.currentNodeStyle != null)
                 selectedStyle.currentNodeStyle.SetActive(true);
-            if (__debugMode == true)
-                Debug.Log($"SettingVisualState:  {state} ");                
+            //if (__debugMode == true)
+            //    Debug.Log($"SettingVisualState:  {state} ");                
         }
         
         public void AlignCursorWithSurface(string state, Vector3 contactPositon, Vector3 contactNormal, Vector2 mousePosition){
@@ -482,7 +495,7 @@ namespace VisualCommand
                 var (isPrimaryUp, primaryUpPosition) = GeneralInputManager.Instance().PollCommandStatus(GeneralInputManager.Command.primary_down);
                 if (isPrimaryUp)
                 {
-                    if (__targetScreen.HandleNavigationEvent(this))
+                    if (__targetScreen.SetPlayerNavigation(this,AgentNavigationType.NavigateToOnce))
                         SetVisualState(SelectionState.active);
                 }
 

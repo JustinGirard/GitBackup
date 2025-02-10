@@ -1,6 +1,7 @@
 
 
 using System.Collections.Generic;
+using UnityEditor.ShortcutManagement;
 using UnityEngine;
 
 public class MissileSystem : StandardSystem
@@ -12,31 +13,16 @@ public class MissileSystem : StandardSystem
     [SerializeField]
     private float baseDamage = 5f;
     
-    private string system_id = AgentActionType.Shield;
+    //private string system_id = AgentAttackType.Shield;
 
-    private float GetDamageMultiplierFor(GameObject sourceUnit, string sourcePowerId,GameObject targetUnit, string targetPowerId)
-    {
-        if (AgentActionType.Attack == targetPowerId)
-        {
-            return 1f;
-        }
-        if (AgentActionType.Shield == targetPowerId)
-        {
-            return 2f;
-        }
-        if (AgentActionType.Missile == targetPowerId)
-        {
-            return 1f;
-        }
-        return 1f;
-    }
+
     public override System.Collections.IEnumerator Execute(
+                                string sourceActionId,
                                 GameObject sourceUnit, 
-                                string sourcePowerId, 
-                                GameObject targetUnit, 
-                                List<string> targetPowerIds, 
+                                List<GameObject> targetUnits, 
                                 ATResourceData sourceResources,
-                                ATResourceData targetResources)
+                                Agent sourceAgent
+                                )
     {
         //
         //
@@ -63,17 +49,9 @@ public class MissileSystem : StandardSystem
                 duration: 1f,
                 arcHeight: 2f,
                 source: sourceUnit.transform.position,
-                target: targetUnit.transform.position
+                target: targetUnits[0].transform.position
             ));
             float baseMultiplier = 1.0f;
-            foreach(string targetPowerId in targetPowerIds)
-            {
-                baseMultiplier *= GetDamageMultiplierFor( sourceUnit,  
-                                                                         sourcePowerId, 
-                                                                         targetUnit,  
-                                                                         targetPowerId);
-
-            }
             targetDelta[ResourceTypes.Hull] = -1f*baseDamage*baseMultiplier;
         }
         else
@@ -81,7 +59,12 @@ public class MissileSystem : StandardSystem
             Debug.Log("Execute Missile FAIL");
 
         }
-
+        ATResourceData targetResources =  targetUnits[0].GetComponent<ATResourceData>();
+        if (targetResources == null)
+        {
+            Debug.LogError("Could not find resources on enemy");
+            yield break;
+        }
         Dictionary<string,float> remainder;
         //((ATResourceDataGroup) sourceResources).
         if (primaryDelta.Count > 0)
@@ -91,7 +74,7 @@ public class MissileSystem : StandardSystem
         }
         if (targetDelta.Count > 0)
         {
-            remainder = targetResources.Deposit(targetDelta);
+            remainder =targetResources.Deposit(targetDelta);
             //float totalRemainder = remainder.Values.Sum();
         }
         if ((float)targetResources.Balance(ResourceTypes.Hull) <= 0)
@@ -101,16 +84,18 @@ public class MissileSystem : StandardSystem
             yield return CoroutineRunner.Instance.StartCoroutine(
                 EffectHandler.SingleExplosion( 
                                            explosionPrefab:explosionPrefab,  
-                                            targetParent:targetUnit,
-                                            target:  targetUnit.transform.position,
+                                            targetParent:targetUnits[0],
+                                            target:  targetUnits[0].transform.position,
                                             sizeSmall:2f, 
                                             sizeLarge:5f,
                                             cleanUp:null,
                                             cleanupDelay:0f)
              );
-            if (targetUnit != null)
+            if (targetUnits[0] != null)
             {
-                SimpleShipController unit = targetUnit.GetComponentInParent<SimpleShipController>();
+                SimpleShipController unit = targetUnits[0].GetComponent<SimpleShipController>();
+                if (unit == null)
+                    unit = targetUnits[0].GetComponentInParent<SimpleShipController>();
                 unit.SafeDestroy();
             }
             //if (unit != null)

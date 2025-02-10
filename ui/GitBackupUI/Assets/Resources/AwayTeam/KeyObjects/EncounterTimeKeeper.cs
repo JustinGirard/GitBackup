@@ -135,27 +135,4 @@ using UnityEngine;
         }
         
 
-        // ---------------------------------------------------------
-        // Internal (Action Interval) 
-        // ---------------------------------------------------------
-    /*
-        private void StartActionInterval()
-        {
-            // Reset progress bar to 0 for the next epoch, if desired
-            _timerProgress = 0f;
-
-            // Let subscribers know we started a fresh "turn" or "action interval."
-            OnActionIntervalStart?.Invoke();
-            // Subscribing code can now queue attacks, run coroutines, etc.
-        }
-
-        private void EndActionInterval()
-        {
-            // Clear any "actions" or "states" for the new round
-            _actionsRunning = false;
-            // Possibly set _timerProgress = 0 if you want each "turn" to re-init, etc.
-
-            OnActionIntervalEnd?.Invoke();
-        }
-    */
     }

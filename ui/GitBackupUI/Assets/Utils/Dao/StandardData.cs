@@ -6,12 +6,6 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Unity.VisualScripting;
 
-
-using System.Collections;
-
-
-
-
 public class StandardData : MonoBehaviour
 {
     private DictObjTable __records = new DictObjTable();

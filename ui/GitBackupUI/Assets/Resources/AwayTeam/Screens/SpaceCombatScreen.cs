@@ -1,10 +1,9 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UIElements;
-
 using System;
 using VisualCommand;
-
+using Unity.VisualScripting;
 
 [System.Serializable]
 public class DynamicButtonCanvas
@@ -22,7 +21,6 @@ public class ATGameMode
     public string key;
     public GameObject gameMode;
 }
-
 
 public interface IShowHide
 {
@@ -71,7 +69,7 @@ public class SpaceCombatScreen : SpaceEncounterObserver,IShowHide
         return __instance;
     }
 
-    [SerializeField]
+    //[SerializeField]
     public List<DynamicButtonCanvas> dynamicButtonInit;
     private Dictionary<string,IDynamicControl> dynamicButton;
 
@@ -128,9 +126,10 @@ public class SpaceCombatScreen : SpaceEncounterObserver,IShowHide
     }
     void Awake_InitAgentCardDynamicControls()
     {
+        /*
         cssIdToResourceId = new Dictionary<string, Dictionary<string, string>>();
-        cssIdToResourceId["agent_1"] = SystemConstants.GetAgentGUIFieldMapping("agent_1"); // GUIField - to - ResourceId
-        cssIdToResourceId["agent_2"] = SystemConstants.GetAgentGUIFieldMapping("agent_2");
+        cssIdToResourceId["player_agent"] = SystemConstants.GetAgentGUIFieldMapping("player_agent"); // GUIField - to - ResourceId
+        cssIdToResourceId["ai_agent"] = SystemConstants.GetAgentGUIFieldMapping("ai_agent");
 
         // Set up Agent fields
         foreach (string agent_id in cssIdToResourceId.Keys)
@@ -141,7 +140,7 @@ public class SpaceCombatScreen : SpaceEncounterObserver,IShowHide
                 string resourceId = cssIdToResourceId[agent_id][cssId];
                 DynamicButtonCanvas canCan = new DynamicButtonCanvas();
                 canCan.key = $"{agent_id}.{resourceId}"; // Resource Key
-                if (agent_id == "agent_1")
+                if (agent_id == "player_agent")
                     canCan.placeholder = $"agent-1-card-status,{cssId}";
                 else
                     canCan.placeholder = $"agent-2-card-status,{cssId}";
@@ -149,13 +148,14 @@ public class SpaceCombatScreen : SpaceEncounterObserver,IShowHide
                 canCan.value = Resources.Load<Canvas>("AwayTeam/Screens/StatusbarCanvas");
                 dynamicButtonInit.Add(canCan);
             }
-        }
+        }*/
 
     }
 
     private void Awake_CreateAllDynamicControls()
     {
-
+        /*
+        //if (dynamicButtonIn)
         foreach (DynamicButtonCanvas dynamicButtonEntry in dynamicButtonInit)
         {
             if (dynamicButtonEntry == null)
@@ -176,7 +176,7 @@ public class SpaceCombatScreen : SpaceEncounterObserver,IShowHide
             //    Debug.Log("Successfully found DockedButton.");
             
             // Event Registration
-            dockedButton.RegisterInteractionHandler (HandleDynamicButtonInteraction); 
+            //dockedButton.RegisterInteractionHandler (HandleDynamicButtonInteraction); 
             dynamicButton[dynamicButtonEntry.key] = dockedButton;
 
             // UI Tracking
@@ -188,7 +188,8 @@ public class SpaceCombatScreen : SpaceEncounterObserver,IShowHide
             {
                 DynamicControlRenderer.UpdateCanvasBounds(buttonCanvas, placeholderName,uiDocument);
             });
-        }
+        }*/
+        
     }
     
     public IATGameMode GetEncounterManager()
@@ -209,7 +210,6 @@ public class SpaceCombatScreen : SpaceEncounterObserver,IShowHide
 
         navigatorObject = GameObject.Find("AwayTeam");
         navigationManager = navigatorObject.GetComponent<NavigationManager>();
-        //navigationManager.NavigateTo("AT_NewGame",false);
         uxmlToResourceMapping = SystemConstants.GetAccountFieldMapping();
         uiDocument = GetComponent<UIDocument>();
         VisualElement root = uiDocument.rootVisualElement;
@@ -224,8 +224,8 @@ public class SpaceCombatScreen : SpaceEncounterObserver,IShowHide
         });
         dynamicButton = new Dictionary<string,IDynamicControl>();
 
-        Awake_InitAgentCardDynamicControls();
-        Awake_CreateAllDynamicControls();
+        //Awake_InitAgentCardDynamicControls();
+       //Awake_CreateAllDynamicControls();
         return;
 
     }
@@ -246,7 +246,6 @@ public class SpaceCombatScreen : SpaceEncounterObserver,IShowHide
         return comparison;
     }
 
-
     private void SetButtonPosition(RectTransform button, VisualElement placeholder)
     {
         if (button == null || placeholder == null)
@@ -256,27 +255,75 @@ public class SpaceCombatScreen : SpaceEncounterObserver,IShowHide
         Vector3 worldPosition = Camera.main.ScreenToWorldPoint(new Vector3(screenPosition.x, screenPosition.y, Camera.main.nearClipPlane));
         button.position = worldPosition;
     }
-    //__navCommand
-    public bool HandleNavigationEvent(SurfaceNavigationCommand visualCommand)
+
+    public bool SetPlayerNavigation(ISurfaceNavigationCommand visualCommand,string navActionId)
     {
         Agent playerAgent = encounterManager.GetPlayerAgent();
-        Debug.Log($"PROCESSING NAVIGATION EVENT IN SpaceCombatScreen");
-        playerAgent.SetTargetNavigation(AgentNavigationType.NavigateTo);
-        return playerAgent.AttachNavigationWaypoint(visualCommand);
+        if (!AgentNavigationType.IsValid(navActionId))
+        {
+            Debug.LogError($"Could nto process {navActionId}");
+            return false;
+        }
+        return playerAgent.AddCommand(AgentCommand.Type.Navigation,navActionId,visualCommand.GameObject());
     }
 
 
-    private void HandleDynamicButtonInteraction(string actionId, string eventId,bool within)
+    public void SetPlayerFormation(string formation)
     {
         Agent playerAgent = encounterManager.GetPlayerAgent();
-        if(eventId != "MouseUp" || within == false )
+        if (!AgentFormation.all.Contains(formation) )
+            Debug.LogError($"Could not find formation {formation}");
+        else
+            playerAgent.AddCommand(AgentCommand.Type.Formation,formation,null);
+    }
+    public void SetPlayerAttackPattern(string attackPattern)
+    {
+        Agent playerAgent = encounterManager.GetPlayerAgent();
+        if (!AgentTargetPattern.all.Contains(attackPattern) )
+            Debug.LogError($"Could not find attackPattern {attackPattern}");
+        else
+            playerAgent.AddCommand(AgentCommand.Type.AttackPattern,attackPattern,null);
+    }
+    public void SetPlayerPower(string powerId)
+    {
+        Agent playerAgent = encounterManager.GetPlayerAgent();
+        Agent subject = playerAgent.GetPrimaryEnemyAgent();
+        if (subject == null)
+        {
+            UINotificationWaterfall.Instance().Dispatch("basic", "power_error_01", $"power_error: Cant do power with no target", 5f, true); 
             return;
-        //Debug.Log($"HandleDynamicButtonInteraction selected: {actionId}");
-        playerAgent.SetTargetAction(actionId);
+        }
+
+        if (!AgentPowerType.all.Contains(powerId) )
+            Debug.LogError($"Could not find poer: {powerId}");
+        else
+        {
+            playerAgent.AddCommand(AgentCommand.Type.Combat,powerId,subject.GameObject());
+        }
+    }    
+
+    [SerializeField]
+    PanelModeController formationPanel;
+    [SerializeField]
+    PanelModeController attackPatternPanel;
+
+    public void SetDisplayedFormation(string formation)
+    {
+        formationPanel.SetRevisedValue(formation);
     }
+    public void SetDisplayedAttackPattern(string attackPattern)
+    {
+        attackPatternPanel.SetRevisedValue(attackPattern);
+    }
+
+
 
     public override bool VisualizeEffect(string effect,GameObject onBehalfOf)
     {
+        // if (effect == SpaceEncounterManager.ObservableEffects.FormationClaw ){SetDisplayedFormation(effect);Debug.Log($"C {effect}");} 
+        // if (effect == SpaceEncounterManager.ObservableEffects.FormationDiamond ){SetDisplayedFormation(effect); Debug.Log($"A {effect}");} 
+        // if (effect == SpaceEncounterManager.ObservableEffects.FormationLine ){SetDisplayedFormation(effect);Debug.Log($"B {effect}");} 
+
         if (effect == SpaceEncounterManager.ObservableEffects.AttackOn)
         {
             StartCoroutine(eApplyPulseAndActivate(DynamicButtonID.Attack));
@@ -310,10 +357,13 @@ public class SpaceCombatScreen : SpaceEncounterObserver,IShowHide
             StartCoroutine(eShowTimerUpdates());
         return true;
     }
+
+    
     private System.Collections.IEnumerator eShowTimerUpdates()
     {
         float prog = encounterManager.GetTimerProgress();
         float progMax = encounterManager.GetTimerProgressMax();
+        /*
         //
         GameObject buttonObject =  dynamicButton[DynamicButtonID.Attack].GetGameObject();
         IShowProgress dc = buttonObject.GetComponent<IShowProgress>();
@@ -332,14 +382,14 @@ public class SpaceCombatScreen : SpaceEncounterObserver,IShowHide
         buttonObject =  dynamicButton[DynamicButtonID.Shield].GetGameObject();
         dc = buttonObject.GetComponent<IShowProgress>();
         dc.SetProgressMax((int)progMax);
-        dc.SetProgress((int)prog);
+        dc.SetProgress((int)prog);*/
         yield break;
     }
 
-    public override void  ShowFloatingActivePowers(GameObject unit)
-    {
-        StandardUIDocument.FloatingPowerIndicator.AttachTo(unit);
-    }
+    //public override void  ShowFloatingActivePowers(GameObject unit)
+    //{
+    //    StandardUIDocument.FloatingPowerIndicator.AttachTo(unit);
+    //}
 
     private System.Collections.IEnumerator eApplyPulseAndActivate(string buttonId)
     {
@@ -356,12 +406,12 @@ public class SpaceCombatScreen : SpaceEncounterObserver,IShowHide
         // Find the button's GameObject or target
         try /// UI Related
         {
-            GameObject buttonObject =  dynamicButton[buttonId].GetGameObject();
-            yield return EffectHandler.Pulse(target:buttonObject, 
-                                    duration:0.25f, 
-                                    velocity:6f,
-                                    size:0.05f,
-                                    finalScale:null); // 0.5s pulse with velocity 10
+            //GameObject buttonObject =  dynamicButton[buttonId].GetGameObject();
+            //yield return EffectHandler.Pulse(target:buttonObject, 
+            //                        duration:0.25f, 
+            //                        velocity:6f,
+            //                        size:0.05f,
+            //                        finalScale:null); // 0.5s pulse with velocity 10
 
             // Set the button state to inactive
             yield return new WaitForSeconds(0.5f); // Optional delay after the pulse
@@ -373,11 +423,10 @@ public class SpaceCombatScreen : SpaceEncounterObserver,IShowHide
         }
     }
 
-
-
     public void SetButtonState(string buttonKey, string state)
     {
-        dynamicButton[buttonKey].SetState(state);
+        if (dynamicButton.ContainsKey(buttonKey))
+            dynamicButton[buttonKey].SetState(state);
     }    
 
     void DoRun(ClickEvent evt)
@@ -440,36 +489,45 @@ public class SpaceCombatScreen : SpaceEncounterObserver,IShowHide
             Debug.LogError("No UIDocument component found on SpaceCombatScreen GameObject.");
             return;
         }
-
-        foreach (var agentId in new[] { "account", "agent_1", "agent_2" })
+        /*
+        foreach (var guiAgentId in new[] { "account", "player_agent", "ai_agent" })
         {
-            string cardId = SystemConstants.GetAgentGUICardId(agentId);
+            string cardId = SystemConstants.GetAgentGUICardId(guiAgentId);
             VisualElement card = uiDocument.rootVisualElement.Q<VisualElement>(cardId);
-            ATResourceData resourceData = encounterManager.GetResourceObject(agentId);
+            ATResourceData resourceData = GetResourceForGUID(guiAgentId);
             if (resourceData != null)
-                PopulateAccountFields(agentId,resourceData, card);
-        }     
+                PopulateAccountFields(guiAgentId,resourceData, card);
+        }   */  
     }
+    ATResourceData GetResourceForGUID(string guiAgentId)
+    {
+
+        ATResourceData resourceData = null;
+        Agent player = encounterManager.GetPlayerAgent();
+        if (guiAgentId == "account")
+        {
+            resourceData = player.GetResourceObject();
+        }
+        if (guiAgentId == "player_agent")
+        {
+            resourceData = player.GetAccountResourceObject();
+        }
+        if (guiAgentId == "ai_agent")
+        {
+            Agent enemy = player.GetPrimaryEnemyAgent();
+            //Debug.Log($"PRIMARY ENEMY 2 ->[{enemy}]");
+            if (enemy != null)
+            {
+                resourceData = enemy.GetResourceObject();
+            }
+        }
+
+        return resourceData;
+    } 
     void UpdateUI(bool setMaxProgress=false)
     {
-        var uiDocument = GetComponent<UIDocument>();
-        if (uiDocument == null)
-        {
-            Debug.LogError("No UIDocument component found on SpaceCombatScreen GameObject.");
-            return;
-        }        
-        foreach (var agentId in new[] { "account", "agent_1", "agent_2" })
-        {
-            string cardId = SystemConstants.GetAgentGUICardId(agentId);
-            VisualElement card = uiDocument.rootVisualElement.Q<VisualElement>(cardId);
-            ATResourceData resourceData = encounterManager.GetResourceObject(agentId);
-            if (resourceData == null)
-            {
-                //Debug.LogWarning($"Have a null resource data for agentId:{agentId}");
-            }
-            else
-                UpdateAgentFields(agentId,resourceData, card,setMaxProgress);
-        }
+
+
     }
     void Update()
     {
@@ -480,15 +538,18 @@ public class SpaceCombatScreen : SpaceEncounterObserver,IShowHide
         }
     }
 
-    Dictionary <string,int>__revisionData = new Dictionary <string,int> {{"account",0},{"agent_1",0},{"agent_2",0}};
-    private void PopulateAccountFields(string agent, ATResourceData resourceData, VisualElement cardElement )
+    //Dictionary <string,int>__revisionData = new Dictionary <string,int> {
+    //    {"account",0}, {"player_agent",0}, {"ai_agent",0 }
+    //};
+    private void PopulateAccountFields(string agentGuiId, ATResourceData resourceData, VisualElement cardElement )
     {
+        /*
         //Debug.Log($"-------running PopulateAccountFields");
         if (cardElement == null)
             return;
-        if (resourceData.GetDataRevision() == __revisionData[agent])
+        if (resourceData.GetDataRevision() == __revisionData[agentGuiId])
             return;
-        __revisionData[agent] = resourceData.GetDataRevision();
+        __revisionData[agentGuiId] = resourceData.GetDataRevision();
 
         //uxmlToResourceMapping = EncounterSettings.GetAccountFieldMapping();
         Dictionary<string,string> currentMapping= null; 
@@ -498,18 +559,24 @@ public class SpaceCombatScreen : SpaceEncounterObserver,IShowHide
         //else
         //    currentMapping = cssIdToResourceId[agent];
         string agent_resource_prefix = "";
-        if (agent =="account" )
+        if (agentGuiId =="account" )
         {
             currentMapping= uxmlToResourceMapping;
             agent_resource_prefix = "";
         }
-        else
+        if (agentGuiId =="player_agent" )
         {
-            agent_resource_prefix = $"{agent}.";
-            currentMapping = cssIdToResourceId[agent];
+            agent_resource_prefix = $"player_agent.";
+            currentMapping = cssIdToResourceId[agentGuiId];
+        }
+        if (agentGuiId =="ai_agent" )
+        {
+            agent_resource_prefix = $"ai_agent.";
+            currentMapping = cssIdToResourceId[agentGuiId];
         }
 
-        Dictionary<string,string> resourceIdToIconMapping = SystemConstants.ResourceIdToIconMapping(agent);
+
+        Dictionary<string,string> resourceIdToIconMapping = SystemConstants.ResourceIdToIconMapping(agentGuiId);
         // $"{resourceIdToIconMapping[resourceName]}" 
         foreach (var mapping in currentMapping)
         {
@@ -535,8 +602,10 @@ public class SpaceCombatScreen : SpaceEncounterObserver,IShowHide
                     }
                     catch (Exception ex)
                     {
+                        string keysAsString = string.Join(", ", dynamicButton.Keys);
+
+                        Debug.LogError($"Could not find progress bar for uxmlId: {agent_resource_prefix}.{uxmlId} in [{keysAsString}]. Exception: {ex.Message}\nStack Trace: {ex.StackTrace}");
                         Debug.Log(dynamicButton[$"{agent_resource_prefix}{resourceName}"]);
-                        Debug.LogError($"Could not find progress bar for uxmlId: {agent_resource_prefix}.{uxmlId}. Exception: {ex.Message}\nStack Trace: {ex.StackTrace}");
 
                     }
 
@@ -566,7 +635,7 @@ public class SpaceCombatScreen : SpaceEncounterObserver,IShowHide
             // Find the associated image element and add a name label as a placeholder
             // string imageId = uxmlId.Replace("status-value", "status-icon"); // Assuming a consistent naming pattern
             // var imageElement = cardElement.Q<VisualElement>(imageId);
-        }
+        }*/
 
     }
 
@@ -575,6 +644,8 @@ public class SpaceCombatScreen : SpaceEncounterObserver,IShowHide
     /// </summary>
     private void UpdateAgentFields(string agent,ATResourceData resourceData, VisualElement cardElement, bool setMaxProgress= false)
     {
+        /*
+        Debug.Log($"Updating UpdateAgentFields {resourceData.gameObject.name}");
         if (resourceData.GetDataRevision() == __revisionData[agent] && setMaxProgress==false)
         {
             return;
@@ -612,9 +683,6 @@ public class SpaceCombatScreen : SpaceEncounterObserver,IShowHide
 
             // Update the label for the resource value
             var label = cardElement.Q<Label>(uxmlId);
-            /*
-            var debug_label = cardElement.Q<Label>($"icon-label-{uxmlId}");
-            */
 
 
             if (label != null)
@@ -644,7 +712,12 @@ public class SpaceCombatScreen : SpaceEncounterObserver,IShowHide
                     var debug_label = cardElement.Q<Label>($"icon-label-{uxmlId}");
                     if (debug_label != null)
                     {
-                        debug_label.text = $"{resourceIdToIconMapping[resourceName]} ({resourceAmount.ToString()}):";
+                        debug_label.text = $"{resourceIdToIconMapping[resourceName]}s ({resourceAmount.ToString()}):";
+                    }
+                    else
+                    {
+                        debug_label.text = $"missing resourceIdToIconMapping[resourceName]:{resourceName}";
+
                     }
                 }
                 label.text = $"";
@@ -654,5 +727,6 @@ public class SpaceCombatScreen : SpaceEncounterObserver,IShowHide
             string imageId = uxmlId.Replace("status-value", "status-icon");
             var imageElement = cardElement.Q<VisualElement>(imageId);
         }
+        */
     }
 }

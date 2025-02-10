@@ -3,30 +3,39 @@ using System.Collections.Generic;
 using UnityEngine;
 using System.Linq;
 using Unity.VisualScripting;
+using System.Linq;
 public class AgentManager : MonoBehaviour
 {
+    public List<Agent> AgentsInRadius(float rad, Agent agent)
+    {
+        return __agents.Values
+            .Where(a => a != agent) // Exclude yourself
+            .Where(a => Vector3.Distance(a.transform.position, agent.transform.position) <= rad) // Check distance
+            .OrderBy(a => Vector3.Distance(a.transform.position, GetPlayerAgent().transform.position)) // Order by distance to player
+            .ToList();        
+    }    
+    
     private Dictionary<string,Agent> __agents = new Dictionary<string, Agent>();
     [SerializeField]
     private List<AgentPrefab> __initOnlyAgents = new List<AgentPrefab>();
 
     public Agent GetPlayerAgent()
     {
-        return __agents["agent_1"]; 
+        foreach (var agent in __agents.Values)
+        {
+            if (agent is PlayerAgent)
+            {
+                return agent;
+            }
+        }
+        return null; // Return null if no PlayerAgent is found
+    }
+    public void AddAgent(Agent addMe)
+    {
+        __agents[addMe.name] = addMe;
     }
 
     void Awake(){
-        if (__initOnlyAgents.Count <= 0)
-        {
-            Debug.LogError("agentManager MUST have agents attached. For now an agent_1 and agent_2");
-            return;
-        }        
-        foreach (AgentPrefab apre in __initOnlyAgents)
-        {
-            //Debug.Log($"adding agent {apre.agent_id}");
-            __agents[apre.agent_id] = apre.agentPrefab;
-        }        
-
-
     }
     // Start is called before the first frame update
     void Start()
@@ -40,6 +49,11 @@ public class AgentManager : MonoBehaviour
     }
     public Agent GetAgent(string agentId)
     {
+        if(__agents.ContainsKey(agentId) == false)
+        {
+            Debug.Log($"Do not contain agent {agentId}");
+            return null;
+        }
         return __agents[agentId] ;
     }
 

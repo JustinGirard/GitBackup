@@ -1,7 +1,7 @@
 using Unity;
 using UnityEngine;
 // DELETE THIS FILE DURING CLEAN UP
-class EncounterBase: MonoBehaviour
+class NEVERUSEEncounterBase: MonoBehaviour
 {
 
         // Start is called before the first frame update

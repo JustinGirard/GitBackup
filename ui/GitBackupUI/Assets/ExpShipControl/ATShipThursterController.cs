@@ -4,6 +4,7 @@ using UnityEngine;
 using SciFiShipController;
 using System.Collections;
 using System.Collections.Generic;
+using UnityEngine.PlayerLoop;
 
 
 public class SimpleShipController : MonoBehaviour
@@ -31,8 +32,8 @@ public class SimpleShipController : MonoBehaviour
     private PlayerInputModule playerInputModule;
     private ShipControlModule shipControlModule;
     private ShipInput shipInput;
-    float modeTimer = 0f;
-    bool isPositionMode = false;
+    //float modeTimer = 0f;
+    //bool isPositionMode = false;
     List<ShipInput> __inputStack = new List<ShipInput> ();
     public ProjectileEmitter GetEmitter(string type)
     {
@@ -65,15 +66,66 @@ public class SimpleShipController : MonoBehaviour
         aimAtObject.gameObject.name = "unit_aim."+name;
         positionObject.gameObject.name = "position."+name;
     }
-    public void SetGoalPosition(Transform t,Vector3? offset)
+    public void SetGoalPosition(Transform t)
     {
         positionObject.transform.parent = t;
         positionObject.transform.position = t.position;
-        //if (offset != null)
-        //    positionObject.transform.position = t.position + (Vector3)offset;
-        //else
-        //    positionObject.transform.position = t.position;
+        CreateDebugCube(positionObject.transform, $"UnitTarget-{this.gameObject.name}", Color.white);
+
     }
+
+    private Dictionary<string, GameObject> debugCubes = new Dictionary<string, GameObject>();    
+    private void CreateDebugCube(Transform trans, string id,Color cin)
+    {
+        // Check if a debug cube already exists for this ID
+        if (debugCubes.TryGetValue(id, out GameObject cube))
+        {
+            // Move the existing cube to the new position
+            cube.transform.parent = trans;
+            cube.transform.position = trans.position;
+        }
+        else
+        {
+            // Create a new cube
+            cube = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            cube.transform.localScale =  new Vector3(0.1f,1.5f,0.1f);  // Scale down for better visibility
+            
+            cube.GetComponent<Renderer>().material.color = cin; // Make it red for easier identification
+            cube.transform.parent = trans;
+            cube.transform.position = trans.position;
+            cube.name = id;
+            if (cube.TryGetComponent<BoxCollider>(out BoxCollider collider))
+            {
+                Destroy(collider); // Removes it completely
+                // collider.enabled = false; // Alternative: Just disables it
+            }            
+            // Add the new cube to the dictionary
+            debugCubes[id] = cube;
+        }
+    }    
+    private Vector3 goalVelocity = Vector3.zero;
+    private float goalSmoothTime = 0.2f;
+    /*
+     SMOOTH DAMP IDEA
+    public void SetGoalPosition(Transform t,  float customSmoothTime = 0.2f)
+    {
+        // TODO Another Option -- instead of tracking the current position -- attach to the transform directly. This will result in smoothness no matter what.
+        // Store goal position and smoothing time
+        positionObject.transform.parent = t;
+        goalSmoothTime = customSmoothTime;
+    }
+
+    public void UpdateGoalPosition()
+    {
+        // Apply SmoothDamp to smoothly move towards the goal
+        positionObject.transform.position = Vector3.SmoothDamp(
+            positionObject.transform.position,  positionObject.transform.position, ref goalVelocity, goalSmoothTime);
+    }*/
+    public void UpdateGoalPosition()
+    {
+        // Apply SmoothDamp to smoothly move towards the goal
+    }
+
     public GameObject GetGoalPosition()
     {
         return positionObject;
@@ -106,12 +158,15 @@ public class SimpleShipController : MonoBehaviour
     public float __orientTime = 0f;
     public float __velocityTime = 0f;
     public bool __navigationActive = false;
+    private Vector3 translationGoalVelocity = Vector3.zero;
     private void Update()
     {
         if (__navigationActive == false)
             return;
         //return;
-        Initalize();            
+        Initalize();
+        UpdateGoalPosition();
+            
         float angDist = ATShipControlEffects.AngDist(shipTransform:this.transform, source: transform, target: aimAtObject.transform);
         if (angDist > 5f)  
             StartCoroutine(ATShipControlEffects.AdjustOrientationSlerpOsc(
@@ -132,10 +187,40 @@ public class SimpleShipController : MonoBehaviour
                 }
             ));
 
-        if (ATShipControlEffects.TransDist(shipTransform: this.transform, target: positionObject.transform) > 1f)
-        {
-
+        //if (ATShipControlEffects.TransDist(shipTransform: this.transform, target: positionObject.transform) > 0.2f)
+        //{
+        /*
+        // Apply SmoothDamp for position
+        veeFormation.transform.position = Vector3.SmoothDamp(
+            veeFormation.transform.position, goalPosition, ref goalVelocity, goalSmoothTime);        
+        */
+        /*    veeFormation.transform.position = Vector3.SmoothDamp(
+                veeFormation.transform.position,  positionObject.transform, ref goalVelocity, goalSmoothTime);        
             StartCoroutine(ATShipControlEffects.AdjustVelocityTowardsTarget(
+                shipTransform: this.transform,
+                shipRigidbody: GetComponent<Rigidbody>(),  // Access Rigidbody for velocity
+                powerScaler: new Vector3(30f, 30f, 30f),  // Uniform thrust scaling
+                considerationWeight: new Vector3(1f, 1f, 1f),  // Emphasize all axes
+                smoothVelocity:ref translationGoalVelocity,
+                target: positionObject.transform,  // Target position
+                dampingFactorDivide: 1f,
+                dampingFactorPower: 1.0f,
+                () => {
+                    __velocityTime += Time.deltaTime;
+                    if (__velocityTime > 1f)
+                    {
+                        __velocityTime = 0f;
+                        return true;
+                    }
+                    return false;
+                }
+            ));*/
+
+
+        //}
+        //
+       //         dampingFactorDivide: GeneralInputManager.Instance().SettingShip_dampingFactorDivide("ship","dampingFactorDivide"),
+        /*
                 shipTransform: this.transform,
                 shipRigidbody: GetComponent<Rigidbody>(),  // Access Rigidbody for velocity
                 powerScaler: new Vector3(30f, 30f, 30f),  // Uniform thrust scaling
@@ -143,20 +228,28 @@ public class SimpleShipController : MonoBehaviour
                 target: positionObject.transform,  // Target position
                 dampingFactorDivide: 1f,
                 dampingFactorPower: 1.0f,
-                () => {
-                    __velocityTime += Time.deltaTime;
-                    if (__velocityTime > 5f)
-                    {
-                        __velocityTime = 0f;
-                        return true;
-                    }
-                    return false;
-                }
-            ));
-
-
-        }
-
+                smoothVelocity:ref translationGoalVelocity,
+                smoothVelocityTime:0.01f
+        
+        */
+        /*
+                considerationWeight: gi.SettingConsiderationWeight(),  // Emphasize all axes
+                dampingFactorDivide: gi.SettingDampingFactorDivide(),
+                dampingFactorPower:gi.SettingDampingFactorPower(),
+                smoothVelocityTime:gi.SettingSmoothVelocityTime()        
+        */
+        GeneralInputManager gi = GeneralInputManager.Instance();
+        ATShipControlEffects.DoSmoothAdjustVelocityTowardsTarget(           
+                shipTransform: this.transform,
+                shipRigidbody: GetComponent<Rigidbody>(),  // Access Rigidbody for velocity
+                target: positionObject.transform,  // Target position
+                powerScaler:  gi.SettingPowerScaler(),  // Uniform thrust scaling
+                considerationWeight: gi.SettingConsiderationWeight(),  // Emphasize all axes
+                dampingFactorDivide: gi.SettingDampingFactorDivide(),
+                dampingFactorPower:gi.SettingDampingFactorPower(),
+                smoothVelocityTime:gi.SettingSmoothVelocityTime(),
+                smoothVelocity:ref translationGoalVelocity
+                );
         ProcessInput();
     }
     /*

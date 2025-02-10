@@ -8,6 +8,7 @@ public class EncounterSquad : MonoBehaviour, IPausable
     [Header("Settings")]
     // public Vector3 masterPosition = Vector3.zero; // The central "master position"
     public Quaternion masterRotation = Quaternion.identity; // Optional if rotations are needed
+    // [SerializeField] public float unitTravelSmoothTime = 0.3f;
     [SerializeField]
     private int __numUnits = 2;
 
@@ -19,6 +20,31 @@ public class EncounterSquad : MonoBehaviour, IPausable
     private GameObject veeFormation; // The dynamically loaded VeeFormation instance
 
     private bool __is_running = false;
+    
+    public string GetFormation()
+    {
+          VeeFormation f = veeFormation.GetComponent<VeeFormation>();
+          return f.GetFormation();
+    }
+    public void SetFormation(string formation )
+    {
+        VeeFormation f = veeFormation.GetComponent<VeeFormation>();
+        f.SetFormation(formation);
+
+        int i = 0;
+        foreach (GameObject unitGO in spaceMapUnits)
+        {
+            if (unitGO == null)
+                continue;
+            SimpleShipController unit = unitGO.GetComponentInChildren<SimpleShipController>(); 
+            Transform formationPosition = veeFormation.GetComponent<VeeFormation>().GetPositionTransform(i); 
+            unit.SetGoalPosition(formationPosition);
+            //unit.SetGoalTarget(formationPosition, formationPosition.forward *2f);
+            i = i +1;
+        }
+        // Debug.Log("Formation updated");
+    }
+
     public void Run()
     {
         foreach(GameObject spaceMapUnit in spaceMapUnits)
@@ -69,7 +95,10 @@ public class EncounterSquad : MonoBehaviour, IPausable
         return __is_running;
     }    
 
+    public void Update(){
 
+        UpdateGoalPosition();        
+    }
     /// <summary>
     /// Cleans up and respawns all SpaceMapUnits and the VeeFormation.
     /// </summary>
@@ -143,7 +172,11 @@ public class EncounterSquad : MonoBehaviour, IPausable
         yield return new WaitForFixedUpdate(); // Ensures parenting changes are synchronized
 
         veeFormation.transform.position = formations.position;
+        this.goalPosition = formations.position;
+
         veeFormation.transform.rotation = formations.rotation;
+        this.goalRotation = formations.rotation;
+
         yield return new WaitForEndOfFrame(); 
         yield return new WaitForFixedUpdate(); // Ensures parenting changes are synchronized
         for (int i = 0; i < __numUnits; i++)
@@ -176,8 +209,7 @@ public class EncounterSquad : MonoBehaviour, IPausable
             unit.transform.rotation =  formationPosition.rotation;
             yield return new WaitForEndOfFrame();
             yield return new WaitForFixedUpdate();
-
-            unit.SetGoalPosition(formationPosition, Vector3.zero);
+            unit.SetGoalPosition(formationPosition);
             unit.SetGoalTarget(formationPosition, formationPosition.forward *2f);
             yield return new WaitForEndOfFrame(); 
             yield return new WaitForFixedUpdate();
@@ -186,23 +218,118 @@ public class EncounterSquad : MonoBehaviour, IPausable
         //Debug.Break(); // WHEN DEBUG BREAK RUNS, ALL SHIPS RENDER CORRECTLY
         //yield return new WaitForSeconds(5);
     }
+    /*
     public void SetGoalPosition(Transform t, Vector3? offset)
     {
-        Debug.Log("Set goal position");
+        // Debug.Log("Set goal position");
         veeFormation.transform.position = t.position;
         veeFormation.transform.rotation = t.rotation;
-    
-        //foreach(GameObject unit in spaceMapUnits)
-        //{
-        //    (unit.GetComponent<SimpleShipController>()).SetGoalPosition(t, Vector3.zero);
-        //}
+    }*/
+    private Vector3 goalPosition;
+    private Vector3 goalVelocity = Vector3.zero;
+    private float goalSmoothTime = 0.2f;
+
+    private Quaternion goalRotation;
+    private float goalRotationSpeed = 5.0f; // Adjustable rotation smoothing speed
+
+    public void SetGoalPosition(Transform t, float customSmoothTime = 0.2f, float customRotationSpeed = 5.0f)
+    {
+        // Store goal position and rotation
+        goalPosition = t.position;
+        goalRotation = t.rotation;
+
+        // Store smoothing parameters
+        goalSmoothTime = customSmoothTime;
+        goalRotationSpeed = customRotationSpeed;
+        CreateDebugCube(goalPosition, $"EncounterSquadGoal-{this.gameObject.name}", Color.red);
     }
+    private Dictionary<string, GameObject> debugCubes = new Dictionary<string, GameObject>();    
+    private void CreateDebugCube(Vector3 position, string id,Color cin)
+    {
+        // Check if a debug cube already exists for this ID
+        if (debugCubes.TryGetValue(id, out GameObject cube))
+        {
+            // Move the existing cube to the new position
+            cube.transform.position = position;
+        }
+        else
+        {
+            // Create a new cube
+            cube = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            cube.transform.localScale =  new Vector3(0.15f,1.5f,0.15f);  // Scale down for better visibility
+            
+            cube.GetComponent<Renderer>().material.color = cin; // Make it red for easier identification
+            cube.transform.position = position;
+            cube.name = id;
+            if (cube.TryGetComponent<BoxCollider>(out BoxCollider collider))
+            {
+                Destroy(collider); // Removes it completely
+                // collider.enabled = false; // Alternative: Just disables it
+            }            
+            // Add the new cube to the dictionary
+            debugCubes[id] = cube;
+        }
+    }
+    public void UpdateGoalPosition()
+    {
+        if (veeFormation == null)
+        {
+            //Debug.LogWarning("UpdateGoalPosition: veeFormation is null. Aborting.");
+            return;
+        }
+
+        if (veeFormation.transform == null)
+        {
+            Debug.LogWarning("UpdateGoalPosition: veeFormation.transform is null. Aborting.");
+            return;
+        }
+
+        if (goalPosition == null)
+        {
+            Debug.LogWarning("UpdateGoalPosition: goalPosition is null. Aborting.");
+            return;
+        }
+
+        if (goalVelocity == null)
+        {
+            Debug.LogWarning("UpdateGoalPosition: goalVelocity is null. Aborting.");
+            return;
+        }
+
+        if (goalSmoothTime <= 0)
+        {
+            Debug.LogWarning("UpdateGoalPosition: goalSmoothTime is non-positive. Aborting.");
+            return;
+        }
+
+        if (goalRotation == null)
+        {
+            Debug.LogWarning("UpdateGoalPosition: goalRotation is null. Aborting.");
+            return;
+        }
+
+        if (goalRotationSpeed <= 0)
+        {
+            Debug.LogWarning("UpdateGoalPosition: goalRotationSpeed is non-positive. Aborting.");
+            return;
+        }
+        //Debug.Log(".");
+        // Apply SmoothDamp for position
+        veeFormation.transform.position = Vector3.SmoothDamp(
+            veeFormation.transform.position, goalPosition, ref goalVelocity, goalSmoothTime);
+
+        // Apply Slerp for smooth rotation
+        veeFormation.transform.rotation = Quaternion.Slerp(
+            veeFormation.transform.rotation, goalRotation, Time.deltaTime * goalRotationSpeed);
+    }
+
+
 
     public void SetGoalTarget(Transform t, Vector3? offset)
     {
         foreach(GameObject unit in spaceMapUnits)
         {
-            (unit.GetComponent<SimpleShipController>()).SetGoalTarget(t,offset);
+            (unit.GetComponentInChildren<SimpleShipController>()).SetGoalTarget(t,offset);
         }
     }
 

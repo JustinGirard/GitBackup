@@ -1,126 +1,4 @@
 
-/*
-using System.Collections.Generic;
-using UnityEngine;
-using System.Linq;
-
-public class BlasterSystem : StandardSystem
-{
-    // Additional stats specific to Attack system could be added here
-    // For example: damage modifiers, ammo cost, etc.
-    [SerializeField]
-    private float ammoCost = 1f;
-    [SerializeField]
-    private float fuelCost = 1f;
-    [SerializeField]
-    private float baseDamage = 2f;
-
-    private string system_id = AgentActionType.Attack;
-
-    private float GetDamageMultiplierFor(GameObject sourceAgent, string sourcePowerId,GameObject targetAgent, string targetPowerId)
-    {
-        if (AgentActionType.Attack == targetPowerId)
-        {
-            return 0.5f;
-        }
-        if (AgentActionType.Shield == targetPowerId)
-        {
-            return 0.0f;
-        }
-        if (AgentActionType.Missile == targetPowerId)
-        {
-            return 2f;
-        }
-        return 1f;
-    }
-    public override System.Collections.IEnumerator Execute(GameObject sourceUnit, 
-                                string sourcePowerId, 
-                                GameObject targetUnit, 
-                                List<string> targetPowerIds, 
-                                ATResourceData sourceResources,
-                                ATResourceData targetResources)
-
-    {
-        /// 0] PowerTransaction powerTrans = new PhysicalPowers.BlasterPower(PARAMS);
-        /// 1] EncounterDelta worldChange = PhysicalEnvironment.AttemptPower(Power) -> (System)
-        /// ---- EncounterDelta = PhysicalEvent
-        /// ---- Timeout
-        /// 2] EncounterManager.ApplyDelta(worldChange);
-        /// 3] 
-        Dictionary<string, float> primaryDelta = new Dictionary<string, float>();
-        Dictionary<string, float> targetDelta = new Dictionary<string, float>();
-
-        GameEncounterBase spaceEncounter = this.GetEncounterManager();
-        if (spaceEncounter == null)
-            Debug.LogError("MISSING spaceEncounter");
-        spaceEncounter.NotifyAllScreens(SpaceEncounterManager.ObservableEffects.AttackOff);
-        
-        if ((float)sourceResources.GetResourceAmount(ResourceTypes.Ammunition) > 0)
-        {
-            
-            primaryDelta[ResourceTypes.Fuel] = -1*fuelCost;
-            primaryDelta[ResourceTypes.Ammunition] = -1*ammoCost;
-            // sourceUnit.transform.position,
-            // targetUnit.transform.position,
-            yield return CoroutineRunner.Instance.StartCoroutine(
-                EffectHandler.ShootBlasterAt(
-                    boltPrefab: Resources.Load<GameObject>(SpaceEncounterManager.PrefabPath.BoltPath),
-                    explosionPrefab: Resources.Load<GameObject>(SpaceEncounterManager.PrefabPath.Explosion),
-                    number: 4,
-                    delay: 1f,
-                    duration: 1f,
-                    maxDistance: 3f,
-                    source: sourceUnit.transform.position,
-                    target: targetUnit.transform.position,
-                    deviation:0.1f
-                )
-            );
-            float baseMultiplier = 1.0f;
-            foreach(string targetPowerId in targetPowerIds)
-            {
-                baseMultiplier *= GetDamageMultiplierFor( sourceUnit,  
-                                                          sourcePowerId, 
-                                                          targetUnit,  
-                                                          targetPowerId);
-
-            }
-            targetDelta[ResourceTypes.Hull] = -1f*baseDamage*baseMultiplier;
-
-        }
-        Dictionary<string,float> remainder;
-        //((ATResourceDataGroup) sourceResources).
-        if (primaryDelta.Count > 0)
-        {
-            remainder = sourceResources.Deposit(primaryDelta);
-            //float totalRemainder = remainder.Values.Sum();
-        }
-        if (targetDelta.Count > 0)
-        {
-            remainder = targetResources.Deposit(targetDelta);
-            //float totalRemainder = remainder.Values.Sum();
-        }
-        if ((float)targetResources.Balance(ResourceTypes.Hull) <= 0)
-        {
-            GameObject explosionPrefab = Resources.Load<GameObject>(SpaceEncounterManager.PrefabPath.Explosion);
-            
-            yield return CoroutineRunner.Instance.StartCoroutine(
-                EffectHandler.SingleExplosion( 
-                                        explosionPrefab,  
-                                        targetUnit.transform.position,  
-                                        2f, 
-                                        5f)
-             );
-            SimpleShipController unit = targetUnit.GetComponentInParent<SimpleShipController>();
-            unit.SafeDestroy();
-
-        }
-
-
-        yield break;
-    }
-}
-*/
-
 using System.Collections.Generic;
 using UnityEngine;
 using System.Linq;
@@ -137,73 +15,183 @@ public class BlasterSystem : StandardSystem
     private float fuelCost = 1f;
     [SerializeField]
     private float baseDamage = 2f;
-    private string system_id = AgentActionType.Attack;
-    private BlasterPowerExecution __execution = null;
-    public void TurnOff()
-    {
-        //Debug.Log("(1)__execution = null");
-        __execution = null;
-        GetEncounterManager().NotifyAllScreens(SpaceEncounterManager.ObservableEffects.AttackOff);
+    // [SerializeField]
+    private bool __isActivated = false;
 
-    }
-    public override System.Collections.IEnumerator Execute(GameObject sourceUnit, 
-                                string sourcePowerId, 
-                                GameObject targetUnit, 
-                                List<string> targetPowerIds, 
-                                ATResourceData sourceResources,
-                                ATResourceData targetResources)
+    [SerializeField] private List<GameObject> emitter;
+    [SerializeField] private GameObject muzzleChargePrefab;
+    [SerializeField] private GameObject muzzleFlashPrefab;
+    [SerializeField] private GameObject projectilePrefab;
+    [SerializeField] private GameObject impactDefaultPrefab;
+    [SerializeField] private GameObject damageDefaultPrefab;
+
+    [SerializeField] private List<GameObject> __muzzleChargeInstances;
+
+    private string system_id = AgentPowerType.Attack;
+    private BlasterPowerExecution __execution = null;
+
+    private new void Awake()
     {
-        // Check if an execution is already ongoing
-        if (__execution != null)
+        base.Awake();
+        attachedStates["charging"] = new BlasterCharge(this);
+        attachedStates["executing"] = new BlasterExecute(this);
+    }
+
+    public class BlasterCharge:StandardCharge
+    {
+        public BlasterCharge(StandardSystem system):base(system){}
+
+        public override System.Collections.IEnumerator Deactivate(ATResourceData sourceResources) 
         {
-            //Debug.LogWarning("Previous power is already executing. Aborting new execution.");
+            system.SetBehaviour("deactivated"); 
+            if (system is BlasterSystem b1) yield return b1.ClearMuzzleCharges();
+            //CoroutineRunner.Instance.DebugLog("BlasterCharge: Deactivated");
+            yield break;
+        }  
+
+        public override System.Collections.IEnumerator StateUpdate(float timeDelta)
+        {
+            FloatRange chargeLevel = system.GetLevel("charge");
+            if (system is BlasterSystem b2) yield return b2.ShowMuzzleCharge();
+            if (chargeLevel.Percent() < 1.0f )
+            {
+                chargeLevel.Add( timeDelta);
+                //CoroutineRunner.Instance.DebugLog("BlasterCharge: Charging up");
+            }            
+            if (chargeLevel.Percent() > 0.99f)
+            {
+                if (system is BlasterSystem b1) yield return b1.ClearMuzzleCharges();
+                system.SetBehaviour("executing");
+            }
             yield break;
         }
-        //Debug.Log("Executing Blaster");
 
-        // Load encounter context
+    }
+
+    public class BlasterExecute:StandardExecute
+    {
+        public BlasterExecute(StandardSystem system):base(system){}
+
+        public override System.Collections.IEnumerator Execute( string sourceActionId, GameObject sourceUnit,  List<GameObject> targetUnits, ATResourceData sourceResources, Agent sourceAgent)
+        {
+            FloatRange overheatLevel = system.GetLevel("overheat");
+            FloatRange executeLevel = system.GetLevel("execute");
+            overheatLevel.Add( 0.25f);
+            executeLevel.Add( 0.5f);
+            //CoroutineRunner.Instance.DebugLog("StandardExecute:Executing ");
+
+            if (executeLevel.Percent() > 0.99 || overheatLevel.Percent() > 0.99)
+            {
+                //Debug.Log($"Reached Final state executeLevel:{executeLevel.Percent()}, overheatLevel:{overheatLevel.Percent()}");
+                system.GetLevel("charge").Set(0);
+                system.GetLevel("execute").Set(0);
+                system.SetBehaviour("deactivated");
+                yield break;
+            }
+            if (system is BlasterSystem b1) yield return b1.ShootBlaster(  
+                sourceUnit:sourceUnit, 
+                targetUnits:targetUnits, 
+                sourceResources:sourceResources,  
+                sourceAgent:sourceAgent);
+
+            yield break;
+        }  
+
+        //public override System.Collections.IEnumerator StateUpdate(float timeDelta){yield break;}
+    }       
+
+
+
+    public  System.Collections.IEnumerator ShowMuzzleCharge( )
+    {
+        if (__muzzleChargeInstances.Count ==0)
+        {
+            __muzzleChargeInstances.Clear();
+            foreach (var em in emitter)
+            {
+                if (em != null && muzzleChargePrefab != null)
+                {
+                    GameObject muzzleChargeInstance = ObjectPool.Instance().Load(muzzleChargePrefab);
+                    if (muzzleChargeInstance != null)
+                    {
+                        muzzleChargeInstance.transform.parent =  em.transform;
+                        muzzleChargeInstance.transform.localScale = Vector3.one;
+                        muzzleChargeInstance.transform.position = em.transform.position;
+                        muzzleChargeInstance.transform.rotation = em.transform.rotation;
+                        muzzleChargeInstance.SetActive(true);
+                        __muzzleChargeInstances.Add(muzzleChargeInstance);
+                    }
+                }
+            }
+        }
+        yield break;
+    }
+
+    public  System.Collections.IEnumerator ClearMuzzleCharges()
+    {
+        foreach (var instance in __muzzleChargeInstances)
+        {
+            if (instance != null)
+            {
+                instance.SetActive(false);
+            }
+        }
+        __muzzleChargeInstances.Clear();
+        yield break;
+    }    
+    public override string GetShortDescriptionText()
+    {
+        return "m:normal";
+    }
+
+    public  System.Collections.IEnumerator ShootBlaster(GameObject sourceUnit, 
+                                List<GameObject> targetUnits, 
+                                ATResourceData sourceResources,
+                                Agent sourceAgent)
+    {
+        if (__execution != null)
+        {
+            Debug.LogWarning("No Already shooting!");
+            yield break;
+        }
+
         GameEncounterBase spaceEncounter = this.GetEncounterManager();
         if (spaceEncounter == null)
         {
             Debug.LogError("Missing space encounter context. Execution aborted.");
+            yield return StartCoroutine(Deactivate(sourceResources));
             yield break;
         }
-        
-        // Initialize BlasterExecution with required parameters
-        //Debug.Log("(1)__execution = NEW");
+        //Debug.Log($"Linked Prefab {this.muzzleChargePrefab}");
+     
         __execution = new BlasterPowerExecution(
+            muzzleChargePrefab:this.muzzleChargePrefab,
+            boltPrefab:this.projectilePrefab,
+            damagePrefab:this.damageDefaultPrefab,
+            impactPrefab:this.impactDefaultPrefab,
+            muzzleFlashPrefab:this.muzzleChargePrefab,
             sourceResources: sourceResources,
-            targetResources: targetResources,
             sourceUnit: sourceUnit,
-            targetUnit: targetUnit,
+            targetUnits: targetUnits,
             spaceEncounter: spaceEncounter,
-            sourcePowerId: sourcePowerId,
-            targetPowerIds: targetPowerIds,
             fuelCost: fuelCost,
             ammoCost: ammoCost,
             baseDamage: baseDamage
         );
 
         bool success = false;
-        //The best overloaded Add method 'Dictionary<string, Func<Action<bool>, IEnumerator>>.Add(string, Func<Action<bool>, IEnumerator>)' for the collection initializer has some invalid argumentsCS1950
+        // TODO kill this complexity
         Dictionary<string, Func<System.Action<bool>, System.Collections.IEnumerator>> executionPhases = 
-            new Dictionary<string, Func<System.Action<bool>, System.Collections.IEnumerator>>
-            {
-                { "CanExecute", onFinishHandle => __execution.CanExecute(onFinishHandle) },
-                { "BeforeExecute", onFinishHandle => __execution.BeforeExecute(onFinishHandle) },
-                { "Execute", onFinishHandle => __execution.Execute(onFinishHandle) },
-                { "AfterExecute", onFinishHandle => __execution.AfterExecute(onFinishHandle) }
-            };
+        new Dictionary<string, Func<System.Action<bool>, System.Collections.IEnumerator>>
+        {
+            { "CanExecute", onFinishHandle => __execution.CanExecute(onFinishHandle) },
+            { "BeforeExecute", onFinishHandle => __execution.BeforeExecute(onFinishHandle) },
+            { "Execute", onFinishHandle => __execution.Execute(onFinishHandle) },
+            { "AfterExecute", onFinishHandle => __execution.AfterExecute(onFinishHandle) }
+        };
+
         foreach (KeyValuePair<string, Func<System.Action<bool>, System.Collections.IEnumerator>> phase in executionPhases)
         {
-            /*success = false;
-            yield return StartCoroutine(phase.Value(result => success = result));
-            if (!success)
-            {
-                Debug.LogWarning($"Phase {phase.Key} failed.");
-                TurnOff();
-                yield break;
-            }*/
             if (phase.Key == null)
             {
                 Debug.LogError($"Null key found in execution phase.");
@@ -231,10 +219,7 @@ public class BlasterSystem : StandardSystem
                 break;
             }
         }
-
-        // If all phases succeed
-        TurnOff();
+        __execution = null;
         yield break;
-       
     }
 }
